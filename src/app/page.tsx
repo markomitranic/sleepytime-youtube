@@ -1,75 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Input } from "~/components/ui/input";
-import { env } from "~/env";
-import { extractPlaylistIdFromUrl, fetchPlaylistItems, fetchPlaylistSnippet } from "~/lib/youtube";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 
 export default function HomePage() {
   const [url, setUrl] = useState("");
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const playlistId = extractPlaylistIdFromUrl(url) ?? undefined;
   const playlist = usePlaylist();
-
-  // Prefill from `?list=` if present
-  useEffect(() => {
-    const list = searchParams.get("list");
-    if (!list) return;
-    if (playlistId === list) return;
-    setUrl(`https://www.youtube.com/playlist?list=${list}`);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!playlistId) return;
-    const params = new URLSearchParams(Array.from(searchParams.entries()));
-    params.set("list", playlistId);
-    // Reset selected video when loading a new playlist
-    params.delete("v");
-    router.replace(`/?${params.toString()}`);
+    if (!url) return;
+    playlist.loadFromUrl(url);
   }
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["playlistItems", playlistId],
-    enabled: Boolean(playlistId) && Boolean(env.NEXT_PUBLIC_YOUTUBE_API_KEY),
-    queryFn: async () => {
-      let nextPageToken: string | undefined = undefined;
-      const aggregated: Awaited<ReturnType<typeof fetchPlaylistItems>>["items"] = [];
-      do {
-        const res = await fetchPlaylistItems({
-          apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY!,
-          playlistId: playlistId!,
-          pageToken: nextPageToken,
-        });
-        aggregated.push(...res.items);
-        nextPageToken = res.nextPageToken;
-      } while (nextPageToken);
-      return aggregated;
-    },
-  });
-
-  const { data: snippet } = useQuery({
-    queryKey: ["playlistSnippet", playlistId],
-    enabled: Boolean(playlistId) && Boolean(env.NEXT_PUBLIC_YOUTUBE_API_KEY),
-    queryFn: async () =>
-      fetchPlaylistSnippet({
-        apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY!,
-        playlistId: playlistId!,
-      }),
-  });
-
-  useEffect(() => {
-    if (!playlistId || !url || !data) return;
-    const v = typeof window !== "undefined" ? new URL(window.location.href).searchParams.get("v") ?? undefined : undefined;
-    playlist.loadPlaylist({ url, playlistId, snippet: snippet ?? null, items: data, currentVideoId: v });
-  }, [playlistId, url, data, snippet]);
-
-  // URL syncing moved to PlaylistContext
+  // All playlist fetching and URL syncing handled in PlaylistContext
 
   return (
     <main className="flex min-h-screen items-start justify-center px-[10px] py-6">
@@ -89,19 +34,16 @@ export default function HomePage() {
           <button type="submit" className="sr-only">Load</button>
         </form>
 
-        {playlistId === undefined && url.length > 0 && (
-          <p className="text-sm text-muted-foreground">Invalid playlist URL. It must include a "list" parameter.</p>
-        )}
+        {playlist.error && <p className="text-sm text-destructive">{playlist.error}</p>}
 
-        {isLoading && <p>Loading playlist…</p>}
-        {isError && <p className="text-destructive">{(error as Error)?.message ?? "Failed to load playlist."}</p>}
+        {playlist.isLoading && <p>Loading playlist…</p>}
 
         {playlist.items && playlist.items.length > 0 && (
           <>
             {/* Video embed for the first playable item */}
             {(() => {
-              const currentVideoId = playlist.currentVideoId ?? playlist.items.find((i) => Boolean(i.videoId))?.videoId;
-              const current = playlist.items.find((i) => i.videoId === currentVideoId);
+              const currentVideoId = playlist.currentVideoId;
+              const current = currentVideoId ? playlist.items.find((i) => i.videoId === currentVideoId) : undefined;
               if (!currentVideoId) return null;
               const src = `https://www.youtube.com/embed/${currentVideoId}`;
               return (
@@ -109,9 +51,9 @@ export default function HomePage() {
                   <iframe
                     key={currentVideoId}
                     title={current?.title ?? "YouTube video"}
-                    src={`${src}?rel=0`}
+                    src={`${src}?playsinline=1&rel=0`}
                     className="h-full w-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     referrerPolicy="strict-origin-when-cross-origin"
                     allowFullScreen
                   />
@@ -122,7 +64,7 @@ export default function HomePage() {
             {/* Full list; highlight the current item */}
             <ul className="grid grid-cols-1 gap-4">
               {(() => {
-                const currentVideoId = playlist.currentVideoId ?? playlist.items.find((i) => Boolean(i.videoId))?.videoId;
+                const currentVideoId = playlist.currentVideoId;
                 return playlist.items.map((item) => {
                   const isCurrent = Boolean(currentVideoId && item.videoId === currentVideoId);
                   return (
