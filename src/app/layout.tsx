@@ -18,6 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className={geist.className}>
+        <div className="aurora-background" aria-hidden="true" />
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

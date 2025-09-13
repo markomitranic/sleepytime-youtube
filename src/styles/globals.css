@@ -121,5 +121,80 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-color: color-mix(in oklch, var(--background) 100%, black 0%);
+    min-height: 100vh;
+  }
+
+  /* Aurora background effect */
+  .aurora-background {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    overflow: hidden;
+    background: linear-gradient(180deg, oklch(0.15 0.01 260), oklch(0.13 0.01 260));
+  }
+
+  .aurora-background::before,
+  .aurora-background::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    will-change: transform;
+    filter: blur(36px) saturate(100%);
+  }
+
+  /* Blue blob */
+  .aurora-background::before {
+    top: -20%;
+    left: -10%;
+    width: 160vmax;
+    height: 120vmax;
+    background: radial-gradient(ellipse 60% 45% at 50% 50%, oklch(0.42 0.10 230 / 0.30), transparent 60%);
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1.05);
+    animation: aurora-orbit-1 36s ease-in-out infinite alternate;
+  }
+
+  /* Dark green blob */
+  .aurora-background::after {
+    bottom: -25%;
+    right: -15%;
+    width: 180vmax;
+    height: 140vmax;
+    background: radial-gradient(ellipse 70% 55% at 50% 50%, oklch(0.33 0.12 150 / 0.25), transparent 70%);
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1.05);
+    animation: aurora-orbit-2 42s ease-in-out infinite alternate;
+  }
+
+  @keyframes aurora-orbit-1 {
+    0% {
+      transform: translate(-10%, -5%) rotate(0deg) scale(1.00);
+    }
+    50% {
+      transform: translate(30%, 10%) rotate(20deg) scale(1.05);
+    }
+    100% {
+      transform: translate(70%, -10%) rotate(0deg) scale(1.10);
+    }
+  }
+
+  @keyframes aurora-orbit-2 {
+    0% {
+      transform: translate(10%, 15%) rotate(0deg) scale(1.00);
+    }
+    50% {
+      transform: translate(-20%, -10%) rotate(-15deg) scale(1.08);
+    }
+    100% {
+      transform: translate(-55%, 20%) rotate(0deg) scale(1.12);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .aurora-background::before,
+    .aurora-background::after {
+      animation-duration: 1ms;
+      animation-iteration-count: 1;
+    }
   }
 }
