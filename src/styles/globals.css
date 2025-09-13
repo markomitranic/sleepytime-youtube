@@ -168,25 +168,37 @@
 
   @keyframes aurora-orbit-1 {
     0% {
-      transform: translate(-10%, -5%) rotate(0deg) scale(1.00);
+      transform: translate(-8%, -6%) rotate(-5deg) scale(1.00);
+    }
+    25% {
+      transform: translate(12%, -8%) rotate(8deg) scale(1.03);
     }
     50% {
-      transform: translate(30%, 10%) rotate(20deg) scale(1.05);
+      transform: translate(15%, 5%) rotate(12deg) scale(1.05);
+    }
+    75% {
+      transform: translate(8%, 12%) rotate(-3deg) scale(1.02);
     }
     100% {
-      transform: translate(70%, -10%) rotate(0deg) scale(1.10);
+      transform: translate(-5%, 8%) rotate(-8deg) scale(1.00);
     }
   }
 
   @keyframes aurora-orbit-2 {
     0% {
-      transform: translate(10%, 15%) rotate(0deg) scale(1.00);
+      transform: translate(6%, 10%) rotate(3deg) scale(1.00);
+    }
+    25% {
+      transform: translate(-10%, 15%) rotate(-12deg) scale(1.04);
     }
     50% {
-      transform: translate(-20%, -10%) rotate(-15deg) scale(1.08);
+      transform: translate(-15%, -5%) rotate(-18deg) scale(1.08);
+    }
+    75% {
+      transform: translate(-8%, -12%) rotate(-8deg) scale(1.06);
     }
     100% {
-      transform: translate(-55%, 20%) rotate(0deg) scale(1.12);
+      transform: translate(5%, -8%) rotate(5deg) scale(1.02);
     }
   }
 
