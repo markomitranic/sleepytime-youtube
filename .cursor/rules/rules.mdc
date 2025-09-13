@@ -1,0 +1,70 @@
+---
+alwaysApply: true
+---
+
+# Project Overview
+
+The application is a React website, completely-client-side, hosted on Vercel. It allows the user
+to provide a playlist URL, and will play videos one by one.
+
+# AI Development
+
+- Always use PNPM as the package manager.
+- **PNPM Installations**: Always check for similar packages before installing new ones.
+- Commonly used commands:
+  - `pnpm dev`
+  - `pnpm build` - Build project for production
+  - `pnpm lint` - Run complete linting suite (combines code, style, and typecheck)
+  - `pnpm test` - Run unit tests (vitest) and Storybook Playwright tests
+  - `pnpm test [file-path]` - Run a single test file (unit or storybook)
+  - `pnpm husky` - Run full battery of checks (equivalent to pre-push hook)
+  - `pnpm nodecheck` - Check Node.js version compatibility
+
+## Finding Documentation
+
+If a task involves a specific framework, library, or API, use the context7 MCP tool to fetch the latest documentation. You have access to Context7 MCP server which can query up-to-date documentation for any system. Notable docs you will find useful:
+
+## React Component Standards
+
+- **Early Returns**: Prefer early return syntax to reduce nesting
+- **Functional Code**: Write simple, flat and functional code
+- **Function assignments**: Always use `function` keyword for components over `const` function assignments
+- Component names must be PascalCase and match filename
+- Prefer types over interfaces
+- Prefer inline prop types over separate interfaces
+- Avoid barrel exports and default exports - we prefer named exports
+- Use direct imports with destructuring `import { Component } from "~/path/to/Component"`
+- MPA Structure, Each React island represents one page root with no client-side routing
+- **Existing Patterns**: Always check for similar functions before creating new ones
+- **CSS Modules**: Use only for animations, prefer Tailwind for styling
+
+## React Hook Form Standards
+
+- **useWatch Optimization**: ALWAYS use `useWatch` with `exact: true` flag for performance optimization
+- **No Nested Properties**: ALWAYS use nested, dot-separated properties directly in `useWatch` (e.g., avoid `"filters.field"`)
+
+```typescript
+// ✅ Correct pattern
+const selectedPage = useWatch({ control, name: "page", exact: true });
+const selectedSortField = useWatch({ control, name: "sortField", exact: true });
+const selectedFiltersField = useWatch({ control, name: "filters.field", exact: true });
+
+// ❌ Wrong patterns
+const selectedPage = useWatch({ control, name: "page" }); // Missing exact: true
+const selectedField = useWatch({ control, name: "filters", exact: true }); // not dot notation
+const selectedFiltersField = selectedFilters?.field ?? [];
+```
+
+## Styling with Tailwind v4
+
+- **No Config File**: All configuration is in `src/styles/tailwind.css`, no `tailwind.config.js`
+
+
+# Testing
+
+## Unit Testing
+
+- We use Vitest for unit tests in `*.test.ts` files which are colocated with the typescript files.
+- While debugging, run single tests: `pnpm test src/path/to/file.test.ts`
+- Always do a final confirmation of the implementation with `pnpm test`
+
