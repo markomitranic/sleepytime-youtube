@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "~/styles/globals.css";
 import { AppProviders } from "./providers";
+import { DevToolbar } from "~/components/DevToolbar";
 
 export const metadata: Metadata = {
   title: "Sleepytime YouTube",
@@ -19,7 +20,10 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className={geist.className}>
         <div className="aurora-background" aria-hidden="true" />
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          {children}
+          <DevToolbar />
+        </AppProviders>
       </body>
     </html>
   );

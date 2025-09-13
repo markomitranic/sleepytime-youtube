@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { ChevronUp, Shuffle, SkipForward, Moon } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
+import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 
 export function Player() {
   const playlist = usePlaylist();
@@ -45,9 +46,7 @@ export function Player() {
     }
   }, [playlist.items, playlist.setCurrentVideoId]);
 
-  const handleMoon = useCallback(() => {
-    console.log("Moon icon clicked - sleep mode coming soon!");
-  }, []);
+  // handleMoon callback removed - now handled by SleepTimerDrawer
 
   if (!currentVideoId) return null;
   const current = playlist.items.find((i) => i.videoId === currentVideoId);
@@ -101,14 +100,19 @@ export function Player() {
           <SkipForward className="h-6 w-6" />
         </button>
         
-        <button
-          type="button"
-          onClick={handleMoon}
-          className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full border text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground"
-          aria-label="Sleep mode (coming soon)"
-        >
-          <Moon className="h-5 w-5" />
-        </button>
+        <SleepTimerDrawer>
+          <button
+            type="button"
+            className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full border transition focus-visible:ring-[3px] hover:text-foreground ${
+              playlist.sleepTimer.isActive 
+                ? "bg-blue-100 text-blue-600 border-blue-300 shadow-sm" 
+                : "text-muted-foreground"
+            }`}
+            aria-label={playlist.sleepTimer.isActive ? "Sleep timer active - click to modify" : "Set sleep timer"}
+          >
+            <Moon className="h-5 w-5" />
+          </button>
+        </SleepTimerDrawer>
       </div>
 
       <ul className="grid grid-cols-1 gap-4">

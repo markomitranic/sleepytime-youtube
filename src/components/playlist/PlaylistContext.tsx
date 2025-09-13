@@ -1,9 +1,16 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { YouTubePlaylistItem, YouTubePlaylistSnippet } from "~/lib/youtube";
 import { env } from "~/env";
 import { extractPlaylistIdFromUrl, fetchPlaylistItems, fetchPlaylistSnippet } from "~/lib/youtube";
+
+export type SleepTimer = {
+  isActive: boolean;
+  durationMinutes: number;
+  startTime?: number;
+  remainingSeconds?: number;
+};
 
 export type PlaylistState = {
   url?: string;
@@ -13,6 +20,7 @@ export type PlaylistState = {
   currentVideoId?: string;
   isLoading?: boolean;
   error?: string | null;
+  sleepTimer: SleepTimer;
 };
 
 export type PlaylistActions = {
@@ -27,12 +35,17 @@ export type PlaylistActions = {
   loadByPlaylistId: (playlistId: string) => Promise<void>;
   setCurrentVideoId: (videoId: string | undefined) => void;
   clear: () => void;
+  setSleepTimer: (durationMinutes: number) => void;
+  deactivateSleepTimer: () => void;
 };
 
 const PlaylistContext = createContext<(PlaylistState & PlaylistActions) | null>(null);
 
 export function PlaylistProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<PlaylistState>({ items: [] });
+  const [state, setState] = useState<PlaylistState>({ 
+    items: [], 
+    sleepTimer: { isActive: false, durationMinutes: 30 }
+  });
 
   const actions: PlaylistActions = useMemo(
     () => ({
@@ -45,6 +58,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           // Fallback to first available
           const fallback = items.find((i) => Boolean(i.videoId))?.videoId;
           return {
+            ...prev,
             url,
             playlistId,
             snippet,
@@ -52,6 +66,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
             currentVideoId: provided ?? preserved ?? fallback,
             isLoading: false,
             error: null,
+            sleepTimer: prev.sleepTimer, // Preserve existing sleep timer state
           };
         });
       },
@@ -112,7 +127,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
       },
       setCurrentVideoId: (videoId) => setState((s) => ({ ...s, currentVideoId: videoId })),
       clear: () => {
-        setState({ items: [] });
+        setState({ items: [], sleepTimer: { isActive: false, durationMinutes: 30 } });
         if (typeof window !== "undefined") {
           const urlObj = new URL(window.location.href);
           urlObj.searchParams.delete("list");
@@ -121,6 +136,23 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           const href = newQuery ? `${urlObj.pathname}?${newQuery}` : urlObj.pathname;
           window.history.replaceState(null, "", href);
         }
+      },
+      setSleepTimer: (durationMinutes: number) => {
+        setState(s => ({
+          ...s,
+          sleepTimer: {
+            isActive: true,
+            durationMinutes,
+            startTime: Date.now(),
+            remainingSeconds: durationMinutes * 60,
+          }
+        }));
+      },
+      deactivateSleepTimer: () => {
+        setState(s => ({
+          ...s,
+          sleepTimer: { isActive: false, durationMinutes: s.sleepTimer.durationMinutes }
+        }));
       },
     }),
     [],
@@ -155,6 +187,39 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
     const href = newQuery ? `${urlObj.pathname}?${newQuery}` : urlObj.pathname;
     window.history.replaceState(null, "", href);
   }, [state.playlistId]);
+
+  // Sleep Timer countdown logic
+  useEffect(() => {
+    if (!state.sleepTimer.isActive || !state.sleepTimer.startTime) return;
+
+    const interval = setInterval(() => {
+      setState(prev => {
+        if (!prev.sleepTimer.isActive || !prev.sleepTimer.startTime) return prev;
+
+        const elapsed = Math.floor((Date.now() - prev.sleepTimer.startTime) / 1000);
+        const totalSeconds = prev.sleepTimer.durationMinutes * 60;
+        const remainingSeconds = Math.max(0, totalSeconds - elapsed);
+
+        if (remainingSeconds <= 0) {
+          // Timer expired - deactivate it
+          return {
+            ...prev,
+            sleepTimer: { isActive: false, durationMinutes: prev.sleepTimer.durationMinutes }
+          };
+        }
+
+        return {
+          ...prev,
+          sleepTimer: {
+            ...prev.sleepTimer,
+            remainingSeconds
+          }
+        };
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [state.sleepTimer.isActive, state.sleepTimer.startTime]);
 
   // Initialize from URL if ?list= is present
   useEffect(() => {
