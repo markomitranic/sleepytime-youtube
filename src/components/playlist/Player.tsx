@@ -1,13 +1,23 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { ChevronUp, Shuffle, SkipForward, Moon } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 
+// Declare YouTube IFrame API types
+declare global {
+  interface Window {
+    YT: any;
+    onYouTubeIframeAPIReady: () => void;
+  }
+}
+
 export function Player() {
   const playlist = usePlaylist();
   const currentVideoId = playlist.currentVideoId;
+  const playerRef = useRef<any>(null);
+  const playerInstanceRef = useRef<any>(null);
 
   const handleBack = useCallback(() => {
     playlist.clear();
@@ -46,13 +56,81 @@ export function Player() {
     }
   }, [playlist.items, playlist.setCurrentVideoId]);
 
-  // handleMoon callback removed - now handled by SleepTimerDrawer
+  // Load YouTube IFrame API
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    // Load YouTube IFrame API script
+    if (!window.YT) {
+      const script = document.createElement('script');
+      script.src = 'https://www.youtube.com/iframe_api';
+      script.async = true;
+      document.head.appendChild(script);
+    }
+
+    // Define the API ready callback
+    (window as any).onYouTubeIframeAPIReady = () => {
+      // Will be handled in the video-specific effect
+    };
+  }, []);
+
+  // Initialize player when video changes
+  useEffect(() => {
+    if (!currentVideoId || typeof window === 'undefined') return;
+
+    const initPlayer = () => {
+      if (window.YT && playerRef.current) {
+        playerInstanceRef.current = new window.YT.Player(playerRef.current, {
+          videoId: currentVideoId,
+          playerVars: {
+            enablejsapi: 1,
+            playsinline: 1,
+            rel: 0,
+            modestbranding: 1,
+            controls: 1
+          },
+          events: {
+            onReady: (event: any) => {
+              // Player is ready
+            }
+          }
+        });
+      }
+    };
+
+    if (window.YT) {
+      initPlayer();
+    } else {
+      // Wait for API to load
+      (window as any).onYouTubeIframeAPIReady = initPlayer;
+    }
+
+    return () => {
+      if (playerInstanceRef.current && playerInstanceRef.current.destroy) {
+        playerInstanceRef.current.destroy();
+        playerInstanceRef.current = null;
+      }
+    };
+  }, [currentVideoId]);
+
+  // Handle pause/play based on isPaused state
+  useEffect(() => {
+    if (!playerInstanceRef.current) return;
+
+    if (playlist.isPaused) {
+      playerInstanceRef.current.pauseVideo();
+    } else if (playerInstanceRef.current.getPlayerState && playerInstanceRef.current.getPlayerState() === 2) {
+      // Only resume if currently paused (state 2)
+      playerInstanceRef.current.playVideo();
+    }
+  }, [playlist.isPaused]);
 
   // If no playlist items, don't render anything
   if (!playlist.items.length) return null;
   
-  const current = currentVideoId ? playlist.items.find((i) => i.videoId === currentVideoId) : null;
-  const src = currentVideoId ? `https://www.youtube.com/embed/${currentVideoId}` : null;
+  if (!currentVideoId) return null;
+  
+  const current = playlist.items.find((i) => i.videoId === currentVideoId);
 
   return (
     <div className="space-y-4">
@@ -70,28 +148,14 @@ export function Player() {
         </h2>
       </div>
 
-      {/* Video Player - only show if there's a current video */}
-      {currentVideoId && src ? (
-        <div className="aspect-video w-full overflow-hidden rounded-md border bg-black">
-          <iframe
-            key={currentVideoId}
-            title={current?.title ?? "YouTube video"}
-            src={`${src}?playsinline=1&rel=0`}
-            className="h-full w-full"
-            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerPolicy="strict-origin-when-cross-origin"
-            allowFullScreen
-          />
-        </div>
-      ) : (
-        <div className="aspect-video w-full overflow-hidden rounded-md border bg-muted flex items-center justify-center">
-          <div className="text-center text-muted-foreground">
-            <Moon className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="text-lg font-medium">Playback Paused</p>
-            <p className="text-sm">Click any video below to resume</p>
-          </div>
-        </div>
-      )}
+      {/* Video Player */}
+      <div className="aspect-video w-full overflow-hidden rounded-md border bg-black">
+        <div
+          ref={playerRef}
+          id={`youtube-player-${currentVideoId}`}
+          className="h-full w-full"
+        />
+      </div>
 
       {/* Player Controls */}
       <div className="flex items-center justify-center gap-8 py-4">

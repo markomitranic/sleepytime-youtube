@@ -21,6 +21,7 @@ export type PlaylistState = {
   isLoading?: boolean;
   error?: string | null;
   sleepTimer: SleepTimer;
+  isPaused?: boolean; // New field to track if video is paused by sleep
 };
 
 export type PlaylistActions = {
@@ -45,7 +46,8 @@ const PlaylistContext = createContext<(PlaylistState & PlaylistActions) | null>(
 export function PlaylistProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<PlaylistState>({ 
     items: [], 
-    sleepTimer: { isActive: false, durationMinutes: 30 }
+    sleepTimer: { isActive: false, durationMinutes: 30 },
+    isPaused: false
   });
 
   const actions: PlaylistActions = useMemo(
@@ -126,9 +128,9 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           setState((s) => ({ ...s, isLoading: false, error: (e as Error)?.message ?? "Failed to load playlist." }));
         }
       },
-      setCurrentVideoId: (videoId) => setState((s) => ({ ...s, currentVideoId: videoId })),
+      setCurrentVideoId: (videoId) => setState((s) => ({ ...s, currentVideoId: videoId, isPaused: false })), // Resume when selecting a video
       clear: () => {
-        setState({ items: [], sleepTimer: { isActive: false, durationMinutes: 30 } });
+        setState({ items: [], sleepTimer: { isActive: false, durationMinutes: 30 }, isPaused: false });
         if (typeof window !== "undefined") {
           const urlObj = new URL(window.location.href);
           urlObj.searchParams.delete("list");
@@ -157,21 +159,12 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
       },
       triggerSleep: () => {
         // Sleep action: pause video playback and deactivate timer
-        // Keep playlist intact, just stop the current video
+        // Keep playlist and current video, just mark as paused
         setState(s => ({
           ...s,
-          currentVideoId: undefined, // This will hide the video iframe, effectively pausing
+          isPaused: true, // Mark video as paused instead of clearing currentVideoId
           sleepTimer: { isActive: false, durationMinutes: s.sleepTimer.durationMinutes }
         }));
-        
-        // Remove current video from URL but keep playlist
-        if (typeof window !== "undefined") {
-          const urlObj = new URL(window.location.href);
-          urlObj.searchParams.delete("v");
-          const newQuery = urlObj.searchParams.toString();
-          const href = newQuery ? `${urlObj.pathname}?${newQuery}` : urlObj.pathname;
-          window.history.replaceState(null, "", href);
-        }
       },
     }),
     [],
