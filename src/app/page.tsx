@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
+import Image from "next/image";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
@@ -45,6 +46,15 @@ export default function HomePage() {
               >
                 Try it out with some slowedReverb →
               </a>
+            </div>
+            <div className="mt-5">
+              <Image
+                src="/sleepytime-underwood.jpg"
+                alt="Sleepytime Celestial Seasonings Bear - by Underwood"
+                width={1200}
+                height={600}
+                className="rounded-md w-full h-auto opacity-40 hover:opacity-100 transition-opacity duration-300"
+              />
             </div>
           </div>
         )}
