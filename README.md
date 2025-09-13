@@ -2,6 +2,8 @@
 
 Play a YouTube playlist one video at a time. Pure client-side Next.js app deployed on Vercel.
 
+https://sleepytime-youtube.vercel.app/?list=PLPX6lu9kG1JXEdTsF1GSWzZ8qQA_3aUMs
+
 ## Tech Stack
 
 - Next.js (App Router, TypeScript) — `src/app`
