@@ -175,9 +175,8 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
         setState(s => ({ ...s, darker: !s.darker }));
       },
       reloadPlaylist: async () => {
-        const currentPlaylistId = state.playlistId;
-        if (currentPlaylistId) {
-          await actions.loadByPlaylistId(currentPlaylistId);
+        if (typeof window !== 'undefined') {
+          window.location.reload();
         }
       },
     }),
