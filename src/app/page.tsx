@@ -19,7 +19,7 @@ export default function HomePage() {
   return (
     <main className="flex min-h-screen items-start justify-center px-[10px] py-6">
       <div className="w-full max-w-[720px] space-y-6">
-        <h1 className="text-3xl font-bold">Enter YouTube Playlist URL</h1>
+        {!playlist.playlistId && <h1 className="text-3xl font-bold">Enter YouTube Playlist URL</h1>}
         {!playlist.playlistId && (
           <form onSubmit={onSubmit} className="space-y-3">
             <Input

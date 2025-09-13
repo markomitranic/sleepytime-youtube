@@ -1,17 +1,74 @@
 "use client";
 
+import { useCallback } from "react";
+import { ChevronUp, Shuffle, SkipForward, Moon } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 
 export function Player() {
   const playlist = usePlaylist();
-
   const currentVideoId = playlist.currentVideoId;
+
+  const handleBack = useCallback(() => {
+    playlist.clear();
+  }, [playlist]);
+
+  const handleShuffle = useCallback((videoId: string | undefined) => {
+    const availableVideos = playlist.items.filter(item => item.videoId);
+    if (availableVideos.length === 0) return;
+    
+    // Filter out the current video to avoid selecting the same one
+    const otherVideos = availableVideos.filter(item => item.videoId !== videoId);
+    
+    // If there's only one video total, or no other videos, don't shuffle
+    if (otherVideos.length === 0) return;
+    
+    const randomIndex = Math.floor(Math.random() * otherVideos.length);
+    const randomVideo = otherVideos[randomIndex];
+    if (randomVideo?.videoId) {
+      playlist.setCurrentVideoId(randomVideo.videoId);
+    }
+  }, [playlist.items, playlist.setCurrentVideoId]);
+
+  const handleNext = useCallback((videoId: string | undefined) => {
+    if (!videoId) return;
+    
+    const availableVideos = playlist.items.filter(item => item.videoId);
+    const currentIndex = availableVideos.findIndex(item => item.videoId === videoId);
+    
+    if (currentIndex === -1) return;
+    
+    const nextIndex = (currentIndex + 1) % availableVideos.length;
+    const nextVideo = availableVideos[nextIndex];
+    
+    if (nextVideo?.videoId) {
+      playlist.setCurrentVideoId(nextVideo.videoId);
+    }
+  }, [playlist.items, playlist.setCurrentVideoId]);
+
+  const handleMoon = useCallback(() => {
+    console.log("Moon icon clicked - sleep mode coming soon!");
+  }, []);
+
   if (!currentVideoId) return null;
   const current = playlist.items.find((i) => i.videoId === currentVideoId);
   const src = `https://www.youtube.com/embed/${currentVideoId}`;
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-col items-center gap-2">
+        <button
+          type="button"
+          aria-label="Back"
+          onClick={handleBack}
+          className="hover:bg-secondary/60 focus-visible:ring-ring/50 group inline-flex h-7 w-16 items-center justify-center rounded-md border text-muted-foreground transition focus-visible:ring-[3px]"
+        >
+          <ChevronUp className="text-current opacity-90 group-hover:opacity-100" width={28} height={14} strokeWidth={2.5} />
+        </button>
+        <h2 className="text-xl font-semibold text-center truncate w-full" title={playlist.snippet?.title ?? undefined}>
+          {playlist.snippet?.title ?? "Playlist"}
+        </h2>
+      </div>
+
       <div className="aspect-video w-full overflow-hidden rounded-md border bg-black">
         <iframe
           key={currentVideoId}
@@ -22,6 +79,36 @@ export function Player() {
           referrerPolicy="strict-origin-when-cross-origin"
           allowFullScreen
         />
+      </div>
+
+      {/* Player Controls */}
+      <div className="flex items-center justify-center gap-8 py-4">
+        <button
+          type="button"
+          onClick={() => handleShuffle(currentVideoId)}
+          className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full border text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground"
+          aria-label="Shuffle playlist"
+        >
+          <Shuffle className="h-5 w-5" />
+        </button>
+        
+        <button
+          type="button"
+          onClick={() => handleNext(currentVideoId)}
+          className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-14 w-14 items-center justify-center rounded-full border text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground"
+          aria-label="Next video"
+        >
+          <SkipForward className="h-6 w-6" />
+        </button>
+        
+        <button
+          type="button"
+          onClick={handleMoon}
+          className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full border text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground"
+          aria-label="Sleep mode (coming soon)"
+        >
+          <Moon className="h-5 w-5" />
+        </button>
       </div>
 
       <ul className="grid grid-cols-1 gap-4">

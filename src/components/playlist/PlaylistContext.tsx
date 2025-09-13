@@ -111,7 +111,17 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
         }
       },
       setCurrentVideoId: (videoId) => setState((s) => ({ ...s, currentVideoId: videoId })),
-      clear: () => setState({ items: [] }),
+      clear: () => {
+        setState({ items: [] });
+        if (typeof window !== "undefined") {
+          const urlObj = new URL(window.location.href);
+          urlObj.searchParams.delete("list");
+          urlObj.searchParams.delete("v");
+          const newQuery = urlObj.searchParams.toString();
+          const href = newQuery ? `${urlObj.pathname}?${newQuery}` : urlObj.pathname;
+          window.history.replaceState(null, "", href);
+        }
+      },
     }),
     [],
   );
