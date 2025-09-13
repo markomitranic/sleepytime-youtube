@@ -110,7 +110,7 @@ export function SleepTimerDrawer({ children }: SleepTimerDrawerProps) {
               )}
               <DrawerClose asChild>
                 <Button variant="outline" className="flex-1">
-                  Cancel
+                  Close
                 </Button>
               </DrawerClose>
             </div>

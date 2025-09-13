@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { ChevronUp, Shuffle, SkipForward, Moon } from "lucide-react";
+import { ChevronUp, Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 
@@ -192,6 +192,13 @@ export function Player() {
         </SleepTimerDrawer>
       </div>
 
+      {/* Playlist Divider */}
+      <div className="flex items-center gap-4 pt-2">
+        <div className="flex-1 h-px bg-border"></div>
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Playlist</h3>
+        <div className="flex-1 h-px bg-border"></div>
+      </div>
+
       <ul className="grid grid-cols-1 gap-4">
         {playlist.items.map((item) => {
           const isCurrent = Boolean(currentVideoId && item.videoId === currentVideoId);
@@ -223,6 +230,42 @@ export function Player() {
           );
         })}
       </ul>
+
+      {/* Footer with social links */}
+      <div className="flex items-center justify-center gap-6 pt-8 pb-4 mt-8 border-t">
+        <a
+          href="https://github.com/markomitranic/sleepytime-youtube"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="View on GitHub"
+        >
+          <Github className="h-5 w-5" />
+          <span className="text-sm">GitHub</span>
+        </a>
+        
+        <a
+          href="https://www.linkedin.com/in/marko-mitranic/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="LinkedIn Profile"
+        >
+          <Linkedin className="h-5 w-5" />
+          <span className="text-sm">LinkedIn</span>
+        </a>
+        
+        <a
+          href="https://medium.com/homullus"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Medium Blog"
+        >
+          <ExternalLink className="h-5 w-5" />
+          <span className="text-sm">Medium</span>
+        </a>
+      </div>
     </div>
   );
 }
