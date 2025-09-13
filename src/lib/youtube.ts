@@ -8,6 +8,7 @@ export type YouTubePlaylistItem = {
 export type YouTubePlaylistSnippet = {
   id: string;
   title: string;
+  description?: string;
 };
 
 export function extractPlaylistIdFromUrl(input: string): string | null {
@@ -87,13 +88,17 @@ export async function fetchPlaylistSnippet({
   url.searchParams.set("part", "snippet");
   url.searchParams.set("id", playlistId);
   url.searchParams.set("key", apiKey);
-  url.searchParams.set("fields", "items(id,snippet(title))");
+  url.searchParams.set("fields", "items(id,snippet(title,description))");
   const res = await fetch(url.toString());
   if (!res.ok) return null;
-  const json = (await res.json()) as { items?: Array<{ id: string; snippet?: { title?: string } }> };
+  const json = (await res.json()) as { items?: Array<{ id: string; snippet?: { title?: string; description?: string } }> };
   const first = json.items?.[0];
   if (!first) return null;
-  return { id: first.id, title: first.snippet?.title ?? "Untitled playlist" };
+  return {
+    id: first.id,
+    title: first.snippet?.title ?? "Untitled playlist",
+    description: first.snippet?.description,
+  };
 }
 
 
