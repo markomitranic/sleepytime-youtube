@@ -22,7 +22,7 @@ export function DevToolbar() {
   }, [playlist]);
 
   const handleSleep = useCallback(() => {
-    playlist.setSleepTimer(1); // 1 minute for quick testing
+    playlist.triggerSleep(); // Immediately trigger sleep action
   }, [playlist]);
 
   // Only show in development

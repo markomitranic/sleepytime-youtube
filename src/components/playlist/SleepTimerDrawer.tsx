@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 
 import { Button } from "~/components/ui/button";

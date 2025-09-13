@@ -48,9 +48,11 @@ export function Player() {
 
   // handleMoon callback removed - now handled by SleepTimerDrawer
 
-  if (!currentVideoId) return null;
-  const current = playlist.items.find((i) => i.videoId === currentVideoId);
-  const src = `https://www.youtube.com/embed/${currentVideoId}`;
+  // If no playlist items, don't render anything
+  if (!playlist.items.length) return null;
+  
+  const current = currentVideoId ? playlist.items.find((i) => i.videoId === currentVideoId) : null;
+  const src = currentVideoId ? `https://www.youtube.com/embed/${currentVideoId}` : null;
 
   return (
     <div className="space-y-4">
@@ -68,17 +70,28 @@ export function Player() {
         </h2>
       </div>
 
-      <div className="aspect-video w-full overflow-hidden rounded-md border bg-black">
-        <iframe
-          key={currentVideoId}
-          title={current?.title ?? "YouTube video"}
-          src={`${src}?playsinline=1&rel=0`}
-          className="h-full w-full"
-          allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          referrerPolicy="strict-origin-when-cross-origin"
-          allowFullScreen
-        />
-      </div>
+      {/* Video Player - only show if there's a current video */}
+      {currentVideoId && src ? (
+        <div className="aspect-video w-full overflow-hidden rounded-md border bg-black">
+          <iframe
+            key={currentVideoId}
+            title={current?.title ?? "YouTube video"}
+            src={`${src}?playsinline=1&rel=0`}
+            className="h-full w-full"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+          />
+        </div>
+      ) : (
+        <div className="aspect-video w-full overflow-hidden rounded-md border bg-muted flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <Moon className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p className="text-lg font-medium">Playback Paused</p>
+            <p className="text-sm">Click any video below to resume</p>
+          </div>
+        </div>
+      )}
 
       {/* Player Controls */}
       <div className="flex items-center justify-center gap-8 py-4">

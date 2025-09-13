@@ -37,6 +37,7 @@ export type PlaylistActions = {
   clear: () => void;
   setSleepTimer: (durationMinutes: number) => void;
   deactivateSleepTimer: () => void;
+  triggerSleep: () => void;
 };
 
 const PlaylistContext = createContext<(PlaylistState & PlaylistActions) | null>(null);
@@ -154,6 +155,24 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           sleepTimer: { isActive: false, durationMinutes: s.sleepTimer.durationMinutes }
         }));
       },
+      triggerSleep: () => {
+        // Sleep action: pause video playback and deactivate timer
+        // Keep playlist intact, just stop the current video
+        setState(s => ({
+          ...s,
+          currentVideoId: undefined, // This will hide the video iframe, effectively pausing
+          sleepTimer: { isActive: false, durationMinutes: s.sleepTimer.durationMinutes }
+        }));
+        
+        // Remove current video from URL but keep playlist
+        if (typeof window !== "undefined") {
+          const urlObj = new URL(window.location.href);
+          urlObj.searchParams.delete("v");
+          const newQuery = urlObj.searchParams.toString();
+          const href = newQuery ? `${urlObj.pathname}?${newQuery}` : urlObj.pathname;
+          window.history.replaceState(null, "", href);
+        }
+      },
     }),
     [],
   );
@@ -201,7 +220,8 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
         const remainingSeconds = Math.max(0, totalSeconds - elapsed);
 
         if (remainingSeconds <= 0) {
-          // Timer expired - deactivate it
+          // Timer expired - trigger sleep action
+          setTimeout(() => actions.triggerSleep(), 0);
           return {
             ...prev,
             sleepTimer: { isActive: false, durationMinutes: prev.sleepTimer.durationMinutes }
