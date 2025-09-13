@@ -3,6 +3,8 @@ export type YouTubePlaylistItem = {
   title: string;
   thumbnailUrl?: string;
   videoId?: string;
+  channelTitle?: string;
+  channelId?: string;
 };
 
 export type YouTubePlaylistSnippet = {
@@ -31,6 +33,8 @@ type YouTubePlaylistItemsResponse = {
       title?: string;
       resourceId?: { videoId?: string };
       thumbnails?: { default?: { url?: string }; medium?: { url?: string }; high?: { url?: string } };
+      videoOwnerChannelTitle?: string;
+      videoOwnerChannelId?: string;
     };
   }>;
 };
@@ -56,7 +60,7 @@ export async function fetchPlaylistItems({
     [
       "etag",
       "nextPageToken",
-      "items(snippet(title,videoOwnerChannelTitle,position,resourceId(videoId),thumbnails(default(url),medium(url),high(url))))",
+      "items(snippet(title,videoOwnerChannelTitle,videoOwnerChannelId,position,resourceId(videoId),thumbnails(default(url),medium(url),high(url))))",
       "pageInfo",
     ].join(","),
   );
@@ -72,7 +76,9 @@ export async function fetchPlaylistItems({
     const title = s.title ?? "Untitled";
     const videoId = s.resourceId?.videoId;
     const thumb = s.thumbnails?.high?.url || s.thumbnails?.medium?.url || s.thumbnails?.default?.url;
-    return { id: item.id, title, videoId, thumbnailUrl: thumb };
+    const channelTitle = s.videoOwnerChannelTitle;
+    const channelId = s.videoOwnerChannelId;
+    return { id: item.id, title, videoId, thumbnailUrl: thumb, channelTitle, channelId };
   });
   return { items: simplified, nextPageToken: json.nextPageToken };
 }

@@ -217,14 +217,30 @@ export function Player() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className={`truncate font-medium ${isCurrent ? "opacity-80" : ""}`}>{item.title}</p>
-                  {isCurrent && (
-                    <span className="ml-auto inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
-                      <span className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_6px_theme(colors.green.500)]" />
-                      Playing
-                    </span>
-                  )}
                 </div>
-                {item.videoId && <p className="text-xs text-muted-foreground">Video ID: {item.videoId}</p>}
+                {item.channelTitle && (
+                  <div className="flex flex-col gap-1">
+                    {item.channelId ? (
+                      <a
+                        href={`https://www.youtube.com/channel/${item.channelId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {item.channelTitle}
+                      </a>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">{item.channelTitle}</p>
+                    )}
+                    {isCurrent && (
+                      <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground w-fit">
+                        <span className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_6px_theme(colors.green.500)]" />
+                        Playing
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </li>
           );
