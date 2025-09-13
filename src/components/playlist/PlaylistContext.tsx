@@ -22,6 +22,7 @@ export type PlaylistState = {
   error?: string | null;
   sleepTimer: SleepTimer;
   isPaused?: boolean; // New field to track if video is paused by sleep
+  darker?: boolean; // New field to track if aurora animation should be hidden
 };
 
 export type PlaylistActions = {
@@ -39,6 +40,8 @@ export type PlaylistActions = {
   setSleepTimer: (durationMinutes: number) => void;
   deactivateSleepTimer: () => void;
   triggerSleep: () => void;
+  toggleDarker: () => void;
+  reloadPlaylist: () => Promise<void>;
 };
 
 const PlaylistContext = createContext<(PlaylistState & PlaylistActions) | null>(null);
@@ -47,7 +50,8 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<PlaylistState>({ 
     items: [], 
     sleepTimer: { isActive: false, durationMinutes: 30 },
-    isPaused: false
+    isPaused: false,
+    darker: false
   });
 
   const actions: PlaylistActions = useMemo(
@@ -70,6 +74,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
             isLoading: false,
             error: null,
             sleepTimer: prev.sleepTimer, // Preserve existing sleep timer state
+            darker: prev.darker, // Preserve existing darker state
           };
         });
       },
@@ -130,7 +135,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
       },
       setCurrentVideoId: (videoId) => setState((s) => ({ ...s, currentVideoId: videoId, isPaused: false })), // Resume when selecting a video
       clear: () => {
-        setState({ items: [], sleepTimer: { isActive: false, durationMinutes: 30 }, isPaused: false });
+        setState({ items: [], sleepTimer: { isActive: false, durationMinutes: 30 }, isPaused: false, darker: false });
         if (typeof window !== "undefined") {
           const urlObj = new URL(window.location.href);
           urlObj.searchParams.delete("list");
@@ -165,6 +170,15 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           isPaused: true, // Mark video as paused instead of clearing currentVideoId
           sleepTimer: { isActive: false, durationMinutes: s.sleepTimer.durationMinutes }
         }));
+      },
+      toggleDarker: () => {
+        setState(s => ({ ...s, darker: !s.darker }));
+      },
+      reloadPlaylist: async () => {
+        const currentPlaylistId = state.playlistId;
+        if (currentPlaylistId) {
+          await actions.loadByPlaylistId(currentPlaylistId);
+        }
       },
     }),
     [],

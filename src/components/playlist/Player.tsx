@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { ChevronUp, Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink } from "lucide-react";
+import { ChevronUp, Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, RefreshCw, Bed } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 
@@ -133,7 +133,32 @@ export function Player() {
   const current = playlist.items.find((i) => i.videoId === currentVideoId);
 
   return (
-    <div className="space-y-4">
+    <div className={`relative space-y-4 transition-opacity duration-300 ${playlist.darker ? "opacity-30" : ""}`}>
+      {/* Corner Icons */}
+      <div className="absolute top-0 left-0 right-0 flex justify-between pointer-events-none z-10">
+        <button
+          type="button"
+          onClick={() => playlist.reloadPlaylist()}
+          className="pointer-events-auto hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground bg-background/80 border"
+          aria-label="Refresh playlist"
+        >
+          <RefreshCw className="h-4 w-4" />
+        </button>
+        
+        <button
+          type="button"
+          onClick={() => playlist.toggleDarker()}
+          className={`pointer-events-auto hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-8 w-8 items-center justify-center rounded-md transition focus-visible:ring-[3px] hover:text-foreground bg-background/80 border ${
+            playlist.darker
+              ? "bg-blue-100 text-blue-600 border-blue-300 shadow-sm dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700"
+              : "text-muted-foreground"
+          }`}
+          aria-label={playlist.darker ? "Show aurora animation" : "Hide aurora animation"}
+        >
+          <Bed className="h-4 w-4" />
+        </button>
+      </div>
+
       <div className="flex flex-col items-center gap-2">
         <button
           type="button"
