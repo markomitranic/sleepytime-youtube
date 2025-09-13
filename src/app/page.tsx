@@ -69,19 +69,7 @@ export default function HomePage() {
     playlist.loadPlaylist({ url, playlistId, snippet: snippet ?? null, items: data, currentVideoId: v });
   }, [playlistId, url, data, snippet]);
 
-  // Persist current video to URL (?v=) via History API once a selection exists
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const nextId = playlist.currentVideoId;
-    if (!nextId) return; // Don't touch the URL until we know the current video
-    const urlObj = new URL(window.location.href);
-    const currentParam = urlObj.searchParams.get("v");
-    if (currentParam === nextId) return;
-    urlObj.searchParams.set("v", nextId);
-    const newQuery = urlObj.searchParams.toString();
-    const href = newQuery ? `${urlObj.pathname}?${newQuery}` : urlObj.pathname;
-    window.history.replaceState(null, "", href);
-  }, [playlist.currentVideoId]);
+  // URL syncing moved to PlaylistContext
 
   return (
     <main className="flex min-h-screen items-start justify-center px-[10px] py-6">

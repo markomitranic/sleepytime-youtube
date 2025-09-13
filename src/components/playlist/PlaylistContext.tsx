@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { YouTubePlaylistItem, YouTubePlaylistSnippet } from "~/lib/youtube";
 
 export type PlaylistState = {
@@ -54,6 +54,21 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo(() => ({ ...state, ...actions }), [state, actions]);
+
+  // Sync current video to URL (?v=) once selection exists
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!state.playlistId) return;
+    const nextId = state.currentVideoId;
+    if (!nextId) return;
+    const urlObj = new URL(window.location.href);
+    const currentParam = urlObj.searchParams.get("v");
+    if (currentParam === nextId) return;
+    urlObj.searchParams.set("v", nextId);
+    const newQuery = urlObj.searchParams.toString();
+    const href = newQuery ? `${urlObj.pathname}?${newQuery}` : urlObj.pathname;
+    window.history.replaceState(null, "", href);
+  }, [state.playlistId, state.currentVideoId]);
 
   return <PlaylistContext.Provider value={value}>{children}</PlaylistContext.Provider>;
 }
