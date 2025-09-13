@@ -65,33 +65,23 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!playlistId || !url || !data) return;
-    playlist.loadPlaylist({ url, playlistId, snippet: snippet ?? null, items: data });
-  }, [playlistId, url, data, snippet, playlist]);
+    const v = typeof window !== "undefined" ? new URL(window.location.href).searchParams.get("v") ?? undefined : undefined;
+    playlist.loadPlaylist({ url, playlistId, snippet: snippet ?? null, items: data, currentVideoId: v });
+  }, [playlistId, url, data, snippet]);
 
-  // Initialize current video from ?v= when valid for the loaded playlist
+  // Persist current video to URL (?v=) via History API once a selection exists
   useEffect(() => {
-    const v = searchParams.get("v");
-    if (!v) return;
-    if (!playlist.items || playlist.items.length === 0) return;
-    const exists = playlist.items.some((i) => i.videoId === v);
-    if (exists && playlist.currentVideoId !== v) playlist.setCurrentVideoId(v);
-  }, [searchParams, playlist.items, playlist.currentVideoId, playlist]);
-
-  // Persist current video to URL (?v=)
-  useEffect(() => {
-    if (!playlistId) return;
-    const params = new URLSearchParams(Array.from(searchParams.entries()));
-    const currentParam = params.get("v");
+    if (typeof window === "undefined") return;
     const nextId = playlist.currentVideoId;
-    if (nextId) {
-      if (currentParam === nextId) return;
-      params.set("v", nextId);
-    } else {
-      if (currentParam === null) return;
-      params.delete("v");
-    }
-    router.replace(`/?${params.toString()}`);
-  }, [playlist.currentVideoId, playlistId, router, searchParams]);
+    if (!nextId) return; // Don't touch the URL until we know the current video
+    const urlObj = new URL(window.location.href);
+    const currentParam = urlObj.searchParams.get("v");
+    if (currentParam === nextId) return;
+    urlObj.searchParams.set("v", nextId);
+    const newQuery = urlObj.searchParams.toString();
+    const href = newQuery ? `${urlObj.pathname}?${newQuery}` : urlObj.pathname;
+    window.history.replaceState(null, "", href);
+  }, [playlist.currentVideoId]);
 
   return (
     <main className="flex min-h-screen items-start justify-center px-[10px] py-6">
@@ -129,6 +119,7 @@ export default function HomePage() {
               return (
                 <div className="aspect-video w-full overflow-hidden rounded-md border bg-black">
                   <iframe
+                    key={currentVideoId}
                     title={current?.title ?? "YouTube video"}
                     src={`${src}?rel=0`}
                     className="h-full w-full"

@@ -17,6 +17,7 @@ export type PlaylistActions = {
     playlistId: string;
     snippet: YouTubePlaylistSnippet | null;
     items: YouTubePlaylistItem[];
+    currentVideoId?: string;
   }) => void;
   setCurrentVideoId: (videoId: string | undefined) => void;
   clear: () => void;
@@ -29,13 +30,21 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 
   const actions: PlaylistActions = useMemo(
     () => ({
-      loadPlaylist: ({ url, playlistId, snippet, items }) => {
-        setState({
-          url,
-          playlistId,
-          snippet,
-          items,
-          currentVideoId: items.find((i) => Boolean(i.videoId))?.videoId,
+      loadPlaylist: ({ url, playlistId, snippet, items, currentVideoId }) => {
+        setState((prev) => {
+          // Prefer provided currentVideoId if valid in new items
+          const provided = currentVideoId && items.some((i) => i.videoId === currentVideoId) ? currentVideoId : undefined;
+          // Otherwise, keep previous selection if it still exists in new items
+          const preserved = prev.currentVideoId && items.some((i) => i.videoId === prev.currentVideoId) ? prev.currentVideoId : undefined;
+          // Fallback to first available
+          const fallback = items.find((i) => Boolean(i.videoId))?.videoId;
+          return {
+            url,
+            playlistId,
+            snippet,
+            items,
+            currentVideoId: provided ?? preserved ?? fallback,
+          };
         });
       },
       setCurrentVideoId: (videoId) => setState((s) => ({ ...s, currentVideoId: videoId })),
