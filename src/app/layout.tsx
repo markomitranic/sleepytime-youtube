@@ -6,7 +6,7 @@ import { DevToolbar } from "~/components/DevToolbar";
 import { AuroraBackground } from "./AuroraBackground";
 
 export const metadata: Metadata = {
-  title: "Sleepytime YouTube",
+  title: "Sleepytime-YouTube",
   description: "Play YouTube playlists one by one",
 };
 
