@@ -116,9 +116,17 @@ export function Player() {
         toast.error("Couldn't find this video in the playlist.");
         return;
       }
-      await deletePlaylistItem({ accessToken: auth.accessToken, playlistItemId: currentItem.id });
-      // Refresh items in background
-      await playlist.refreshItemsOnce({ delayMs: 600 });
+      // Optimistic UI removal
+      playlist.removeItem(videoId);
+
+      // Trigger background removal on YouTube and then background refresh
+      deletePlaylistItem({ accessToken: auth.accessToken, playlistItemId: currentItem.id })
+        .then(() => playlist.refreshItemsOnce({ delayMs: 900 }))
+        .catch(async () => {
+          // Soft reconcile by refreshing once even on failure
+          await playlist.refreshItemsOnce({ delayMs: 900 });
+        });
+
       if (nextVideoId) {
         playlist.setCurrentVideoId(nextVideoId);
       }

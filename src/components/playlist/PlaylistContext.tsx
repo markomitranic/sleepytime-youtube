@@ -51,6 +51,7 @@ export type PlaylistActions = {
   toggleDarker: () => void;
   reloadPlaylist: () => Promise<void>;
   reorderItem: (videoId: string, direction: "up" | "down") => void;
+  removeItem: (videoId: string) => void;
   refreshItemsOnce: (opts?: { delayMs?: number }) => Promise<void>;
 };
 
@@ -302,6 +303,15 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           if (!moved) return prev;
           updated.splice(targetIndex, 0, moved);
           return { ...prev, items: updated };
+        });
+      },
+      removeItem: (videoId) => {
+        setState((prev) => {
+          const updated = prev.items.filter((i) => i.videoId !== videoId);
+          const nextCurrent = prev.currentVideoId === videoId
+            ? (updated.find((i) => Boolean(i.videoId))?.videoId)
+            : prev.currentVideoId;
+          return { ...prev, items: updated, currentVideoId: nextCurrent };
         });
       },
       refreshItemsOnce: async ({ delayMs = 700 }: { delayMs?: number } = {}) => {
