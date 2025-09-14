@@ -3,6 +3,7 @@ export type BuiltinPlaylist = {
   shortLabel: string;
   // Optional overrides for UI without hitting YouTube API
   title?: string;
+  /** @see https://youtube-thumbnail-grabber.com */
   thumbnail?: string;
   channel?: string;
 };
@@ -13,14 +14,14 @@ export const BUILTIN_PLAYLISTS: BuiltinPlaylist[] = [
     shortLabel: "slowedReverb",
     title: "Slowed + Reverb",
     channel: "MrManafon",
-    // thumbnail: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+    thumbnail: "/slowedreverb.jpg",
   },
   {
     id: "PLdvzE2TS0UFKSqqogxzoA7miRHATFMXZH",
     shortLabel: "Skyrim Homes",
     title: "Skyrim Homes",
     channel: "SkyrimPlus",
-    // thumbnail: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+    thumbnail: "/skyrim.jpg",
   },
   {
     id: "PLXZYfNCCCIGZNcKJYLDf9hi7MSWSKjag9",
@@ -32,7 +33,7 @@ export const BUILTIN_PLAYLISTS: BuiltinPlaylist[] = [
     id: "PLVTclEEyY1SKFumpT86h-y6jikkEUKIAH",
     shortLabel: "Tolkien Lore",
     title: "Tolkien Lore",
-    // thumbnail: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+    thumbnail: "/tolkien.jpg",
   },
   {
     id: "PL1jwNlafHh-A5G-VmMdRarvch-Kc0CqM7",
