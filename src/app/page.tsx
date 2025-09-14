@@ -7,6 +7,7 @@ import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { Player } from "~/components/playlist/Player";
+import { PlaylistGrid } from "~/components/playlist/PlaylistGrid";
 
 export default function HomePage() {
   const playlist = usePlaylist();
@@ -25,7 +26,7 @@ export default function HomePage() {
         {!playlist.playlistId && (
           <div className="space-y-4">
             <p className="text-lg text-muted-foreground text-center">
-              Having trouble sleeping? Add a sleep timer and darker mode to your playlists.
+              Having trouble sleeping? Bothersome having to keep hitting play and skipping ads? Add a sleep timer, auto-removal and darker mode to your playlists.
             </p>
             <form onSubmit={onSubmit} className="flex w-full items-center gap-3">
               <Input
@@ -56,6 +57,8 @@ export default function HomePage() {
                 className="rounded-md w-full h-auto opacity-40 hover:opacity-100 transition-opacity duration-300"
               />
             </div>
+            {/* Divider + Grid */}
+            <PlaylistGrid />
           </div>
         )}
 

@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { YouTubePlaylistItem, YouTubePlaylistSnippet } from "~/lib/youtube";
 import { env } from "~/env";
+import { useAuth } from "~/components/auth/AuthContext";
 import { extractPlaylistIdFromUrl, fetchPlaylistItems, fetchPlaylistSnippet } from "~/lib/youtube";
 
 export type SleepTimer = {
@@ -53,6 +54,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
     isPaused: false,
     darker: false
   });
+  const auth = useAuth();
 
   const actions: PlaylistActions = useMemo(
     () => ({
@@ -94,10 +96,6 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
         }
       },
       loadByPlaylistId: async (playlistId) => {
-        if (!env.NEXT_PUBLIC_YOUTUBE_API_KEY) {
-          setState((s) => ({ ...s, isLoading: false, error: "Missing YouTube API key." }));
-          return;
-        }
         try {
           setState((s) => ({ ...s, isLoading: true, error: null }));
           // Aggregate items across pages
@@ -105,7 +103,8 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           const aggregated: YouTubePlaylistItem[] = [];
           do {
             const res = await fetchPlaylistItems({
-              apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY!,
+              apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY,
+              accessToken: auth.accessToken,
               playlistId,
               pageToken: nextPageToken,
             });
@@ -114,7 +113,8 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           } while (nextPageToken);
 
           const snippet = await fetchPlaylistSnippet({
-            apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY!,
+            apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY,
+            accessToken: auth.accessToken,
             playlistId,
           });
 

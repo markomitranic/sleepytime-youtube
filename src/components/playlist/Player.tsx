@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { ChevronUp, Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, RefreshCw, Bed } from "lucide-react";
+import { ChevronUp, Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, RefreshCw, Bed, ArrowUp, ArrowDown } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
+import { useAuth } from "~/components/auth/AuthContext";
+import { updatePlaylistItemPosition } from "~/lib/youtube";
 
 // Declare YouTube IFrame API types
 declare global {
@@ -15,6 +17,7 @@ declare global {
 
 export function Player() {
   const playlist = usePlaylist();
+  const auth = useAuth();
   const currentVideoId = playlist.currentVideoId;
   const playerRef = useRef<any>(null);
   const playerInstanceRef = useRef<any>(null);
@@ -55,6 +58,33 @@ export function Player() {
       playlist.setCurrentVideoId(nextVideo.videoId);
     }
   }, [playlist.items, playlist.setCurrentVideoId]);
+
+  const handleMove = useCallback(
+    async (direction: "up" | "down", videoId?: string) => {
+      if (!auth.isAuthenticated || !auth.accessToken) return;
+      if (!videoId || !playlist.playlistId) return;
+      const availableVideos = playlist.items.filter((i) => i.videoId);
+      const currentIndex = availableVideos.findIndex((i) => i.videoId === videoId);
+      if (currentIndex === -1) return;
+      const newIndex = direction === "up" ? Math.max(0, currentIndex - 1) : Math.min(availableVideos.length - 1, currentIndex + 1);
+      if (newIndex === currentIndex) return;
+      const currentItem = availableVideos[currentIndex]!;
+      try {
+        await updatePlaylistItemPosition({
+          accessToken: auth.accessToken!,
+          playlistItemId: currentItem.id,
+          playlistId: playlist.playlistId,
+          videoId: currentItem.videoId!,
+          position: newIndex,
+        });
+        await playlist.loadByPlaylistId(playlist.playlistId);
+      } catch (e) {
+        // swallow
+        console.error(e);
+      }
+    },
+    [auth.isAuthenticated, auth.accessToken, playlist.items, playlist.playlistId, playlist.loadByPlaylistId],
+  );
 
   // Load YouTube IFrame API
   useEffect(() => {
@@ -267,6 +297,32 @@ export function Player() {
                   </div>
                 )}
               </div>
+              {auth.isAuthenticated && item.videoId && (
+                <div className="flex flex-col items-center gap-1">
+                  <button
+                    type="button"
+                    className="h-6 w-6 inline-flex items-center justify-center rounded border text-muted-foreground hover:text-foreground hover:bg-secondary"
+                    aria-label="Move up"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMove("up", item.videoId);
+                    }}
+                  >
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    className="h-6 w-6 inline-flex items-center justify-center rounded border text-muted-foreground hover:text-foreground hover:bg-secondary"
+                    aria-label="Move down"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMove("down", item.videoId);
+                    }}
+                  >
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
             </li>
           );
         })}

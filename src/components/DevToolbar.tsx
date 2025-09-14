@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback } from "react";
-import { Code, List, X, Moon } from "lucide-react";
+import { Code, List, X, Moon, Trash2 } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
+import { useAuth } from "~/components/auth/AuthContext";
+import { deletePlaylistItem } from "~/lib/youtube";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +14,7 @@ import {
 
 export function DevToolbar() {
   const playlist = usePlaylist();
+  const auth = useAuth();
 
   const handleSetTestPlaylist = useCallback(async () => {
     await playlist.loadByPlaylistId("PLPX6lu9kG1JXEdTsF1GSWzZ8qQA_3aUMs");
@@ -24,6 +27,19 @@ export function DevToolbar() {
   const handleSleep = useCallback(() => {
     playlist.triggerSleep(); // Immediately trigger sleep action
   }, [playlist]);
+
+  const handleDeleteCurrent = useCallback(async () => {
+    if (!auth.isAuthenticated || !auth.accessToken) return;
+    if (!playlist.playlistId || !playlist.currentVideoId) return;
+    const currentItem = playlist.items.find((i) => i.videoId === playlist.currentVideoId);
+    if (!currentItem) return;
+    try {
+      await deletePlaylistItem({ accessToken: auth.accessToken, playlistItemId: currentItem.id });
+      await playlist.loadByPlaylistId(playlist.playlistId);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [auth.isAuthenticated, auth.accessToken, playlist.playlistId, playlist.currentVideoId, playlist.items, playlist.loadByPlaylistId]);
 
   // Only show in development
   if (process.env.NODE_ENV !== 'development') {
@@ -43,7 +59,7 @@ export function DevToolbar() {
           </button>
         </DropdownMenuTrigger>
         
-        <DropdownMenuContent align="end" side="top" className="w-32">
+        <DropdownMenuContent align="end" side="top" className="w-40">
           <DropdownMenuItem onClick={handleSetTestPlaylist} className="gap-2">
             <List className="h-4 w-4" />
             List
@@ -58,6 +74,12 @@ export function DevToolbar() {
             <Moon className="h-4 w-4" />
             Sleep
           </DropdownMenuItem>
+          {auth.isAuthenticated && playlist.currentVideoId && (
+            <DropdownMenuItem onClick={handleDeleteCurrent} className="gap-2">
+              <Trash2 className="h-4 w-4" />
+              Remove current
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
