@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronUp, Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, RefreshCw, Bed, ArrowUp, ArrowDown, PlayCircle } from "lucide-react";
+import { ChevronUp, Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, RefreshCw, Bed, ArrowUp, ArrowDown, ChevronsRight } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { useAuth } from "~/components/auth/AuthContext";
@@ -329,7 +329,7 @@ export function Player() {
             }`}
             aria-label={autoplayEnabled ? "Disable autoplay" : "Enable autoplay"}
           >
-            <PlayCircle className="h-4 w-4" />
+            <ChevronsRight className="h-4 w-4" />
           </button>
         </div>
       </div>
