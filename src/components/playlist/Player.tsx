@@ -35,6 +35,9 @@ export function Player() {
   const endedVideoIdRef = useRef<string | undefined>(undefined);
   const [shuffleEnabled, setShuffleEnabled] = useState<boolean>(false);
   const [autoplayEnabled, setAutoplayEnabled] = useState<boolean>(false);
+  // Keep latest values available inside YouTube event handlers without reinitializing the player
+  const autoplayEnabledRef = useRef<boolean>(false);
+  const handleNextRef = useRef<(videoId: string | undefined) => void>(() => {});
 
   const handleBack = useCallback(() => {
     playlist.clear();
@@ -85,6 +88,15 @@ export function Player() {
     handleNext(vid);
     setEndedOpen(false);
   }, [currentVideoId, handleNext]);
+
+  // Keep refs in sync for use inside onStateChange callback
+  useEffect(() => {
+    autoplayEnabledRef.current = autoplayEnabled;
+  }, [autoplayEnabled]);
+
+  useEffect(() => {
+    handleNextRef.current = handleNext;
+  }, [handleNext]);
 
   const handleRemoveAndPlayNext = useCallback(async () => {
     const videoId = endedVideoIdRef.current ?? currentVideoId;
@@ -194,8 +206,8 @@ export function Player() {
               try {
                 if (event?.data === window?.YT?.PlayerState?.ENDED) {
                   endedVideoIdRef.current = currentVideoId;
-                  if (autoplayEnabled) {
-                    handleNext(currentVideoId);
+                  if (autoplayEnabledRef.current) {
+                    handleNextRef.current(currentVideoId);
                   } else {
                     setEndedOpen(true);
                   }
@@ -279,7 +291,9 @@ export function Player() {
           </div>
           <DialogFooter className="gap-2 p-4">
             <Button variant="outline" onClick={handlePlayNextFromDialog}>Play Next</Button>
-            <Button variant="destructive" onClick={handleRemoveAndPlayNext}>Remove &amp; Play Next</Button>
+            {auth.isAuthenticated && (
+              <Button variant="destructive" onClick={handleRemoveAndPlayNext}>Remove &amp; Play Next</Button>
+            )}
             <Button variant="ghost" onClick={() => setEndedOpen(false)}>Dismiss</Button>
           </DialogFooter>
         </DialogContent>
