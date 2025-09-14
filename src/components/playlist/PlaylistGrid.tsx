@@ -54,13 +54,26 @@ export function PlaylistGrid() {
       {/* Divider */}
       <div className="flex items-center gap-4 pt-2">
         <div className="flex-1 h-px bg-border"></div>
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Playlists</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Your Playlists</h3>
+          {auth.isAuthenticated && (
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+              aria-label="Refresh playlists"
+              title="Refresh playlists"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
         <div className="flex-1 h-px bg-border"></div>
       </div>
 
       {/* Auth controls */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">Browse your playlists or continue as guest.</p>
+        <p className="text-sm text-muted-foreground">{auth.isAuthenticated ? "Only you can see these." : "Browse your playlists or continue as guest."}</p>
         {auth.isAuthenticated ? (
           <button
             type="button"
@@ -79,20 +92,6 @@ export function PlaylistGrid() {
           </button>
         )}
       </div>
-
-      {auth.isAuthenticated && (
-        <div className="flex items-center justify-end -mt-2">
-          <button
-            type="button"
-            onClick={handleRefresh}
-            className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
-            aria-label="Refresh playlists"
-            title="Refresh playlists"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
 
       {/* User playlists grid (if authenticated) */}
       {auth.isAuthenticated ? (

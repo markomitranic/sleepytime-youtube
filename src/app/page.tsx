@@ -8,6 +8,7 @@ import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { Player } from "~/components/playlist/Player";
+import { SkeletonPlayer } from "~/components/playlist/SkeletonPlayer";
 import { PlaylistGrid } from "~/components/playlist/PlaylistGrid";
 import { toast } from "sonner";
 
@@ -156,9 +157,9 @@ export default function HomePage() {
 
         {/* Error surfaced via Sonner toast */}
 
-        {playlist.isLoading && <p>Loading playlist…</p>}
+        {playlist.isLoading && <SkeletonPlayer />}
 
-        {playlist.items && playlist.items.length > 0 && <Player />}
+        {playlist.items && playlist.items.length > 0 && !playlist.isLoading && <Player />}
       </div>
     </main>
   );

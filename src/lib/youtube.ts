@@ -11,6 +11,7 @@ export type YouTubePlaylistSnippet = {
   id: string;
   title: string;
   description?: string;
+  itemCount?: number;
 };
 
 export type YouTubeUserPlaylist = {
@@ -61,12 +62,14 @@ export async function fetchPlaylistItems({
   playlistId,
   pageToken,
   maxResults = 50,
+  signal,
 }: {
   apiKey?: string;
   accessToken?: string;
   playlistId: string;
   pageToken?: string;
   maxResults?: number;
+  signal?: AbortSignal;
 }): Promise<{ items: YouTubePlaylistItem[]; nextPageToken?: string }> {
   const url = new URL("https://www.googleapis.com/youtube/v3/playlistItems");
   url.searchParams.set("part", "snippet");
@@ -78,7 +81,7 @@ export async function fetchPlaylistItems({
   const headers: Record<string, string> = {};
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
 
-  const res = await fetch(url.toString(), { headers });
+  const res = await fetch(url.toString(), { headers, signal });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`YouTube API error: ${res.status} ${res.statusText} ${text}`);
@@ -100,26 +103,30 @@ export async function fetchPlaylistSnippet({
   apiKey,
   accessToken,
   playlistId,
+  signal,
 }: {
   apiKey?: string;
   accessToken?: string;
   playlistId: string;
+  signal?: AbortSignal;
 }): Promise<YouTubePlaylistSnippet | null> {
   const url = new URL("https://www.googleapis.com/youtube/v3/playlists");
-  url.searchParams.set("part", "snippet");
+  // Include contentDetails to obtain itemCount for progress UI
+  url.searchParams.set("part", "snippet,contentDetails");
   url.searchParams.set("id", playlistId);
   if (apiKey && !accessToken) url.searchParams.set("key", apiKey);
   const headers: Record<string, string> = {};
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-  const res = await fetch(url.toString(), { headers });
+  const res = await fetch(url.toString(), { headers, signal });
   if (!res.ok) return null;
-  const json = (await res.json()) as { items?: Array<{ id: string; snippet?: { title?: string; description?: string } }> };
+  const json = (await res.json()) as { items?: Array<{ id: string; snippet?: { title?: string; description?: string }; contentDetails?: { itemCount?: number } }> };
   const first = json.items?.[0];
   if (!first) return null;
   return {
     id: first.id,
     title: first.snippet?.title ?? "Untitled playlist",
     description: first.snippet?.description,
+    itemCount: first.contentDetails?.itemCount,
   };
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { YouTubePlaylistItem, YouTubePlaylistSnippet } from "~/lib/youtube";
 import { env } from "~/env";
 import { useAuth } from "~/components/auth/AuthContext";
@@ -20,6 +20,12 @@ export type PlaylistState = {
   items: YouTubePlaylistItem[];
   currentVideoId?: string;
   isLoading?: boolean;
+  loading?: {
+    pagesLoaded: number;
+    totalPages?: number;
+    itemsLoaded: number;
+    totalItems?: number;
+  } | null;
   error?: string | null;
   errorDetails?: string | null;
   sleepTimer: SleepTimer;
@@ -55,6 +61,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
     isPaused: false,
     darker: false
   });
+  const loadAbortRef = useRef<AbortController | null>(null);
   const auth = useAuth();
 
   const actions: PlaylistActions = useMemo(
@@ -84,29 +91,68 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
       },
       loadFromUrl: async (url) => {
         try {
-          setState((s) => ({ ...s, isLoading: true, error: null, errorDetails: null }));
+          setState((s) => ({ ...s, isLoading: true, loading: null, error: null, errorDetails: null }));
           const id = extractPlaylistIdFromUrl(url);
           if (!id) {
-            setState((s) => ({ ...s, isLoading: false, error: "Invalid playlist URL. It must include a \"list\" parameter.", errorDetails: null }));
+            setState((s) => ({ ...s, isLoading: false, loading: null, error: "Invalid playlist URL. It must include a \"list\" parameter.", errorDetails: null }));
             return;
           }
           await actions.loadByPlaylistId(id);
           // Preserve provided URL for context consumers
           setState((s) => ({ ...s, url }));
         } catch (e) {
-          setState((s) => ({ ...s, isLoading: false, error: (e as Error)?.message ?? "Failed to load playlist.", errorDetails: (e as Error)?.message ?? null }));
+          setState((s) => ({ ...s, isLoading: false, loading: null, error: (e as Error)?.message ?? "Failed to load playlist.", errorDetails: (e as Error)?.message ?? null }));
         }
       },
       loadByPlaylistId: async (playlistId) => {
         try {
-          setState((s) => ({ ...s, isLoading: true, error: null, errorDetails: null }));
+          // Abort any existing load
+          if (loadAbortRef.current) {
+            try { loadAbortRef.current.abort(); } catch {}
+          }
+
+          const controller = new AbortController();
+          loadAbortRef.current = controller;
+
+          setState((s) => ({
+            ...s,
+            isLoading: true,
+            error: null,
+            errorDetails: null,
+            playlistId,
+            items: [],
+            loading: { pagesLoaded: 0, itemsLoaded: 0, totalPages: undefined, totalItems: undefined },
+          }));
+          // Snap viewport to top so the player area is visible immediately
+          if (typeof window !== "undefined") {
+            try { window.scrollTo(0, 0); } catch {}
+          }
           // Ensure we have a fresh token if the user is authenticated, to access private playlists
           if ((auth as any).getTokenSilently) {
             try {
               await (auth as any).getTokenSilently();
             } catch {}
           }
-          // Aggregate items across pages
+          // Fetch snippet early for title and total count
+          const snippet = await fetchPlaylistSnippet({
+            apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY,
+            accessToken: auth.accessToken,
+            playlistId,
+            signal: loadAbortRef.current?.signal,
+          });
+
+          setState((s) => ({
+            ...s,
+            snippet: snippet ?? null,
+            loading: {
+              pagesLoaded: 0,
+              itemsLoaded: 0,
+              totalItems: snippet?.itemCount,
+              totalPages: typeof snippet?.itemCount === "number" ? Math.ceil(Math.max(0, snippet.itemCount) / 50) : undefined,
+            },
+          }));
+
+          // Aggregate items across pages, progressively updating state
           let nextPageToken: string | undefined = undefined;
           const aggregated: YouTubePlaylistItem[] = [];
           do {
@@ -115,16 +161,21 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
               accessToken: auth.accessToken,
               playlistId,
               pageToken: nextPageToken,
+              signal: loadAbortRef.current?.signal,
             });
             aggregated.push(...res.items);
             nextPageToken = res.nextPageToken;
+            setState((s) => ({
+              ...s,
+              items: aggregated.slice(),
+              loading: {
+                pagesLoaded: (s.loading?.pagesLoaded ?? 0) + 1,
+                itemsLoaded: aggregated.length,
+                totalItems: s.loading?.totalItems,
+                totalPages: s.loading?.totalPages,
+              },
+            }));
           } while (nextPageToken);
-
-          const snippet = await fetchPlaylistSnippet({
-            apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY,
-            accessToken: auth.accessToken,
-            playlistId,
-          });
 
           // Use ?v from URL if valid as initial selection
           const v = typeof window !== "undefined" ? new URL(window.location.href).searchParams.get("v") ?? undefined : undefined;
@@ -138,16 +189,24 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
             currentVideoId: initialFromParam,
           });
         } catch (e) {
+          if ((e as any)?.name === "AbortError") {
+            // Swallow abort
+            return;
+          }
           const raw = (e as Error)?.message ?? "Failed to load playlist.";
           const lower = raw.toLowerCase();
           const friendly = (lower.includes("playlistnotfound") || lower.includes("cannot be found") || lower.includes("404"))
             ? "Couldn't load this playlist. If it's private, ensure you're signed into the same YouTube account that owns it and try refreshing the playlists."
             : (raw || "Failed to load playlist.");
-          setState((s) => ({ ...s, isLoading: false, error: friendly, errorDetails: raw }));
+          setState((s) => ({ ...s, isLoading: false, loading: null, error: friendly, errorDetails: raw }));
         }
       },
       setCurrentVideoId: (videoId) => setState((s) => ({ ...s, currentVideoId: videoId, isPaused: false })), // Resume when selecting a video
       clear: () => {
+        if (loadAbortRef.current) {
+          try { loadAbortRef.current.abort(); } catch {}
+          loadAbortRef.current = null;
+        }
         setState({ items: [], sleepTimer: { isActive: false, durationMinutes: 30 }, isPaused: false, darker: false });
         if (typeof window !== "undefined") {
           const urlObj = new URL(window.location.href);
