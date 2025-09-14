@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import Image from "next/image";
 import { Input } from "~/components/ui/input";
@@ -8,6 +8,7 @@ import { Button } from "~/components/ui/button";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { Player } from "~/components/playlist/Player";
 import { PlaylistGrid } from "~/components/playlist/PlaylistGrid";
+import { toast } from "sonner";
 
 export default function HomePage() {
   const playlist = usePlaylist();
@@ -18,6 +19,21 @@ export default function HomePage() {
     if (!url) return;
     playlist.loadFromUrl(url);
   });
+
+  useEffect(() => {
+    if (!playlist.error) return;
+    const message = playlist.error;
+    toast.error(message, {
+      action: {
+        label: "Copy error",
+        onClick: () => {
+          try {
+            navigator.clipboard.writeText(message);
+          } catch {}
+        },
+      },
+    });
+  }, [playlist.error]);
 
   return (
     <main className="flex min-h-screen items-start justify-center px-[10px] py-6">
@@ -62,7 +78,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {playlist.error && <p className="text-sm text-destructive">{playlist.error}</p>}
+        {/* Error surfaced via Sonner toast */}
 
         {playlist.isLoading && <p>Loading playlist…</p>}
 

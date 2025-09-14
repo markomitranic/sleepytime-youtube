@@ -13,6 +13,7 @@ export type AuthState = {
 export type AuthActions = {
   signIn: () => Promise<void>;
   signOut: () => void;
+  getTokenSilently: () => Promise<boolean>;
 };
 
 const AuthContext = createContext<(AuthState & AuthActions) | null>(null);
@@ -120,7 +121,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, [state.isAuthenticated, state.accessToken]);
 
-  const value = useMemo(() => ({ ...state, signIn, signOut }), [state, signIn, signOut]);
+  // Provide a helper to request token without prompting; returns true if token obtained
+  const getTokenSilently = useCallback(async (): Promise<boolean> => {
+    if (!tokenClientRef.current) return false;
+    const hasValid = Boolean(state.accessToken);
+    if (hasValid) return true;
+    return await new Promise<boolean>((resolve) => {
+      try {
+        const original = tokenClientRef.current.callback;
+        tokenClientRef.current.callback = (resp: any) => {
+          try {
+            if (resp?.access_token) {
+              setState((s) => ({ ...s, isAuthenticated: true, accessToken: resp.access_token as string }));
+              resolve(true);
+            } else {
+              resolve(false);
+            }
+          } finally {
+            tokenClientRef.current.callback = original;
+          }
+        };
+        tokenClientRef.current.requestAccessToken({ prompt: "" });
+      } catch {
+        resolve(false);
+      }
+    });
+  }, [state.accessToken]);
+
+  const value = useMemo(() => ({ ...state, signIn, signOut, getTokenSilently }), [state, signIn, signOut, getTokenSilently]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

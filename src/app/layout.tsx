@@ -4,6 +4,7 @@ import "~/styles/globals.css";
 import { AppProviders } from "./providers";
 import { DevToolbar } from "~/components/DevToolbar";
 import { AuroraBackground } from "./AuroraBackground";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "Sleepytime-YouTube",
@@ -24,6 +25,7 @@ export default function RootLayout({
           <AuroraBackground />
           {children}
           <DevToolbar />
+          <Toaster richColors position="bottom-center" closeButton />
         </AppProviders>
       </body>
     </html>

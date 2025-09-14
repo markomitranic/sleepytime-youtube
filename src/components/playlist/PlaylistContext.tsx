@@ -98,6 +98,12 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
       loadByPlaylistId: async (playlistId) => {
         try {
           setState((s) => ({ ...s, isLoading: true, error: null }));
+          // Ensure we have a fresh token if the user is authenticated, to access private playlists
+          if (auth.isAuthenticated && (auth as any).getTokenSilently) {
+            try {
+              await (auth as any).getTokenSilently();
+            } catch {}
+          }
           // Aggregate items across pages
           let nextPageToken: string | undefined = undefined;
           const aggregated: YouTubePlaylistItem[] = [];
@@ -247,14 +253,15 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [state.sleepTimer.isActive, state.sleepTimer.startTime]);
 
-  // Initialize from URL if ?list= is present
+  // Initialize from URL if ?list= is present (wait until auth is ready for private access)
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!auth.isReady) return;
     const urlObj = new URL(window.location.href);
     const list = urlObj.searchParams.get("list");
     if (!list) return;
     actions.loadByPlaylistId(list);
-  }, []);
+  }, [auth.isReady]);
 
   return <PlaylistContext.Provider value={value}>{children}</PlaylistContext.Provider>;
 }

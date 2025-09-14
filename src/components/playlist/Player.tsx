@@ -6,6 +6,7 @@ import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { useAuth } from "~/components/auth/AuthContext";
 import { updatePlaylistItemPosition } from "~/lib/youtube";
+import { toast } from "sonner";
 
 // Declare YouTube IFrame API types
 declare global {
@@ -263,7 +264,22 @@ export function Player() {
               className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 hover:bg-secondary ${
                 isCurrent ? "bg-secondary/60" : ""
               }`}
-              onClick={() => item.videoId && playlist.setCurrentVideoId(item.videoId)}
+              onClick={() => {
+                if (!item.videoId) {
+                  toast.error("This video is unavailable (private or removed)", {
+                    action: {
+                      label: "Copy error",
+                      onClick: () => {
+                        try {
+                          navigator.clipboard.writeText("This video is unavailable (private or removed)");
+                        } catch {}
+                      },
+                    },
+                  });
+                  return;
+                }
+                playlist.setCurrentVideoId(item.videoId);
+              }}
             >
               {item.thumbnailUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
