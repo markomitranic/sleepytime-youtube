@@ -348,6 +348,18 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
     window.history.replaceState(null, "", href);
   }, [state.playlistId, state.currentVideoId]);
 
+  // Sync document title to reflect playlist title when a playlist is opened
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const baseTitle = "Sleepytime-YouTube";
+    const playlistTitle = state.snippet?.title?.trim();
+    if (state.playlistId && playlistTitle) {
+      document.title = `${baseTitle} - ${playlistTitle}`;
+    } else {
+      document.title = baseTitle;
+    }
+  }, [state.playlistId, state.snippet?.title]);
+
   // Sync playlist id to URL (?list=)
   useEffect(() => {
     if (typeof window === "undefined") return;
