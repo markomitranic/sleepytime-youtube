@@ -187,6 +187,81 @@ export async function fetchUserPlaylists({ accessToken }: { accessToken: string 
   return all;
 }
 
+// Fetch metadata for specific playlist IDs (public/unlisted). If an accessToken is provided
+// and the user has access, it may also return private metadata. Intended for built-in IDs.
+export async function fetchPlaylistsByIds({
+  apiKey,
+  accessToken,
+  playlistIds,
+}: {
+  apiKey?: string;
+  accessToken?: string;
+  playlistIds: string[];
+}): Promise<YouTubeUserPlaylist[]> {
+  if (!playlistIds.length) return [];
+
+  // YouTube API allows up to 50 ids per request
+  const chunks: string[][] = [];
+  for (let i = 0; i < playlistIds.length; i += 50) {
+    chunks.push(playlistIds.slice(i, i + 50));
+  }
+
+  const headers: Record<string, string> = {};
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+
+  const results: YouTubeUserPlaylist[] = [];
+  for (const ids of chunks) {
+    const url = new URL("https://www.googleapis.com/youtube/v3/playlists");
+    url.searchParams.set("part", "snippet,contentDetails,status");
+    url.searchParams.set("id", ids.join(","));
+    if (apiKey && !accessToken) url.searchParams.set("key", apiKey);
+
+    const res = await fetch(url.toString(), { headers });
+    if (!res.ok) {
+      // Skip this chunk on error but continue processing others
+      continue;
+    }
+    const json = (await res.json()) as {
+      items?: Array<{
+        id?: string;
+        snippet?: {
+          title?: string;
+          thumbnails?: { default?: { url?: string }; medium?: { url?: string }; high?: { url?: string } };
+        };
+        status?: { privacyStatus?: string };
+        contentDetails?: { itemCount?: number };
+      }>;
+    };
+
+    const mapped: YouTubeUserPlaylist[] = (json.items ?? [])
+      .filter((p) => Boolean(p.id))
+      .map((p) => {
+        const title = p.snippet?.title ?? "Untitled";
+        const thumb = p.snippet?.thumbnails?.high?.url || p.snippet?.thumbnails?.medium?.url || p.snippet?.thumbnails?.default?.url;
+        return {
+          id: p.id as string,
+          title,
+          thumbnailUrl: thumb,
+          itemCount: p.contentDetails?.itemCount,
+          isPrivate: p.status?.privacyStatus === "private",
+          privacyStatus: (
+            p.status?.privacyStatus === "public" ||
+            p.status?.privacyStatus === "unlisted" ||
+            p.status?.privacyStatus === "private"
+          )
+            ? (p.status?.privacyStatus as "public" | "unlisted" | "private")
+            : undefined,
+        };
+      });
+    results.push(...mapped);
+  }
+
+  // Preserve input order
+  const order = new Map(playlistIds.map((id, idx) => [id, idx] as const));
+  results.sort((a, b) => (order.get(a.id)! - order.get(b.id)!));
+  return results;
+}
+
 export async function deletePlaylistItem({ accessToken, playlistItemId }: { accessToken: string; playlistItemId: string }): Promise<void> {
   const url = new URL("https://www.googleapis.com/youtube/v3/playlistItems");
   url.searchParams.set("id", playlistItemId);

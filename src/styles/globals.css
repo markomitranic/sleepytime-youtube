@@ -210,3 +210,21 @@
     }
   }
 }
+
+/* Breathing green LED for built-in playlist badges */
+@layer utilities {
+  @keyframes led-breathe {
+    0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55); opacity: 0.95; }
+    50% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); opacity: 0.8; }
+    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55); opacity: 0.95; }
+  }
+
+  .led-green {
+    display: inline-block;
+    width: 0.5rem; /* 8px */
+    height: 0.5rem; /* 8px */
+    border-radius: 9999px;
+    background-color: #22c55e; /* Tailwind green-500 */
+    animation: led-breathe 2.2s ease-in-out infinite;
+  }
+}
