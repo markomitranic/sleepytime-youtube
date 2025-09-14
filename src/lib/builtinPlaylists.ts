@@ -34,6 +34,17 @@ export const BUILTIN_PLAYLISTS: BuiltinPlaylist[] = [
     title: "Tolkien Lore",
     // thumbnail: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
   },
+  {
+    id: "PL1jwNlafHh-A5G-VmMdRarvch-Kc0CqM7",
+    shortLabel: "Cabin DIY",
+    title: "Cabin Life",
+    thumbnail: "/rosie.avif",
+  },
+  {
+    id: "PLsPUh22kYmNCHG8KwkgA6-R824qt10UJP",
+    shortLabel: "Spacetime",
+    title: "Explore the outer reaches of space",
+  },
 ];
 
 export const BUILTIN_PLAYLIST_IDS = BUILTIN_PLAYLISTS.map(

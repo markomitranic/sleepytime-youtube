@@ -168,7 +168,7 @@ export function PlaylistGrid() {
       {/* Separator for built-in */}
       <div id="try-it-out" className="flex items-center gap-4 pt-4">
         <div className="flex-1 h-px bg-border"></div>
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Try it out!</h3>
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Need some inspiration?</h3>
         <div className="flex-1 h-px bg-border"></div>
       </div>
 
