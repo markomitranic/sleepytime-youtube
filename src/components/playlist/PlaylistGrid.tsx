@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { useAuth } from "~/components/auth/AuthContext";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { Badge } from "~/components/ui/badge";
-import { Lock, RefreshCw } from "lucide-react";
+import { Lock, RefreshCw, Globe, Link as LinkIcon } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchUserPlaylists } from "~/lib/youtube";
 
@@ -92,16 +92,30 @@ export function PlaylistGrid() {
                 <div className="aspect-square w-full overflow-hidden rounded-md border bg-secondary/40 relative">
                   {p.thumbnailUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.thumbnailUrl} alt="thumbnail" className="h-full w-full object-cover group-hover:opacity-90 transition-opacity" />
+                    <img src={p.thumbnailUrl} alt="thumbnail" className="h-full w-full object-cover scale-[1.34] origin-center group-hover:opacity-90 transition-opacity" />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">No thumbnail</div>
                   )}
-                  {p.isPrivate && (
+                  {p.privacyStatus && (
                     <div className="absolute top-2 right-2">
-                      <Badge variant="secondary" className="gap-1 px-2 py-0.5 h-5">
-                        <Lock className="h-3.5 w-3.5" />
-                        Private
-                      </Badge>
+                      {p.privacyStatus === "private" && (
+                        <Badge variant="secondary" className="gap-1 px-2 py-0.5 h-5">
+                          <Lock className="h-3.5 w-3.5" />
+                          Private
+                        </Badge>
+                      )}
+                      {p.privacyStatus === "public" && (
+                        <Badge variant="secondary" className="gap-1 px-2 py-0.5 h-5">
+                          <Globe className="h-3.5 w-3.5" />
+                          Public
+                        </Badge>
+                      )}
+                      {p.privacyStatus === "unlisted" && (
+                        <Badge variant="secondary" className="gap-1 px-2 py-0.5 h-5">
+                          <LinkIcon className="h-3.5 w-3.5" />
+                          Unlisted
+                        </Badge>
+                      )}
                     </div>
                   )}
                 </div>

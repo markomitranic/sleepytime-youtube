@@ -19,6 +19,7 @@ export type YouTubeUserPlaylist = {
   thumbnailUrl?: string;
   itemCount?: number;
   isPrivate?: boolean;
+  privacyStatus?: "public" | "unlisted" | "private";
 };
 
 export function isUnsupportedUserPlaylistId(id: string): boolean {
@@ -169,6 +170,13 @@ export async function fetchUserPlaylists({ accessToken }: { accessToken: string 
           thumbnailUrl: thumb,
           itemCount: p.contentDetails?.itemCount,
           isPrivate: p.status?.privacyStatus === "private",
+          privacyStatus: (
+            p.status?.privacyStatus === "public" ||
+            p.status?.privacyStatus === "unlisted" ||
+            p.status?.privacyStatus === "private"
+          )
+            ? (p.status?.privacyStatus as "public" | "unlisted" | "private")
+            : undefined,
         };
       })
       .filter((p) => !isUnsupportedUserPlaylistId(p.id));
