@@ -28,6 +28,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const tokenClientRef = useRef<any>(null);
   const STORAGE_ACCESS_TOKEN = "auth.accessToken";
+  // Backoff for silent token requests (in-memory only)
+  const silentFailuresRef = useRef<number>(0);
+  const silentBackoffUntilRef = useRef<number>(0);
+
+  function computeBackoffMs(failures: number): number {
+    // 0 -> 0s, 1 -> 5s, 2 -> 30s, 3 -> 120s, 4+ -> 600s
+    const schedule = [0, 5000, 30000, 120000, 600000];
+    const idx = Math.max(0, Math.min(failures, schedule.length - 1));
+    const base = schedule[idx] ?? 0;
+    const jitter = base * (0.8 + Math.random() * 0.4);
+    return Math.round(jitter);
+  }
 
   // Load Google Identity Services script
   useEffect(() => {
@@ -59,7 +71,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) return;
     if (tokenClientRef.current) return;
 
-    // @ts-expect-error - gsi attaches to window
     const google = (window as any).google;
     if (!google?.accounts?.oauth2) return;
 
@@ -88,7 +99,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(() => {
     try {
-      // @ts-expect-error - gsi attaches to window
       const google = (window as any).google;
       if (google?.accounts?.oauth2 && state.accessToken) {
         google.accounts.oauth2.revoke(state.accessToken, () => {
@@ -100,6 +110,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         localStorage.removeItem(STORAGE_ACCESS_TOKEN);
       } catch {}
+      // reset backoff on sign out
+      silentFailuresRef.current = 0;
+      silentBackoffUntilRef.current = 0;
     }
   }, [state.accessToken]);
 
@@ -126,6 +139,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!tokenClientRef.current) return false;
     const hasValid = Boolean(state.accessToken);
     if (hasValid) return true;
+    // Respect backoff window
+    const now = Date.now();
+    if (silentBackoffUntilRef.current > now) {
+      return false;
+    }
     return await new Promise<boolean>((resolve) => {
       try {
         const original = tokenClientRef.current.callback;
@@ -133,8 +151,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             if (resp?.access_token) {
               setState((s) => ({ ...s, isAuthenticated: true, accessToken: resp.access_token as string }));
+              // success resets backoff
+              silentFailuresRef.current = 0;
+              silentBackoffUntilRef.current = 0;
               resolve(true);
             } else {
+              // failure increments backoff
+              silentFailuresRef.current = silentFailuresRef.current + 1;
+              const delay = computeBackoffMs(silentFailuresRef.current);
+              silentBackoffUntilRef.current = Date.now() + delay;
               resolve(false);
             }
           } finally {
@@ -143,6 +168,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         tokenClientRef.current.requestAccessToken({ prompt: "" });
       } catch {
+        // failure increments backoff
+        silentFailuresRef.current = silentFailuresRef.current + 1;
+        const delay = computeBackoffMs(silentFailuresRef.current);
+        silentBackoffUntilRef.current = Date.now() + delay;
         resolve(false);
       }
     });
