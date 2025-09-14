@@ -64,27 +64,36 @@ export function Player() {
     async (direction: "up" | "down", videoId?: string) => {
       if (!auth.isAuthenticated || !auth.accessToken) return;
       if (!videoId || !playlist.playlistId) return;
+
+      // Optimistic UI update
+      playlist.reorderItem(videoId, direction);
+
+      // Compute target position against current available list to call API
       const availableVideos = playlist.items.filter((i) => i.videoId);
       const currentIndex = availableVideos.findIndex((i) => i.videoId === videoId);
       if (currentIndex === -1) return;
-      const newIndex = direction === "up" ? Math.max(0, currentIndex - 1) : Math.min(availableVideos.length - 1, currentIndex + 1);
-      if (newIndex === currentIndex) return;
+      const neighborIndex = direction === "up"
+        ? Math.max(0, currentIndex - 1)
+        : Math.min(availableVideos.length - 1, currentIndex + 1);
       const currentItem = availableVideos[currentIndex]!;
+
       try {
         await updatePlaylistItemPosition({
           accessToken: auth.accessToken!,
           playlistItemId: currentItem.id,
           playlistId: playlist.playlistId,
           videoId: currentItem.videoId!,
-          position: newIndex,
+          position: neighborIndex,
         });
-        await playlist.loadByPlaylistId(playlist.playlistId);
+        // Background refresh after slight delay to let YouTube apply the change
+        await playlist.refreshItemsOnce({ delayMs: 900 });
       } catch (e) {
-        // swallow
         console.error(e);
+        // Soft revert by reloading items once
+        await playlist.refreshItemsOnce({ delayMs: 900 });
       }
     },
-    [auth.isAuthenticated, auth.accessToken, playlist.items, playlist.playlistId, playlist.loadByPlaylistId],
+    [auth.isAuthenticated, auth.accessToken, playlist.items, playlist.playlistId, playlist.refreshItemsOnce, playlist.reorderItem],
   );
 
   // Load YouTube IFrame API

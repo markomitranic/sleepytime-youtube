@@ -50,6 +50,8 @@ export type PlaylistActions = {
   triggerSleep: () => void;
   toggleDarker: () => void;
   reloadPlaylist: () => Promise<void>;
+  reorderItem: (videoId: string, direction: "up" | "down") => void;
+  refreshItemsOnce: (opts?: { delayMs?: number }) => Promise<void>;
 };
 
 const PlaylistContext = createContext<(PlaylistState & PlaylistActions) | null>(null);
@@ -249,6 +251,54 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
       reloadPlaylist: async () => {
         if (typeof window !== 'undefined') {
           window.location.reload();
+        }
+      },
+      reorderItem: (videoId, direction) => {
+        setState((prev) => {
+          const items = prev.items.slice();
+          const currentIndex = items.findIndex((i) => i.videoId === videoId);
+          if (currentIndex === -1) return prev;
+          // Find the nearest neighbor in the requested direction that has a videoId
+          let targetIndex = currentIndex;
+          if (direction === "up") {
+            for (let i = currentIndex - 1; i >= 0; i--) {
+              if (items[i]?.videoId) { targetIndex = i; break; }
+            }
+          } else {
+            for (let i = currentIndex + 1; i < items.length; i++) {
+              if (items[i]?.videoId) { targetIndex = i; break; }
+            }
+          }
+          if (targetIndex === currentIndex) return prev;
+          const updated = items.slice();
+          const removed = updated.splice(currentIndex, 1);
+          const moved = removed[0];
+          if (!moved) return prev;
+          updated.splice(targetIndex, 0, moved);
+          return { ...prev, items: updated };
+        });
+      },
+      refreshItemsOnce: async ({ delayMs = 700 }: { delayMs?: number } = {}) => {
+        // Re-fetch items once after a small delay to let YouTube apply the reorder
+        const playlistId = state.playlistId;
+        if (!playlistId) return;
+        await new Promise((r) => setTimeout(r, Math.max(0, delayMs)));
+        try {
+          const aggregated: YouTubePlaylistItem[] = [];
+          let nextPageToken: string | undefined = undefined;
+          do {
+            const res = await fetchPlaylistItems({
+              apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY,
+              accessToken: auth.accessToken,
+              playlistId,
+              pageToken: nextPageToken,
+            });
+            aggregated.push(...res.items);
+            nextPageToken = res.nextPageToken;
+          } while (nextPageToken);
+          setState((s) => ({ ...s, items: aggregated }));
+        } catch {
+          // ignore
         }
       },
     }),
