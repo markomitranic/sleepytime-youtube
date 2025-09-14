@@ -24,7 +24,8 @@ export type YouTubeUserPlaylist = {
 export function isUnsupportedUserPlaylistId(id: string): boolean {
   // Exclude special/system playlists that commonly 404/are unsupported via Data API playlistItems
   // LL*: Liked videos, WL*: Watch later, HL*: History, RD*: Mix/auto mixes
-  return /^(LL|WL|HL|RD)/.test(id);
+  // FL*: Favorites (legacy, often 404/private)
+  return /^(LL|WL|HL|RD|FL)/.test(id);
 }
 
 export function extractPlaylistIdFromUrl(input: string): string | null {
@@ -157,17 +158,20 @@ export async function fetchUserPlaylists({ accessToken }: { accessToken: string 
     });
     if (!res.ok) throw new Error(`YouTube API error: ${res.status} ${res.statusText}`);
     const json = (await res.json()) as YouTubePlaylistsListResponse;
-    const mapped: YouTubeUserPlaylist[] = (json.items ?? []).map((p) => {
-      const title = p.snippet?.title ?? "Untitled";
-      const thumb = p.snippet?.thumbnails?.high?.url || p.snippet?.thumbnails?.medium?.url || p.snippet?.thumbnails?.default?.url;
-      return {
-        id: p.id ?? title,
-        title,
-        thumbnailUrl: thumb,
-        itemCount: p.contentDetails?.itemCount,
-        isPrivate: p.status?.privacyStatus === "private",
-      };
-    }).filter((p) => !isUnsupportedUserPlaylistId(p.id));
+    const mapped: YouTubeUserPlaylist[] = (json.items ?? [])
+      .filter((p) => Boolean(p.id))
+      .map((p) => {
+        const title = p.snippet?.title ?? "Untitled";
+        const thumb = p.snippet?.thumbnails?.high?.url || p.snippet?.thumbnails?.medium?.url || p.snippet?.thumbnails?.default?.url;
+        return {
+          id: p.id as string,
+          title,
+          thumbnailUrl: thumb,
+          itemCount: p.contentDetails?.itemCount,
+          isPrivate: p.status?.privacyStatus === "private",
+        };
+      })
+      .filter((p) => !isUnsupportedUserPlaylistId(p.id));
     all.push(...mapped);
     pageToken = json.nextPageToken;
   } while (pageToken);

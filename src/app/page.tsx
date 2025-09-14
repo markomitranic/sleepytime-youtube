@@ -23,17 +23,19 @@ export default function HomePage() {
   useEffect(() => {
     if (!playlist.error) return;
     const message = playlist.error;
+    const technical = playlist.errorDetails ?? "";
+    const payload = technical && technical !== message ? `${message}\n\nTechnical details:\n${technical}` : message;
     toast.error(message, {
       action: {
         label: "Copy error",
         onClick: () => {
           try {
-            navigator.clipboard.writeText(message);
+            navigator.clipboard.writeText(payload);
           } catch {}
         },
       },
     });
-  }, [playlist.error]);
+  }, [playlist.error, playlist.errorDetails]);
 
   return (
     <main className="flex min-h-screen items-start justify-center px-[10px] py-6">

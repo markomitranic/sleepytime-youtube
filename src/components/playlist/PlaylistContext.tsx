@@ -21,6 +21,7 @@ export type PlaylistState = {
   currentVideoId?: string;
   isLoading?: boolean;
   error?: string | null;
+  errorDetails?: string | null;
   sleepTimer: SleepTimer;
   isPaused?: boolean; // New field to track if video is paused by sleep
   darker?: boolean; // New field to track if aurora animation should be hidden
@@ -75,6 +76,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
             currentVideoId: provided ?? preserved ?? fallback,
             isLoading: false,
             error: null,
+            errorDetails: null,
             sleepTimer: prev.sleepTimer, // Preserve existing sleep timer state
             darker: prev.darker, // Preserve existing darker state
           };
@@ -82,24 +84,24 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
       },
       loadFromUrl: async (url) => {
         try {
-          setState((s) => ({ ...s, isLoading: true, error: null }));
+          setState((s) => ({ ...s, isLoading: true, error: null, errorDetails: null }));
           const id = extractPlaylistIdFromUrl(url);
           if (!id) {
-            setState((s) => ({ ...s, isLoading: false, error: "Invalid playlist URL. It must include a \"list\" parameter." }));
+            setState((s) => ({ ...s, isLoading: false, error: "Invalid playlist URL. It must include a \"list\" parameter.", errorDetails: null }));
             return;
           }
           await actions.loadByPlaylistId(id);
           // Preserve provided URL for context consumers
           setState((s) => ({ ...s, url }));
         } catch (e) {
-          setState((s) => ({ ...s, isLoading: false, error: (e as Error)?.message ?? "Failed to load playlist." }));
+          setState((s) => ({ ...s, isLoading: false, error: (e as Error)?.message ?? "Failed to load playlist.", errorDetails: (e as Error)?.message ?? null }));
         }
       },
       loadByPlaylistId: async (playlistId) => {
         try {
-          setState((s) => ({ ...s, isLoading: true, error: null }));
+          setState((s) => ({ ...s, isLoading: true, error: null, errorDetails: null }));
           // Ensure we have a fresh token if the user is authenticated, to access private playlists
-          if (auth.isAuthenticated && (auth as any).getTokenSilently) {
+          if ((auth as any).getTokenSilently) {
             try {
               await (auth as any).getTokenSilently();
             } catch {}
@@ -136,7 +138,12 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
             currentVideoId: initialFromParam,
           });
         } catch (e) {
-          setState((s) => ({ ...s, isLoading: false, error: (e as Error)?.message ?? "Failed to load playlist." }));
+          const raw = (e as Error)?.message ?? "Failed to load playlist.";
+          const lower = raw.toLowerCase();
+          const friendly = (lower.includes("playlistnotfound") || lower.includes("cannot be found") || lower.includes("404"))
+            ? "Couldn't load this playlist. If it's private, ensure you're signed into the same YouTube account that owns it and try refreshing the playlists."
+            : (raw || "Failed to load playlist.");
+          setState((s) => ({ ...s, isLoading: false, error: friendly, errorDetails: raw }));
         }
       },
       setCurrentVideoId: (videoId) => setState((s) => ({ ...s, currentVideoId: videoId, isPaused: false })), // Resume when selecting a video
@@ -186,7 +193,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
         }
       },
     }),
-    [],
+    [auth.isAuthenticated, auth.accessToken],
   );
 
   const value = useMemo(() => ({ ...state, ...actions }), [state, actions]);
