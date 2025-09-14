@@ -80,8 +80,19 @@ export async function fetchPlaylistItems({
 
   const headers: Record<string, string> = {};
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-
-  const res = await fetch(url.toString(), { headers, signal });
+  
+  // First attempt (possibly authorized)
+  let res = await fetch(url.toString(), { headers, signal });
+  // If unauthorized and we have an API key, retry once WITHOUT Authorization header
+  if (res.status === 401 && apiKey) {
+    try {
+      const retryUrl = new URL(url.toString());
+      retryUrl.searchParams.set("key", apiKey);
+      res = await fetch(retryUrl.toString(), { signal });
+    } catch {
+      // fall through to error handling
+    }
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`YouTube API error: ${res.status} ${res.statusText} ${text}`);
@@ -117,7 +128,14 @@ export async function fetchPlaylistSnippet({
   if (apiKey && !accessToken) url.searchParams.set("key", apiKey);
   const headers: Record<string, string> = {};
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-  const res = await fetch(url.toString(), { headers, signal });
+  let res = await fetch(url.toString(), { headers, signal });
+  if (res.status === 401 && apiKey) {
+    try {
+      const retryUrl = new URL(url.toString());
+      retryUrl.searchParams.set("key", apiKey);
+      res = await fetch(retryUrl.toString(), { signal });
+    } catch {}
+  }
   if (!res.ok) return null;
   const json = (await res.json()) as { items?: Array<{ id: string; snippet?: { title?: string; description?: string }; contentDetails?: { itemCount?: number } }> };
   const first = json.items?.[0];
@@ -223,7 +241,14 @@ export async function fetchPlaylistsByIds({
     url.searchParams.set("id", ids.join(","));
     if (apiKey && !accessToken) url.searchParams.set("key", apiKey);
 
-    const res = await fetch(url.toString(), { headers });
+    let res = await fetch(url.toString(), { headers });
+    if (res.status === 401 && apiKey) {
+      try {
+        const retryUrl = new URL(url.toString());
+        retryUrl.searchParams.set("key", apiKey);
+        res = await fetch(retryUrl.toString());
+      } catch {}
+    }
     if (!res.ok) {
       // Skip this chunk on error but continue processing others
       continue;

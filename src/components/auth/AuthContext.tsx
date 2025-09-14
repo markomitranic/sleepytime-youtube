@@ -28,9 +28,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const tokenClientRef = useRef<any>(null);
   const STORAGE_ACCESS_TOKEN = "auth.accessToken";
+  const STORAGE_ACCESS_TOKEN_AT = "auth.accessTokenAt";
+  const TOKEN_REFRESH_WINDOW_MS = 50 * 60 * 1000; // proactively refresh after ~50 minutes
   // Backoff for silent token requests (in-memory only)
   const silentFailuresRef = useRef<number>(0);
   const silentBackoffUntilRef = useRef<number>(0);
+  const tokenObtainedAtRef = useRef<number>(0);
 
   function computeBackoffMs(failures: number): number {
     // 0 -> 0s, 1 -> 5s, 2 -> 30s, 3 -> 120s, 4+ -> 600s
@@ -109,10 +112,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setState({ isReady: true, isAuthenticated: false, accessToken: undefined, error: null });
       try {
         localStorage.removeItem(STORAGE_ACCESS_TOKEN);
+        localStorage.removeItem(STORAGE_ACCESS_TOKEN_AT);
       } catch {}
       // reset backoff on sign out
       silentFailuresRef.current = 0;
       silentBackoffUntilRef.current = 0;
+      tokenObtainedAtRef.current = 0;
     }
   }, [state.accessToken]);
 
@@ -121,6 +126,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined") return;
     try {
       const token = localStorage.getItem(STORAGE_ACCESS_TOKEN);
+      const atRaw = localStorage.getItem(STORAGE_ACCESS_TOKEN_AT);
+      const at = atRaw ? Number(atRaw) : 0;
+      tokenObtainedAtRef.current = Number.isFinite(at) ? at : 0;
       if (token) setState((s) => ({ ...s, isAuthenticated: true, accessToken: token }));
     } catch {}
   }, []);
@@ -131,16 +139,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!state.isAuthenticated || !state.accessToken) return;
     try {
       localStorage.setItem(STORAGE_ACCESS_TOKEN, state.accessToken);
+      const now = Date.now();
+      tokenObtainedAtRef.current = now;
+      localStorage.setItem(STORAGE_ACCESS_TOKEN_AT, String(now));
     } catch {}
   }, [state.isAuthenticated, state.accessToken]);
 
   // Provide a helper to request token without prompting; returns true if token obtained
   const getTokenSilently = useCallback(async (): Promise<boolean> => {
     if (!tokenClientRef.current) return false;
-    const hasValid = Boolean(state.accessToken);
-    if (hasValid) return true;
-    // Respect backoff window
     const now = Date.now();
+    const hasToken = Boolean(state.accessToken);
+    const tokenAgeMs = now - (tokenObtainedAtRef.current || 0);
+    const tokenIsFresh = hasToken && tokenAgeMs < TOKEN_REFRESH_WINDOW_MS;
+    if (tokenIsFresh) return true;
+    // Respect backoff window
     if (silentBackoffUntilRef.current > now) {
       return false;
     }
@@ -160,6 +173,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               silentFailuresRef.current = silentFailuresRef.current + 1;
               const delay = computeBackoffMs(silentFailuresRef.current);
               silentBackoffUntilRef.current = Date.now() + delay;
+              // Clear stale token so public API key paths work
+              setState((s) => ({ ...s, isAuthenticated: false, accessToken: undefined }));
+              try {
+                localStorage.removeItem(STORAGE_ACCESS_TOKEN);
+                localStorage.removeItem(STORAGE_ACCESS_TOKEN_AT);
+              } catch {}
               resolve(false);
             }
           } finally {
@@ -172,6 +191,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         silentFailuresRef.current = silentFailuresRef.current + 1;
         const delay = computeBackoffMs(silentFailuresRef.current);
         silentBackoffUntilRef.current = Date.now() + delay;
+        // Clear stale token so public API key paths work
+        setState((s) => ({ ...s, isAuthenticated: false, accessToken: undefined }));
+        try {
+          localStorage.removeItem(STORAGE_ACCESS_TOKEN);
+          localStorage.removeItem(STORAGE_ACCESS_TOKEN_AT);
+        } catch {}
         resolve(false);
       }
     });

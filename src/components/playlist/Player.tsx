@@ -1,12 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
-import { ChevronUp, Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, RefreshCw, Bed, ArrowUp, ArrowDown } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronUp, Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, RefreshCw, Bed, ArrowUp, ArrowDown, PlayCircle } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { useAuth } from "~/components/auth/AuthContext";
-import { updatePlaylistItemPosition } from "~/lib/youtube";
+import { deletePlaylistItem, updatePlaylistItemPosition } from "~/lib/youtube";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "~/components/ui/dialog";
+import { Button } from "~/components/ui/button";
 
 // Declare YouTube IFrame API types
 declare global {
@@ -22,6 +31,10 @@ export function Player() {
   const currentVideoId = playlist.currentVideoId;
   const playerRef = useRef<any>(null);
   const playerInstanceRef = useRef<any>(null);
+  const [endedOpen, setEndedOpen] = useState<boolean>(false);
+  const endedVideoIdRef = useRef<string | undefined>(undefined);
+  const [shuffleEnabled, setShuffleEnabled] = useState<boolean>(false);
+  const [autoplayEnabled, setAutoplayEnabled] = useState<boolean>(false);
 
   const handleBack = useCallback(() => {
     playlist.clear();
@@ -44,21 +57,65 @@ export function Player() {
     }
   }, [playlist.items, playlist.setCurrentVideoId]);
 
-  const handleNext = useCallback((videoId: string | undefined) => {
-    if (!videoId) return;
-    
+  const getNextVideoId = useCallback((fromVideoId: string | undefined): string | undefined => {
+    if (!fromVideoId) return undefined;
     const availableVideos = playlist.items.filter(item => item.videoId);
-    const currentIndex = availableVideos.findIndex(item => item.videoId === videoId);
-    
-    if (currentIndex === -1) return;
-    
-    const nextIndex = (currentIndex + 1) % availableVideos.length;
-    const nextVideo = availableVideos[nextIndex];
-    
-    if (nextVideo?.videoId) {
-      playlist.setCurrentVideoId(nextVideo.videoId);
+    if (availableVideos.length === 0) return undefined;
+
+    if (shuffleEnabled) {
+      const otherVideos = availableVideos.filter(item => item.videoId !== fromVideoId);
+      if (otherVideos.length === 0) return fromVideoId;
+      const randomIndex = Math.floor(Math.random() * otherVideos.length);
+      return otherVideos[randomIndex]?.videoId;
     }
-  }, [playlist.items, playlist.setCurrentVideoId]);
+
+    const currentIndex = availableVideos.findIndex(item => item.videoId === fromVideoId);
+    if (currentIndex === -1) return undefined;
+    const nextIndex = (currentIndex + 1) % availableVideos.length;
+    return availableVideos[nextIndex]?.videoId;
+  }, [playlist.items, shuffleEnabled]);
+
+  const handleNext = useCallback((videoId: string | undefined) => {
+    const nextId = getNextVideoId(videoId);
+    if (nextId) playlist.setCurrentVideoId(nextId);
+  }, [getNextVideoId, playlist.setCurrentVideoId]);
+
+  const handlePlayNextFromDialog = useCallback(() => {
+    const vid = endedVideoIdRef.current ?? currentVideoId;
+    handleNext(vid);
+    setEndedOpen(false);
+  }, [currentVideoId, handleNext]);
+
+  const handleRemoveAndPlayNext = useCallback(async () => {
+    const videoId = endedVideoIdRef.current ?? currentVideoId;
+    if (!videoId) return;
+    if (!playlist.playlistId) return;
+
+    // Pre-compute next video before deletion (respect shuffle toggle)
+    const nextVideoId = getNextVideoId(videoId);
+
+    try {
+      if (!auth.isAuthenticated || !auth.accessToken) {
+        toast.error("You must be signed in to remove from playlist.");
+        return;
+      }
+      const currentItem = playlist.items.find(i => i.videoId === videoId);
+      if (!currentItem) {
+        toast.error("Couldn't find this video in the playlist.");
+        return;
+      }
+      await deletePlaylistItem({ accessToken: auth.accessToken, playlistItemId: currentItem.id });
+      // Refresh items in background
+      await playlist.refreshItemsOnce({ delayMs: 600 });
+      if (nextVideoId) {
+        playlist.setCurrentVideoId(nextVideoId);
+      }
+    } catch (e) {
+      toast.error((e as Error)?.message ?? "Failed to remove video.");
+    } finally {
+      setEndedOpen(false);
+    }
+  }, [auth.isAuthenticated, auth.accessToken, currentVideoId, playlist.items, playlist.playlistId, playlist.refreshItemsOnce, playlist.setCurrentVideoId, getNextVideoId]);
 
   const handleMove = useCallback(
     async (direction: "up" | "down", videoId?: string) => {
@@ -132,6 +189,18 @@ export function Player() {
           events: {
             onReady: (event: any) => {
               // Player is ready
+            },
+            onStateChange: (event: any) => {
+              try {
+                if (event?.data === window?.YT?.PlayerState?.ENDED) {
+                  endedVideoIdRef.current = currentVideoId;
+                  if (autoplayEnabled) {
+                    handleNext(currentVideoId);
+                  } else {
+                    setEndedOpen(true);
+                  }
+                }
+              } catch {}
             }
           }
         });
@@ -174,7 +243,48 @@ export function Player() {
 
   return (
     <div className={`relative space-y-4 transition-opacity duration-300 ${playlist.darker ? "opacity-30" : ""}`}>
-      {/* Corner Icons */}
+      <Dialog open={endedOpen} onOpenChange={setEndedOpen}>
+        <DialogContent className="p-0 overflow-hidden">
+          <div className="p-6 flex flex-col items-center text-center gap-4">
+            <div className="size-16 rounded-full bg-blue-500/10 flex items-center justify-center">
+              {/* Temporary SVG placeholder for sleeping koala */}
+              <svg viewBox="0 0 64 64" aria-hidden="true" className="size-10">
+                <defs>
+                  <radialGradient id="g1" cx="50%" cy="50%" r="60%">
+                    <stop offset="0%" stopColor="#a3bffa" />
+                    <stop offset="100%" stopColor="#1e293b" />
+                  </radialGradient>
+                </defs>
+                <rect x="0" y="0" width="64" height="64" fill="url(#g1)" opacity="0.2" />
+                <circle cx="48" cy="16" r="6" fill="#cbd5e1" />
+                <path d="M10 44 C 22 36, 42 36, 56 44" stroke="#64748b" strokeWidth="3" fill="none" />
+                <g transform="translate(28,30)">
+                  <circle cx="0" cy="0" r="8" fill="#94a3b8" />
+                  <circle cx="-3" cy="-1" r="1.2" fill="#0f172a" />
+                  <circle cx="3" cy="-1" r="1.2" fill="#0f172a" />
+                  <ellipse cx="0" cy="2" rx="2.5" ry="2" fill="#475569" />
+                  <path d="M-4 4 Q 0 6 4 4" stroke="#334155" strokeWidth="1.5" fill="none" />
+                </g>
+                <path d="M36 26 q 4 -4 8 0" stroke="#94a3b8" strokeWidth="2" fill="none" />
+                <text x="8" y="18" fill="#cbd5e1" fontSize="6" fontFamily="ui-sans-serif">Z</text>
+                <text x="13" y="13" fill="#94a3b8" fontSize="5" fontFamily="ui-sans-serif">Z</text>
+              </svg>
+            </div>
+            <DialogHeader className="p-0">
+              <DialogTitle>Sleepy yet?</DialogTitle>
+              <DialogDescription>
+                This is a good place to stop watching. Your phone will go to sleep unless you explicitly decide to continue.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <DialogFooter className="gap-2 p-4">
+            <Button variant="outline" onClick={handlePlayNextFromDialog}>Play Next</Button>
+            <Button variant="destructive" onClick={handleRemoveAndPlayNext}>Remove &amp; Play Next</Button>
+            <Button variant="ghost" onClick={() => setEndedOpen(false)}>Dismiss</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Top row icons: right cluster now includes sleep + toggles */}
       <div className="absolute top-0 left-0 right-0 flex justify-between pointer-events-none z-10">
         <button
           type="button"
@@ -185,18 +295,43 @@ export function Player() {
           <RefreshCw className="h-4 w-4" />
         </button>
         
-        <button
-          type="button"
-          onClick={() => playlist.toggleDarker()}
-          className={`pointer-events-auto hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-8 w-8 items-center justify-center rounded-md transition focus-visible:ring-[3px] hover:text-foreground bg-background/80 border ${
-            playlist.darker
-              ? "bg-blue-100 text-blue-600 border-blue-300 shadow-sm dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700"
-              : "text-muted-foreground"
-          }`}
-          aria-label={playlist.darker ? "Show aurora animation" : "Hide aurora animation"}
-        >
-          <Bed className="h-4 w-4" />
-        </button>
+        <div className="pointer-events-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => playlist.toggleDarker()}
+            className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-8 w-8 items-center justify-center rounded-md transition focus-visible:ring-[3px] hover:text-foreground bg-background/80 border ${
+              playlist.darker
+                ? "bg-blue-500/15 text-white border-blue-300 shadow-sm dark:bg-blue-900/30 dark:text-white dark:border-blue-700"
+                : "text-muted-foreground"
+            }`}
+            aria-label={playlist.darker ? "Show aurora animation" : "Hide aurora animation"}
+          >
+            <Bed className="h-4 w-4" />
+          </button>
+
+          {/* New small toggles in top row: shuffle + autoplay */}
+          <button
+            type="button"
+            onClick={() => setShuffleEnabled((v) => !v)}
+            className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-8 w-8 items-center justify-center rounded-md transition focus-visible:ring-[3px] hover:text-foreground bg-background/80 border ${
+              shuffleEnabled ? "bg-blue-500/15 text-white border-blue-300 shadow-sm" : "text-muted-foreground"
+            }`}
+            aria-label={shuffleEnabled ? "Disable shuffle" : "Enable shuffle"}
+          >
+            <Shuffle className="h-4 w-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAutoplayEnabled((v) => !v)}
+            className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-8 w-8 items-center justify-center rounded-md transition focus-visible:ring-[3px] hover:text-foreground bg-background/80 border ${
+              autoplayEnabled ? "bg-blue-500/15 text-white border-blue-300 shadow-sm" : "text-muted-foreground"
+            }`}
+            aria-label={autoplayEnabled ? "Disable autoplay" : "Enable autoplay"}
+          >
+            <PlayCircle className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col items-center gap-2">

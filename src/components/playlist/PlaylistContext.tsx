@@ -129,8 +129,8 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           if (typeof window !== "undefined") {
             try { window.scrollTo(0, 0); } catch {}
           }
-          // Ensure we have a fresh token if the user is authenticated, to access private playlists
-          if ((auth as any).getTokenSilently) {
+          // Ensure we have a fresh token ONLY if already authenticated (avoid prompting on public playlists)
+          if (auth.isAuthenticated && (auth as any).getTokenSilently) {
             try {
               await (auth as any).getTokenSilently();
             } catch {}
@@ -197,10 +197,36 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           }
           const raw = (e as Error)?.message ?? "Failed to load playlist.";
           const lower = raw.toLowerCase();
-          const friendly = (lower.includes("playlistnotfound") || lower.includes("cannot be found") || lower.includes("404"))
+          const isNotFound = (lower.includes("playlistnotfound") || lower.includes("cannot be found") || lower.includes("404"));
+          const friendly = isNotFound
             ? "Couldn't load this playlist. If it's private, ensure you're signed into the same YouTube account that owns it and try refreshing the playlists."
             : (raw || "Failed to load playlist.");
-          setState((s) => ({ ...s, isLoading: false, loading: null, error: friendly, errorDetails: raw }));
+          setState((s) => ({
+            ...s,
+            isLoading: false,
+            loading: null,
+            error: friendly,
+            errorDetails: raw,
+            // If not found, snap back to homepage state but keep the error so Sonner shows
+            playlistId: isNotFound ? undefined : s.playlistId,
+            items: isNotFound ? [] : s.items,
+          }));
+          if (isNotFound && typeof window !== "undefined") {
+            try {
+              const urlObj = new URL(window.location.href);
+              urlObj.searchParams.delete("list");
+              urlObj.searchParams.delete("v");
+              const newQuery = urlObj.searchParams.toString();
+              const href = newQuery ? `${urlObj.pathname}?${newQuery}` : urlObj.pathname;
+              window.history.replaceState(null, "", href);
+            } catch {}
+          }
+          // If not found and the user appears signed in, sign them out to clear bad/expired token
+          try {
+            if (isNotFound && (auth as any)?.isAuthenticated && (auth as any)?.signOut) {
+              (auth as any).signOut();
+            }
+          } catch {}
         }
       },
       setCurrentVideoId: (videoId) => setState((s) => ({ ...s, currentVideoId: videoId, isPaused: false })), // Resume when selecting a video
