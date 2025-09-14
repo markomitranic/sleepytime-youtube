@@ -7,7 +7,7 @@ import { Badge } from "~/components/ui/badge";
 import { Lock, RefreshCw, Globe, Link as LinkIcon } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchUserPlaylists, fetchPlaylistsByIds } from "~/lib/youtube";
-import { BUILTIN_PLAYLIST_IDS } from "~/lib/builtinPlaylists";
+import { BUILTIN_PLAYLIST_IDS, BUILTIN_PLAYLISTS } from "~/lib/builtinPlaylists";
 import { env } from "~/env";
 
 export function PlaylistGrid() {
@@ -29,14 +29,30 @@ export function PlaylistGrid() {
     queryKey: ["builtinPlaylists", auth.accessToken],
     queryFn: async () => {
       // Allow accessToken for private metadata if applicable, but not required
-      return await fetchPlaylistsByIds({
+      const apiResults = await fetchPlaylistsByIds({
         apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY,
         accessToken: auth.accessToken,
         playlistIds: Array.from(BUILTIN_PLAYLIST_IDS),
       });
+      // Merge with hardcoded overrides: prefer hardcoded title/thumbnail when provided
+      const overrides = new Map(BUILTIN_PLAYLISTS.map((b) => [b.id, b] as const));
+      return apiResults.map((p) => {
+        const o = overrides.get(p.id);
+        return {
+          ...p,
+          title: o?.title ?? p.title,
+          thumbnailUrl: o?.thumbnail ?? p.thumbnailUrl,
+          channelTitle: o?.channel ?? p.channelTitle,
+        };
+      });
     },
     staleTime: 1000 * 60 * 10, // fetch infrequently
   });
+
+  // Avoid showing duplicates: if a user is signed in and a built-in playlist
+  // is also in their collection, hide it from the built-in section.
+  const builtinIdsOwnedByUser = new Set((userPlaylists ?? []).map((p) => p.id));
+  const builtinsToRender = (builtinPlaylists ?? []).filter((p) => !builtinIdsOwnedByUser.has(p.id));
 
   const handleSelect = useCallback(
     async (playlistId: string) => {
@@ -158,7 +174,7 @@ export function PlaylistGrid() {
 
       {/* Built-in playlists grid */}
       <ul className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {(builtinPlaylists ?? []).map((p) => (
+        {builtinsToRender.map((p) => (
           <li key={p.id}>
             <button
               type="button"
@@ -181,6 +197,9 @@ export function PlaylistGrid() {
               </div>
               <div className="mt-2">
                 <p className="text-sm font-medium truncate" title={p.title}>{p.title}</p>
+                {p.channelTitle && p.title && p.channelTitle.trim().toLowerCase() !== p.title.trim().toLowerCase() && (
+                  <p className="text-xs text-muted-foreground truncate" title={p.channelTitle}>{p.channelTitle}</p>
+                )}
                 {typeof p.itemCount === "number" && (
                   <p className="text-xs text-muted-foreground">{p.itemCount} videos</p>
                 )}

@@ -21,6 +21,8 @@ export type YouTubeUserPlaylist = {
   itemCount?: number;
   isPrivate?: boolean;
   privacyStatus?: "public" | "unlisted" | "private";
+  channelTitle?: string;
+  channelId?: string;
 };
 
 export function isUnsupportedUserPlaylistId(id: string): boolean {
@@ -154,6 +156,8 @@ type YouTubePlaylistsListResponse = {
     id?: string;
     snippet?: {
       title?: string;
+      channelTitle?: string;
+      channelId?: string;
       thumbnails?: { default?: { url?: string }; medium?: { url?: string }; high?: { url?: string } };
     };
     status?: { privacyStatus?: string };
@@ -170,7 +174,7 @@ export async function fetchUserPlaylists({ accessToken }: { accessToken: string 
     "fields",
     [
       "nextPageToken",
-      "items(id,snippet(title,thumbnails(default(url),medium(url),high(url))),contentDetails(itemCount),status(privacyStatus))",
+      "items(id,snippet(title,channelTitle,channelId,thumbnails(default(url),medium(url),high(url))),contentDetails(itemCount),status(privacyStatus))",
     ].join(","),
   );
 
@@ -195,6 +199,8 @@ export async function fetchUserPlaylists({ accessToken }: { accessToken: string 
           thumbnailUrl: thumb,
           itemCount: p.contentDetails?.itemCount,
           isPrivate: p.status?.privacyStatus === "private",
+          channelTitle: p.snippet?.channelTitle,
+          channelId: p.snippet?.channelId,
           privacyStatus: (
             p.status?.privacyStatus === "public" ||
             p.status?.privacyStatus === "unlisted" ||
@@ -258,6 +264,8 @@ export async function fetchPlaylistsByIds({
         id?: string;
         snippet?: {
           title?: string;
+          channelTitle?: string;
+          channelId?: string;
           thumbnails?: { default?: { url?: string }; medium?: { url?: string }; high?: { url?: string } };
         };
         status?: { privacyStatus?: string };
@@ -275,6 +283,8 @@ export async function fetchPlaylistsByIds({
           title,
           thumbnailUrl: thumb,
           itemCount: p.contentDetails?.itemCount,
+          channelTitle: p.snippet?.channelTitle,
+          channelId: p.snippet?.channelId,
           isPrivate: p.status?.privacyStatus === "private",
           privacyStatus: (
             p.status?.privacyStatus === "public" ||
