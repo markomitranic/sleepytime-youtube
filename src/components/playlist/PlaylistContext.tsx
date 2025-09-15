@@ -5,6 +5,7 @@ import type { YouTubePlaylistItem, YouTubePlaylistSnippet } from "~/lib/youtube"
 import { env } from "~/env";
 import { useAuth } from "~/components/auth/AuthContext";
 import { extractPlaylistIdFromUrl, fetchPlaylistItems, fetchPlaylistSnippet } from "~/lib/youtube";
+import { toast } from "sonner";
 
 export type SleepTimer = {
   isActive: boolean;
@@ -132,9 +133,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           }
           // Ensure we have a fresh token ONLY if already authenticated (avoid prompting on public playlists)
           if (auth.isAuthenticated && (auth as any).getTokenSilently) {
-            try {
-              await (auth as any).getTokenSilently();
-            } catch {}
+            try { await (auth as any).getTokenSilently(); } catch {}
           }
           // Fetch snippet early for title and total count
           const snippet = await fetchPlaylistSnippet({
@@ -199,6 +198,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           const raw = (e as Error)?.message ?? "Failed to load playlist.";
           const lower = raw.toLowerCase();
           const isNotFound = (lower.includes("playlistnotfound") || lower.includes("cannot be found") || lower.includes("404"));
+          const isUnauthorized = (e as any)?.status === 401 || lower.includes("401");
           const friendly = isNotFound
             ? "Couldn't load this playlist. If it's private, ensure you're signed into the same YouTube account that owns it and try refreshing the playlists."
             : (raw || "Failed to load playlist.");
@@ -222,9 +222,10 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
               window.history.replaceState(null, "", href);
             } catch {}
           }
-          // If not found and the user appears signed in, sign them out to clear bad/expired token
+          // If 401 or not found and the user appears signed in, sign them out to clear bad/expired token
           try {
-            if (isNotFound && (auth as any)?.isAuthenticated && (auth as any)?.signOut) {
+            if ((isUnauthorized || isNotFound) && (auth as any)?.isAuthenticated && (auth as any)?.signOut) {
+              try { toast.error("Your session expired. You’ve been signed out."); } catch {}
               (auth as any).signOut();
             }
           } catch {}

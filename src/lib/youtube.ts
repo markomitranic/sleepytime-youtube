@@ -51,7 +51,11 @@ type YouTubePlaylistItemsResponse = {
     snippet?: {
       title?: string;
       resourceId?: { videoId?: string };
-      thumbnails?: { default?: { url?: string }; medium?: { url?: string }; high?: { url?: string } };
+      thumbnails?: {
+        default?: { url?: string };
+        medium?: { url?: string };
+        high?: { url?: string };
+      };
       videoOwnerChannelTitle?: string;
       videoOwnerChannelId?: string;
     };
@@ -75,14 +79,17 @@ export async function fetchPlaylistItems({
 }): Promise<{ items: YouTubePlaylistItem[]; nextPageToken?: string }> {
   const url = new URL("https://www.googleapis.com/youtube/v3/playlistItems");
   url.searchParams.set("part", "snippet");
-  url.searchParams.set("maxResults", String(Math.min(50, Math.max(1, maxResults))));
+  url.searchParams.set(
+    "maxResults",
+    String(Math.min(50, Math.max(1, maxResults)))
+  );
   url.searchParams.set("playlistId", playlistId);
   if (apiKey && !accessToken) url.searchParams.set("key", apiKey);
   if (pageToken) url.searchParams.set("pageToken", pageToken);
 
   const headers: Record<string, string> = {};
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
-  
+
   // First attempt (possibly authorized)
   let res = await fetch(url.toString(), { headers, signal });
   // If unauthorized and we have an API key, retry once WITHOUT Authorization header
@@ -97,17 +104,31 @@ export async function fetchPlaylistItems({
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`YouTube API error: ${res.status} ${res.statusText} ${text}`);
+    const err: any = new Error(
+      `YouTube API error: ${res.status} ${res.statusText} ${text}`
+    );
+    err.status = res.status;
+    throw err;
   }
   const json = (await res.json()) as YouTubePlaylistItemsResponse;
   const simplified: YouTubePlaylistItem[] = (json.items ?? []).map((item) => {
     const s = item.snippet ?? {};
     const title = s.title ?? "Untitled";
     const videoId = s.resourceId?.videoId;
-    const thumb = s.thumbnails?.high?.url || s.thumbnails?.medium?.url || s.thumbnails?.default?.url;
+    const thumb =
+      s.thumbnails?.high?.url ||
+      s.thumbnails?.medium?.url ||
+      s.thumbnails?.default?.url;
     const channelTitle = s.videoOwnerChannelTitle;
     const channelId = s.videoOwnerChannelId;
-    return { id: item.id, title, videoId, thumbnailUrl: thumb, channelTitle, channelId };
+    return {
+      id: item.id,
+      title,
+      videoId,
+      thumbnailUrl: thumb,
+      channelTitle,
+      channelId,
+    };
   });
   return { items: simplified, nextPageToken: json.nextPageToken };
 }
@@ -138,8 +159,25 @@ export async function fetchPlaylistSnippet({
       res = await fetch(retryUrl.toString(), { signal });
     } catch {}
   }
-  if (!res.ok) return null;
-  const json = (await res.json()) as { items?: Array<{ id: string; snippet?: { title?: string; description?: string }; contentDetails?: { itemCount?: number } }> };
+  if (!res.ok) {
+    // Propagate 401 to enable caller to sign out; return null for other statuses
+    if (res.status === 401) {
+      const text = await res.text().catch(() => "");
+      const err: any = new Error(
+        `YouTube API error: ${res.status} ${res.statusText} ${text}`
+      );
+      err.status = res.status;
+      throw err;
+    }
+    return null;
+  }
+  const json = (await res.json()) as {
+    items?: Array<{
+      id: string;
+      snippet?: { title?: string; description?: string };
+      contentDetails?: { itemCount?: number };
+    }>;
+  };
   const first = json.items?.[0];
   if (!first) return null;
   return {
@@ -158,14 +196,22 @@ type YouTubePlaylistsListResponse = {
       title?: string;
       channelTitle?: string;
       channelId?: string;
-      thumbnails?: { default?: { url?: string }; medium?: { url?: string }; high?: { url?: string } };
+      thumbnails?: {
+        default?: { url?: string };
+        medium?: { url?: string };
+        high?: { url?: string };
+      };
     };
     status?: { privacyStatus?: string };
     contentDetails?: { itemCount?: number };
   }>;
 };
 
-export async function fetchUserPlaylists({ accessToken }: { accessToken: string }): Promise<YouTubeUserPlaylist[]> {
+export async function fetchUserPlaylists({
+  accessToken,
+}: {
+  accessToken: string;
+}): Promise<YouTubeUserPlaylist[]> {
   const base = new URL("https://www.googleapis.com/youtube/v3/playlists");
   base.searchParams.set("part", "snippet,contentDetails,status");
   base.searchParams.set("mine", "true");
@@ -175,7 +221,7 @@ export async function fetchUserPlaylists({ accessToken }: { accessToken: string 
     [
       "nextPageToken",
       "items(id,snippet(title,channelTitle,channelId,thumbnails(default(url),medium(url),high(url))),contentDetails(itemCount),status(privacyStatus))",
-    ].join(","),
+    ].join(",")
   );
 
   const all: YouTubeUserPlaylist[] = [];
@@ -186,13 +232,22 @@ export async function fetchUserPlaylists({ accessToken }: { accessToken: string 
     const res = await fetch(url.toString(), {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (!res.ok) throw new Error(`YouTube API error: ${res.status} ${res.statusText}`);
+    if (!res.ok) {
+      const err: any = new Error(
+        `YouTube API error: ${res.status} ${res.statusText}`
+      );
+      err.status = res.status;
+      throw err;
+    }
     const json = (await res.json()) as YouTubePlaylistsListResponse;
     const mapped: YouTubeUserPlaylist[] = (json.items ?? [])
       .filter((p) => Boolean(p.id))
       .map((p) => {
         const title = p.snippet?.title ?? "Untitled";
-        const thumb = p.snippet?.thumbnails?.high?.url || p.snippet?.thumbnails?.medium?.url || p.snippet?.thumbnails?.default?.url;
+        const thumb =
+          p.snippet?.thumbnails?.high?.url ||
+          p.snippet?.thumbnails?.medium?.url ||
+          p.snippet?.thumbnails?.default?.url;
         return {
           id: p.id as string,
           title,
@@ -201,13 +256,12 @@ export async function fetchUserPlaylists({ accessToken }: { accessToken: string 
           isPrivate: p.status?.privacyStatus === "private",
           channelTitle: p.snippet?.channelTitle,
           channelId: p.snippet?.channelId,
-          privacyStatus: (
+          privacyStatus:
             p.status?.privacyStatus === "public" ||
             p.status?.privacyStatus === "unlisted" ||
             p.status?.privacyStatus === "private"
-          )
-            ? (p.status?.privacyStatus as "public" | "unlisted" | "private")
-            : undefined,
+              ? (p.status?.privacyStatus as "public" | "unlisted" | "private")
+              : undefined,
         };
       })
       .filter((p) => !isUnsupportedUserPlaylistId(p.id));
@@ -266,7 +320,11 @@ export async function fetchPlaylistsByIds({
           title?: string;
           channelTitle?: string;
           channelId?: string;
-          thumbnails?: { default?: { url?: string }; medium?: { url?: string }; high?: { url?: string } };
+          thumbnails?: {
+            default?: { url?: string };
+            medium?: { url?: string };
+            high?: { url?: string };
+          };
         };
         status?: { privacyStatus?: string };
         contentDetails?: { itemCount?: number };
@@ -277,7 +335,10 @@ export async function fetchPlaylistsByIds({
       .filter((p) => Boolean(p.id))
       .map((p) => {
         const title = p.snippet?.title ?? "Untitled";
-        const thumb = p.snippet?.thumbnails?.high?.url || p.snippet?.thumbnails?.medium?.url || p.snippet?.thumbnails?.default?.url;
+        const thumb =
+          p.snippet?.thumbnails?.high?.url ||
+          p.snippet?.thumbnails?.medium?.url ||
+          p.snippet?.thumbnails?.default?.url;
         return {
           id: p.id as string,
           title,
@@ -286,13 +347,12 @@ export async function fetchPlaylistsByIds({
           channelTitle: p.snippet?.channelTitle,
           channelId: p.snippet?.channelId,
           isPrivate: p.status?.privacyStatus === "private",
-          privacyStatus: (
+          privacyStatus:
             p.status?.privacyStatus === "public" ||
             p.status?.privacyStatus === "unlisted" ||
             p.status?.privacyStatus === "private"
-          )
-            ? (p.status?.privacyStatus as "public" | "unlisted" | "private")
-            : undefined,
+              ? (p.status?.privacyStatus as "public" | "unlisted" | "private")
+              : undefined,
         };
       });
     results.push(...mapped);
@@ -300,11 +360,17 @@ export async function fetchPlaylistsByIds({
 
   // Preserve input order
   const order = new Map(playlistIds.map((id, idx) => [id, idx] as const));
-  results.sort((a, b) => (order.get(a.id)! - order.get(b.id)!));
+  results.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
   return results;
 }
 
-export async function deletePlaylistItem({ accessToken, playlistItemId }: { accessToken: string; playlistItemId: string }): Promise<void> {
+export async function deletePlaylistItem({
+  accessToken,
+  playlistItemId,
+}: {
+  accessToken: string;
+  playlistItemId: string;
+}): Promise<void> {
   const url = new URL("https://www.googleapis.com/youtube/v3/playlistItems");
   url.searchParams.set("id", playlistItemId);
   const res = await fetch(url.toString(), {
@@ -312,7 +378,9 @@ export async function deletePlaylistItem({ accessToken, playlistItemId }: { acce
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!res.ok) {
-    throw new Error(`YouTube API error (delete): ${res.status} ${res.statusText}`);
+    throw new Error(
+      `YouTube API error (delete): ${res.status} ${res.statusText}`
+    );
   }
 }
 
@@ -349,8 +417,8 @@ export async function updatePlaylistItemPosition({
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`YouTube API error (update): ${res.status} ${res.statusText} ${text}`);
+    throw new Error(
+      `YouTube API error (update): ${res.status} ${res.statusText} ${text}`
+    );
   }
 }
-
-

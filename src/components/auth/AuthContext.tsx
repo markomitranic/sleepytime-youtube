@@ -13,7 +13,8 @@ export type AuthState = {
 export type AuthActions = {
   signIn: () => Promise<void>;
   signOut: () => void;
-  getTokenSilently: () => Promise<boolean>;
+  // Returns a fresh access token string if obtained, otherwise null
+  getTokenSilently: () => Promise<string | null>;
 };
 
 const AuthContext = createContext<(AuthState & AuthActions) | null>(null);
@@ -146,18 +147,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [state.isAuthenticated, state.accessToken]);
 
   // Provide a helper to request token without prompting; returns true if token obtained
-  const getTokenSilently = useCallback(async (): Promise<boolean> => {
-    if (!tokenClientRef.current) return false;
+  const getTokenSilently = useCallback(async (): Promise<string | null> => {
+    if (!tokenClientRef.current) return null;
     const now = Date.now();
     const hasToken = Boolean(state.accessToken);
     const tokenAgeMs = now - (tokenObtainedAtRef.current || 0);
     const tokenIsFresh = hasToken && tokenAgeMs < TOKEN_REFRESH_WINDOW_MS;
-    if (tokenIsFresh) return true;
+    if (tokenIsFresh) return state.accessToken ?? null;
     // Respect backoff window
     if (silentBackoffUntilRef.current > now) {
-      return false;
+      return null;
     }
-    return await new Promise<boolean>((resolve) => {
+    return await new Promise<string | null>((resolve) => {
       try {
         const original = tokenClientRef.current.callback;
         tokenClientRef.current.callback = (resp: any) => {
@@ -167,7 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               // success resets backoff
               silentFailuresRef.current = 0;
               silentBackoffUntilRef.current = 0;
-              resolve(true);
+              resolve(resp.access_token as string);
             } else {
               // failure increments backoff
               silentFailuresRef.current = silentFailuresRef.current + 1;
@@ -179,7 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 localStorage.removeItem(STORAGE_ACCESS_TOKEN);
                 localStorage.removeItem(STORAGE_ACCESS_TOKEN_AT);
               } catch {}
-              resolve(false);
+              resolve(null);
             }
           } finally {
             tokenClientRef.current.callback = original;
@@ -197,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.removeItem(STORAGE_ACCESS_TOKEN);
           localStorage.removeItem(STORAGE_ACCESS_TOKEN_AT);
         } catch {}
-        resolve(false);
+        resolve(null);
       }
     });
   }, [state.accessToken]);
