@@ -49,14 +49,6 @@ export function PlaylistGrid() {
       if (msg.includes("401")) return false;
       return failureCount < 1;
     },
-    onError: (err) => {
-      const status = (err as any)?.status;
-      const msg = (err as Error)?.message ?? String(err ?? "");
-      if (status === 401 || msg.includes("401")) {
-        try { toast.error("Your session expired. You’ve been signed out."); } catch {}
-        try { auth.signOut(); } catch {}
-      }
-    },
   });
 
   const { data: builtinPlaylists } = useQuery({
