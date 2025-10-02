@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronUp, Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, RefreshCw, Bed, ArrowUp, ArrowDown, ChevronsRight } from "lucide-react";
+import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, ArrowUp, ArrowDown } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { useAuth } from "~/components/auth/AuthContext";
@@ -34,31 +34,10 @@ export function Player() {
   const [endedOpen, setEndedOpen] = useState<boolean>(false);
   const endedVideoIdRef = useRef<string | undefined>(undefined);
   const [shuffleEnabled, setShuffleEnabled] = useState<boolean>(false);
-  const [autoplayEnabled, setAutoplayEnabled] = useState<boolean>(false);
-  // Keep latest values available inside YouTube event handlers without reinitializing the player
-  const autoplayEnabledRef = useRef<boolean>(false);
-  const handleNextRef = useRef<(videoId: string | undefined) => void>(() => {});
 
   const handleBack = useCallback(() => {
     playlist.clear();
   }, [playlist]);
-
-  const handleShuffle = useCallback((videoId: string | undefined) => {
-    const availableVideos = playlist.items.filter(item => item.videoId);
-    if (availableVideos.length === 0) return;
-    
-    // Filter out the current video to avoid selecting the same one
-    const otherVideos = availableVideos.filter(item => item.videoId !== videoId);
-    
-    // If there's only one video total, or no other videos, don't shuffle
-    if (otherVideos.length === 0) return;
-    
-    const randomIndex = Math.floor(Math.random() * otherVideos.length);
-    const randomVideo = otherVideos[randomIndex];
-    if (randomVideo?.videoId) {
-      playlist.setCurrentVideoId(randomVideo.videoId);
-    }
-  }, [playlist.items, playlist.setCurrentVideoId]);
 
   const getNextVideoId = useCallback((fromVideoId: string | undefined): string | undefined => {
     if (!fromVideoId) return undefined;
@@ -88,15 +67,6 @@ export function Player() {
     handleNext(vid);
     setEndedOpen(false);
   }, [currentVideoId, handleNext]);
-
-  // Keep refs in sync for use inside onStateChange callback
-  useEffect(() => {
-    autoplayEnabledRef.current = autoplayEnabled;
-  }, [autoplayEnabled]);
-
-  useEffect(() => {
-    handleNextRef.current = handleNext;
-  }, [handleNext]);
 
   const handleRemoveAndPlayNext = useCallback(async () => {
     const videoId = endedVideoIdRef.current ?? currentVideoId;
@@ -214,11 +184,7 @@ export function Player() {
               try {
                 if (event?.data === window?.YT?.PlayerState?.ENDED) {
                   endedVideoIdRef.current = currentVideoId;
-                  if (autoplayEnabledRef.current) {
-                    handleNextRef.current(currentVideoId);
-                  } else {
-                    setEndedOpen(true);
-                  }
+                  setEndedOpen(true);
                 }
               } catch {}
             }
@@ -262,7 +228,7 @@ export function Player() {
   const current = playlist.items.find((i) => i.videoId === currentVideoId);
 
   return (
-    <div className={`relative space-y-4 transition-opacity duration-300 ${playlist.darker ? "opacity-30" : ""}`}>
+    <div className={`relative space-y-4 px-5 transition-opacity duration-300 ${playlist.darker ? "opacity-30" : ""}`}>
       <Dialog open={endedOpen} onOpenChange={setEndedOpen}>
         <DialogContent className="p-0 overflow-hidden">
           <div className="p-6 flex flex-col items-center text-center gap-4">
@@ -306,65 +272,21 @@ export function Player() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Top row icons: right cluster now includes sleep + toggles */}
-      <div className="absolute top-0 left-0 right-0 flex justify-between pointer-events-none z-10">
-        <button
-          type="button"
-          onClick={() => playlist.reloadPlaylist()}
-          className="pointer-events-auto hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground bg-background/80 border"
-          aria-label="Refresh playlist"
-        >
-          <RefreshCw className="h-4 w-4" />
-        </button>
-        
-        <div className="pointer-events-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => playlist.toggleDarker()}
-            className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-8 w-8 items-center justify-center rounded-md transition focus-visible:ring-[3px] hover:text-foreground bg-background/80 border ${
-              playlist.darker
-                ? "bg-blue-500/15 text-white border-blue-300 shadow-sm dark:bg-blue-900/30 dark:text-white dark:border-blue-700"
-                : "text-muted-foreground"
-            }`}
-            aria-label={playlist.darker ? "Show aurora animation" : "Hide aurora animation"}
-          >
-            <Bed className="h-4 w-4" />
-          </button>
-
-          {/* New small toggles in top row: shuffle + autoplay */}
-          <button
-            type="button"
-            onClick={() => setShuffleEnabled((v) => !v)}
-            className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-8 w-8 items-center justify-center rounded-md transition focus-visible:ring-[3px] hover:text-foreground bg-background/80 border ${
-              shuffleEnabled ? "bg-blue-500/15 text-white border-blue-300 shadow-sm" : "text-muted-foreground"
-            }`}
-            aria-label={shuffleEnabled ? "Disable shuffle" : "Enable shuffle"}
-          >
-            <Shuffle className="h-4 w-4" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setAutoplayEnabled((v) => !v)}
-            className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-8 w-8 items-center justify-center rounded-md transition focus-visible:ring-[3px] hover:text-foreground bg-background/80 border ${
-              autoplayEnabled ? "bg-blue-500/15 text-white border-blue-300 shadow-sm" : "text-muted-foreground"
-            }`}
-            aria-label={autoplayEnabled ? "Disable autoplay" : "Enable autoplay"}
-          >
-            <ChevronsRight className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      <div className="flex flex-col items-center gap-2">
+      {/* Top row: Back button on left */}
+      <div className="absolute top-0 left-5 pointer-events-none z-10">
         <button
           type="button"
           aria-label="Back"
           onClick={handleBack}
-          className="hover:bg-secondary/60 focus-visible:ring-ring/50 group inline-flex h-7 w-16 items-center justify-center rounded-md border text-muted-foreground transition focus-visible:ring-[3px]"
+          className="pointer-events-auto group inline-flex items-center justify-start text-muted-foreground transition hover:text-foreground pt-2"
         >
-          <ChevronUp className="text-current opacity-90 group-hover:opacity-100" width={28} height={14} strokeWidth={2.5} />
+          <svg width="35" height="20" viewBox="0 0 35 20" fill="none" className="opacity-90 group-hover:opacity-100">
+            <path d="M3 5 L17.5 15 L32 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </button>
+      </div>
+
+      <div className="flex flex-col items-center gap-2 pt-2 pb-4">
         <h2 className="text-xl font-semibold text-center truncate w-full" title={playlist.snippet?.title ?? undefined}>
           {playlist.snippet?.title ?? "Playlist"}
         </h2>
@@ -383,9 +305,11 @@ export function Player() {
       <div className="flex items-center justify-center gap-8 py-4">
         <button
           type="button"
-          onClick={() => handleShuffle(currentVideoId)}
-          className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full border text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground"
-          aria-label="Shuffle playlist"
+          onClick={() => setShuffleEnabled((v) => !v)}
+          className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full border transition focus-visible:ring-[3px] hover:text-foreground ${
+            shuffleEnabled ? "bg-blue-500/15 text-white border-blue-300 shadow-sm" : "text-muted-foreground"
+          }`}
+          aria-label={shuffleEnabled ? "Disable shuffle" : "Enable shuffle"}
         >
           <Shuffle className="h-5 w-5" />
         </button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, ChevronUp, ListVideo } from "lucide-react";
+import { Loader2, ListVideo } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 
 export function SkeletonPlayer() {
@@ -13,16 +13,22 @@ export function SkeletonPlayer() {
   const loadedPages = loading?.pagesLoaded ?? 0;
 
   return (
-    <div className="relative space-y-4">
-      <div className="flex flex-col items-center gap-2">
+    <div className="relative space-y-4 px-5">
+      {/* Top row: Back button on left */}
+      <div className="absolute top-0 left-5 pointer-events-none z-10">
         <button
           type="button"
           aria-label="Back"
           onClick={() => playlist.clear()}
-          className="hover:bg-secondary/60 focus-visible:ring-ring/50 group inline-flex h-7 w-16 items-center justify-center rounded-md border text-muted-foreground transition focus-visible:ring-[3px]"
+          className="pointer-events-auto group inline-flex items-center justify-start text-muted-foreground transition hover:text-foreground pt-2"
         >
-          <ChevronUp className="text-current opacity-90 group-hover:opacity-100" width={28} height={14} strokeWidth={2.5} />
+          <svg width="35" height="20" viewBox="0 0 35 20" fill="none" className="opacity-90 group-hover:opacity-100">
+            <path d="M3 5 L17.5 15 L32 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </button>
+      </div>
+
+      <div className="flex flex-col items-center gap-2 pt-2 pb-4">
         <h2 className="text-xl font-semibold text-center truncate w-full" title={playlist.snippet?.title ?? undefined}>
           {playlist.snippet?.title ?? "Loading playlist..."}
         </h2>
