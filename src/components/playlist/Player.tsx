@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical, Loader2 } from "lucide-react";
+import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical, Loader2, Trash2 } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { useAuth } from "~/components/auth/AuthContext";
@@ -55,9 +55,12 @@ type SortableItemProps = {
   isCurrent: boolean;
   isAuthenticated: boolean;
   onSelect: (videoId?: string) => void;
+  onDelete: (itemId: string) => Promise<void>;
 };
 
-function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect }: SortableItemProps) {
+function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDelete }: SortableItemProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const {
     attributes,
     listeners,
@@ -73,75 +76,127 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect }: So
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onDelete(item.id);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   return (
-    <li
-      ref={setNodeRef}
-      style={style}
-      className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 hover:bg-secondary ${
-        isCurrent ? "bg-secondary/60" : ""
-      }`}
-      onClick={() => {
-        if (!item.videoId) {
-          toast.error("This video is unavailable (private or removed)", {
-            action: {
-              label: "Copy error",
-              onClick: () => {
-                try {
-                  navigator.clipboard.writeText("This video is unavailable (private or removed)");
-                } catch {}
+    <>
+      <li
+        ref={setNodeRef}
+        style={style}
+        className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 hover:bg-secondary select-none ${
+          isCurrent ? "bg-secondary/60" : ""
+        }`}
+        onClick={() => {
+          if (!item.videoId) {
+            toast.error("This video is unavailable (private or removed)", {
+              action: {
+                label: "Copy error",
+                onClick: () => {
+                  try {
+                    navigator.clipboard.writeText("This video is unavailable (private or removed)");
+                  } catch {}
+                },
               },
-            },
-          });
-          return;
-        }
-        onSelect(item.videoId);
-      }}
-    >
-      {item.thumbnailUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={item.thumbnailUrl} alt="thumbnail" className="h-16 w-28 rounded object-cover" />
-      )}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className={`truncate font-medium ${isCurrent ? "opacity-80" : ""}`}>{item.title}</p>
-        </div>
-        {item.channelTitle && (
-          <div className="flex flex-col gap-1">
-            {item.channelId ? (
-              <a
-                href={`https://www.youtube.com/channel/${item.channelId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {item.channelTitle}
-              </a>
-            ) : (
-              <p className="text-xs text-muted-foreground">{item.channelTitle}</p>
-            )}
-            {isCurrent && (
-              <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground w-fit">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_6px_theme(colors.green.500)]" />
-                Playing
-              </span>
-            )}
-          </div>
+            });
+            return;
+          }
+          onSelect(item.videoId);
+        }}
+      >
+        {/* Drag handle on the left */}
+        {isAuthenticated && item.videoId && (
+          <button
+            type="button"
+            className="h-8 w-8 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-secondary cursor-grab active:cursor-grabbing self-center flex-shrink-0"
+            aria-label="Drag to reorder"
+            onClick={(e) => e.stopPropagation()}
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-5 w-5" />
+          </button>
         )}
-      </div>
-      {isAuthenticated && item.videoId && (
-        <button
-          type="button"
-          className="h-8 w-8 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-secondary cursor-grab active:cursor-grabbing self-center"
-          aria-label="Drag to reorder"
-          onClick={(e) => e.stopPropagation()}
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-5 w-5" />
-        </button>
-      )}
-    </li>
+        
+        {/* Thumbnail */}
+        {item.thumbnailUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={item.thumbnailUrl} alt="thumbnail" className="h-16 w-28 rounded object-cover flex-shrink-0" />
+        )}
+        
+        {/* Content */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className={`truncate font-medium ${isCurrent ? "opacity-80" : ""}`}>{item.title}</p>
+          </div>
+          {item.channelTitle && (
+            <div className="flex flex-col gap-1">
+              {item.channelId ? (
+                <a
+                  href={`https://www.youtube.com/channel/${item.channelId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {item.channelTitle}
+                </a>
+              ) : (
+                <p className="text-xs text-muted-foreground">{item.channelTitle}</p>
+              )}
+              {isCurrent && (
+                <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground w-fit">
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_6px_theme(colors.green.500)]" />
+                  Playing
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+        
+        {/* Delete button on the right */}
+        {isAuthenticated && item.videoId && (
+          <button
+            type="button"
+            className="h-8 w-8 inline-flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-500/10 self-center flex-shrink-0 transition-colors"
+            aria-label="Delete from playlist"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowDeleteConfirm(true);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
+      </li>
+      
+      {/* Delete confirmation dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete from playlist?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove &quot;{item.title}&quot; from the playlist?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -239,6 +294,58 @@ export function Player() {
       setEndedOpen(false);
     }
   }, [auth.isAuthenticated, auth.accessToken, currentVideoId, playlist.items, playlist.playlistId, playlist.refreshItemsOnce, playlist.setCurrentVideoId, getNextVideoId]);
+
+  const handleDeleteItem = useCallback(
+    async (itemId: string) => {
+      if (!auth.isAuthenticated || !auth.accessToken) {
+        toast.error("You must be signed in to delete from playlist.");
+        throw new Error("Not authenticated");
+      }
+      if (!playlist.playlistId) {
+        toast.error("No playlist selected.");
+        throw new Error("No playlist");
+      }
+
+      const item = playlist.items.find((i) => i.id === itemId);
+      if (!item) {
+        toast.error("Couldn't find this video in the playlist.");
+        throw new Error("Item not found");
+      }
+
+      // Optimistic UI removal
+      const wasCurrentVideo = item.videoId === currentVideoId;
+      playlist.removeItem(item.videoId!);
+      setIsReordering(true);
+
+      try {
+        // Delete from YouTube
+        await deletePlaylistItem({ 
+          accessToken: auth.accessToken, 
+          playlistItemId: itemId 
+        });
+        
+        // If we deleted the currently playing video, play the next one
+        if (wasCurrentVideo) {
+          const nextId = getNextVideoId(item.videoId!);
+          if (nextId) {
+            playlist.setCurrentVideoId(nextId);
+          }
+        }
+        
+        // Background refresh to ensure sync
+        await playlist.refreshItemsOnce({ delayMs: 900 });
+        toast.success("Video removed from playlist");
+      } catch (e) {
+        toast.error((e as Error)?.message ?? "Failed to remove video.");
+        // Soft reconcile by refreshing on failure
+        await playlist.refreshItemsOnce({ delayMs: 900 });
+        throw e;
+      } finally {
+        setIsReordering(false);
+      }
+    },
+    [auth.isAuthenticated, auth.accessToken, currentVideoId, playlist, getNextVideoId]
+  );
 
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
@@ -531,6 +638,7 @@ export function Player() {
                   isCurrent={isCurrent}
                   isAuthenticated={auth.isAuthenticated}
                   onSelect={playlist.setCurrentVideoId}
+                  onDelete={handleDeleteItem}
                 />
               );
             })}
