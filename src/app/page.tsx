@@ -108,7 +108,7 @@ export default function HomePage() {
   }, [playlist.error, playlist.errorDetails]);
 
   return (
-    <main className="flex min-h-screen items-start justify-center px-[10px] py-6">
+    <main className="flex min-h-screen items-start justify-center px-[10px] py-6 pb-24">
       <div className="w-full max-w-[720px] space-y-6">
         {!playlist.playlistId && <h1 className="text-3xl font-bold">Sleepytime-YouTube</h1>}
         {!playlist.playlistId && (
