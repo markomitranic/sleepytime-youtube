@@ -34,12 +34,16 @@ export function DevToolbar() {
     const currentItem = playlist.items.find((i) => i.videoId === playlist.currentVideoId);
     if (!currentItem) return;
     try {
-      await deletePlaylistItem({ accessToken: auth.accessToken, playlistItemId: currentItem.id });
+      await deletePlaylistItem({ 
+        accessToken: auth.accessToken, 
+        playlistItemId: currentItem.id,
+        refreshToken: auth.getTokenSilently,
+      });
       await playlist.loadByPlaylistId(playlist.playlistId);
     } catch (e) {
       console.error(e);
     }
-  }, [auth.isAuthenticated, auth.accessToken, playlist.playlistId, playlist.currentVideoId, playlist.items, playlist.loadByPlaylistId]);
+  }, [auth.isAuthenticated, auth.accessToken, auth.getTokenSilently, playlist.playlistId, playlist.currentVideoId, playlist.items, playlist.loadByPlaylistId]);
 
   // Only show in development
   if (process.env.NODE_ENV !== 'development') {

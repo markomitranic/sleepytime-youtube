@@ -69,6 +69,7 @@ export async function fetchPlaylistItems({
   pageToken,
   maxResults = 50,
   signal,
+  refreshToken,
 }: {
   apiKey?: string;
   accessToken?: string;
@@ -76,6 +77,7 @@ export async function fetchPlaylistItems({
   pageToken?: string;
   maxResults?: number;
   signal?: AbortSignal;
+  refreshToken?: () => Promise<string | null>;
 }): Promise<{ items: YouTubePlaylistItem[]; nextPageToken?: string }> {
   const url = new URL("https://www.googleapis.com/youtube/v3/playlistItems");
   url.searchParams.set("part", "snippet");
@@ -92,7 +94,17 @@ export async function fetchPlaylistItems({
 
   // First attempt (possibly authorized)
   let res = await fetch(url.toString(), { headers, signal });
-  // If unauthorized and we have an API key, retry once WITHOUT Authorization header
+
+  // If unauthorized and we have a refresh function, try to refresh token and retry
+  if (res.status === 401 && accessToken && refreshToken) {
+    const freshToken = await refreshToken();
+    if (freshToken) {
+      headers["Authorization"] = `Bearer ${freshToken}`;
+      res = await fetch(url.toString(), { headers, signal });
+    }
+  }
+
+  // If still unauthorized and we have an API key, retry once WITHOUT Authorization header
   if (res.status === 401 && apiKey) {
     try {
       const retryUrl = new URL(url.toString());
@@ -138,11 +150,13 @@ export async function fetchPlaylistSnippet({
   accessToken,
   playlistId,
   signal,
+  refreshToken,
 }: {
   apiKey?: string;
   accessToken?: string;
   playlistId: string;
   signal?: AbortSignal;
+  refreshToken?: () => Promise<string | null>;
 }): Promise<YouTubePlaylistSnippet | null> {
   const url = new URL("https://www.googleapis.com/youtube/v3/playlists");
   // Include contentDetails to obtain itemCount for progress UI
@@ -152,12 +166,22 @@ export async function fetchPlaylistSnippet({
   const headers: Record<string, string> = {};
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
   let res = await fetch(url.toString(), { headers, signal });
+
+  // If unauthorized and we have a refresh function, try to refresh token and retry
+  if (res.status === 401 && accessToken && refreshToken) {
+    const freshToken = await refreshToken();
+    if (freshToken) {
+      headers["Authorization"] = `Bearer ${freshToken}`;
+      res = await fetch(url.toString(), { headers, signal });
+    }
+  }
+
   if (res.status === 401 && apiKey) {
     try {
       const retryUrl = new URL(url.toString());
       retryUrl.searchParams.set("key", apiKey);
       res = await fetch(retryUrl.toString(), { signal });
-    } catch {}
+    } catch { }
   }
   if (!res.ok) {
     // Propagate 401 to enable caller to sign out; return null for other statuses
@@ -209,8 +233,10 @@ type YouTubePlaylistsListResponse = {
 
 export async function fetchUserPlaylists({
   accessToken,
+  refreshToken,
 }: {
   accessToken: string;
+  refreshToken?: () => Promise<string | null>;
 }): Promise<YouTubeUserPlaylist[]> {
   const base = new URL("https://www.googleapis.com/youtube/v3/playlists");
   base.searchParams.set("part", "snippet,contentDetails,status");
@@ -224,17 +250,34 @@ export async function fetchUserPlaylists({
     ].join(",")
   );
 
+  let currentToken = accessToken;
+  let tokenRefreshed = false;
+
   const all: YouTubeUserPlaylist[] = [];
   let pageToken: string | undefined = undefined;
   do {
     const url = new URL(base.toString());
     if (pageToken) url.searchParams.set("pageToken", pageToken);
-    const res = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${accessToken}` },
+    let res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${currentToken}` },
     });
+
+    // If unauthorized and we haven't refreshed yet, try to refresh token and retry
+    if (res.status === 401 && !tokenRefreshed && refreshToken) {
+      const freshToken = await refreshToken();
+      if (freshToken) {
+        currentToken = freshToken;
+        tokenRefreshed = true;
+        res = await fetch(url.toString(), {
+          headers: { Authorization: `Bearer ${currentToken}` },
+        });
+      }
+    }
+
     if (!res.ok) {
+      const text = await res.text().catch(() => "");
       const err: any = new Error(
-        `YouTube API error: ${res.status} ${res.statusText}`
+        `YouTube API error: ${res.status} ${text}`
       );
       err.status = res.status;
       throw err;
@@ -258,8 +301,8 @@ export async function fetchUserPlaylists({
           channelId: p.snippet?.channelId,
           privacyStatus:
             p.status?.privacyStatus === "public" ||
-            p.status?.privacyStatus === "unlisted" ||
-            p.status?.privacyStatus === "private"
+              p.status?.privacyStatus === "unlisted" ||
+              p.status?.privacyStatus === "private"
               ? (p.status?.privacyStatus as "public" | "unlisted" | "private")
               : undefined,
         };
@@ -278,10 +321,12 @@ export async function fetchPlaylistsByIds({
   apiKey,
   accessToken,
   playlistIds,
+  refreshToken,
 }: {
   apiKey?: string;
   accessToken?: string;
   playlistIds: string[];
+  refreshToken?: () => Promise<string | null>;
 }): Promise<YouTubeUserPlaylist[]> {
   if (!playlistIds.length) return [];
 
@@ -294,6 +339,8 @@ export async function fetchPlaylistsByIds({
   const headers: Record<string, string> = {};
   if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
 
+  let tokenRefreshed = false;
+
   const results: YouTubeUserPlaylist[] = [];
   for (const ids of chunks) {
     const url = new URL("https://www.googleapis.com/youtube/v3/playlists");
@@ -302,12 +349,23 @@ export async function fetchPlaylistsByIds({
     if (apiKey && !accessToken) url.searchParams.set("key", apiKey);
 
     let res = await fetch(url.toString(), { headers });
+
+    // If unauthorized and we haven't refreshed yet, try to refresh token and retry
+    if (res.status === 401 && accessToken && !tokenRefreshed && refreshToken) {
+      const freshToken = await refreshToken();
+      if (freshToken) {
+        headers["Authorization"] = `Bearer ${freshToken}`;
+        tokenRefreshed = true;
+        res = await fetch(url.toString(), { headers });
+      }
+    }
+
     if (res.status === 401 && apiKey) {
       try {
         const retryUrl = new URL(url.toString());
         retryUrl.searchParams.set("key", apiKey);
         res = await fetch(retryUrl.toString());
-      } catch {}
+      } catch { }
     }
     if (!res.ok) {
       // Skip this chunk on error but continue processing others
@@ -349,8 +407,8 @@ export async function fetchPlaylistsByIds({
           isPrivate: p.status?.privacyStatus === "private",
           privacyStatus:
             p.status?.privacyStatus === "public" ||
-            p.status?.privacyStatus === "unlisted" ||
-            p.status?.privacyStatus === "private"
+              p.status?.privacyStatus === "unlisted" ||
+              p.status?.privacyStatus === "private"
               ? (p.status?.privacyStatus as "public" | "unlisted" | "private")
               : undefined,
         };
@@ -367,16 +425,30 @@ export async function fetchPlaylistsByIds({
 export async function deletePlaylistItem({
   accessToken,
   playlistItemId,
+  refreshToken,
 }: {
   accessToken: string;
   playlistItemId: string;
+  refreshToken?: () => Promise<string | null>;
 }): Promise<void> {
   const url = new URL("https://www.googleapis.com/youtube/v3/playlistItems");
   url.searchParams.set("id", playlistItemId);
-  const res = await fetch(url.toString(), {
+  let res = await fetch(url.toString(), {
     method: "DELETE",
     headers: { Authorization: `Bearer ${accessToken}` },
   });
+
+  // If unauthorized, try to refresh token and retry
+  if (res.status === 401 && refreshToken) {
+    const freshToken = await refreshToken();
+    if (freshToken) {
+      res = await fetch(url.toString(), {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${freshToken}` },
+      });
+    }
+  }
+
   if (!res.ok) {
     throw new Error(
       `YouTube API error (delete): ${res.status} ${res.statusText}`
@@ -390,12 +462,14 @@ export async function updatePlaylistItemPosition({
   playlistId,
   videoId,
   position,
+  refreshToken,
 }: {
   accessToken: string;
   playlistItemId: string;
   playlistId: string;
   videoId: string;
   position: number;
+  refreshToken?: () => Promise<string | null>;
 }): Promise<void> {
   const url = new URL("https://www.googleapis.com/youtube/v3/playlistItems");
   url.searchParams.set("part", "snippet");
@@ -407,7 +481,7 @@ export async function updatePlaylistItemPosition({
       resourceId: { kind: "youtube#video", videoId },
     },
   };
-  const res = await fetch(url.toString(), {
+  let res = await fetch(url.toString(), {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -415,10 +489,132 @@ export async function updatePlaylistItemPosition({
     },
     body: JSON.stringify(body),
   });
+
+  // If unauthorized, try to refresh token and retry
+  if (res.status === 401 && refreshToken) {
+    const freshToken = await refreshToken();
+    if (freshToken) {
+      res = await fetch(url.toString(), {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${freshToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+    }
+  }
+
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(
       `YouTube API error (update): ${res.status} ${res.statusText} ${text}`
     );
   }
+}
+
+export type YouTubeSubscriptionVideo = {
+  videoId: string;
+  title: string;
+  thumbnailUrl?: string;
+  channelTitle?: string;
+  channelId?: string;
+  publishedAt: string;
+  description?: string;
+};
+
+type YouTubeActivitiesResponse = {
+  nextPageToken?: string;
+  items?: Array<{
+    id?: string;
+    snippet?: {
+      title?: string;
+      description?: string;
+      channelTitle?: string;
+      channelId?: string;
+      publishedAt?: string;
+      thumbnails?: {
+        default?: { url?: string };
+        medium?: { url?: string };
+        high?: { url?: string };
+      };
+    };
+    contentDetails?: {
+      upload?: {
+        videoId?: string;
+      };
+    };
+  }>;
+};
+
+export async function fetchSubscriptionVideos({
+  accessToken,
+  pageToken,
+  maxResults = 20,
+  signal,
+  refreshToken,
+}: {
+  accessToken: string;
+  pageToken?: string;
+  maxResults?: number;
+  signal?: AbortSignal;
+  refreshToken?: () => Promise<string | null>;
+}): Promise<{ items: YouTubeSubscriptionVideo[]; nextPageToken?: string }> {
+  const url = new URL("https://www.googleapis.com/youtube/v3/activities");
+  url.searchParams.set("part", "snippet,contentDetails");
+  url.searchParams.set("home", "true");
+  url.searchParams.set("maxResults", String(Math.min(50, Math.max(1, maxResults))));
+  if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+  let res = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal,
+  });
+
+  // If unauthorized, try to refresh token and retry
+  if (res.status === 401 && refreshToken) {
+    const freshToken = await refreshToken();
+    if (freshToken) {
+      res = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${freshToken}` },
+        signal,
+      });
+    }
+  }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    const err: any = new Error(
+      `YouTube API error: ${res.status} ${text}`
+    );
+    err.status = res.status;
+    err.needsReauth = res.status === 401; // Flag for UI to handle
+    throw err;
+  }
+
+  const json = (await res.json()) as YouTubeActivitiesResponse;
+
+  // Filter for upload activities and map to video items
+  const videos: YouTubeSubscriptionVideo[] = (json.items ?? [])
+    .filter((item) => item.contentDetails?.upload?.videoId)
+    .map((item) => {
+      const snippet = item.snippet ?? {};
+      const videoId = item.contentDetails?.upload?.videoId ?? "";
+      const thumb =
+        snippet.thumbnails?.high?.url ||
+        snippet.thumbnails?.medium?.url ||
+        snippet.thumbnails?.default?.url;
+
+      return {
+        videoId,
+        title: snippet.title ?? "Untitled",
+        thumbnailUrl: thumb,
+        channelTitle: snippet.channelTitle,
+        channelId: snippet.channelId,
+        publishedAt: snippet.publishedAt ?? new Date().toISOString(),
+        description: snippet.description,
+      };
+    });
+
+  return { items: videos, nextPageToken: json.nextPageToken };
 }

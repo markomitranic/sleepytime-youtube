@@ -329,7 +329,8 @@ export function Player() {
         // Delete from YouTube
         await deletePlaylistItem({ 
           accessToken: auth.accessToken, 
-          playlistItemId: itemId 
+          playlistItemId: itemId,
+          refreshToken: auth.getTokenSilently,
         });
         
         // If we deleted the currently playing video, play the next one
@@ -393,6 +394,7 @@ export function Player() {
           playlistId: playlist.playlistId,
           videoId: movedItem.videoId!,
           position: newIndex,
+          refreshToken: auth.getTokenSilently,
         });
         // Background refresh with longer delay to ensure YouTube has processed the change
         // This happens in the background and won't cause a flicker since our optimistic update is already correct

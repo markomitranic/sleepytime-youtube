@@ -15,8 +15,6 @@ to provide a playlist URL, and will play videos one by one.
   - `pnpm lint` - Run complete linting suite (combines code, style, and typecheck)
   - `pnpm test` - Run unit tests (vitest) and Storybook Playwright tests
   - `pnpm test [file-path]` - Run a single test file (unit or storybook)
-  - `pnpm husky` - Run full battery of checks (equivalent to pre-push hook)
-  - `pnpm nodecheck` - Check Node.js version compatibility
 
 ## Finding Documentation
 

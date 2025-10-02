@@ -16,11 +16,27 @@ export function PlaylistGrid() {
   const playlist = usePlaylist();
 
   const queryClient = useQueryClient();
-  const { data: userPlaylists } = useQuery({
+  const { data: userPlaylists, error: userPlaylistsError } = useQuery({
     queryKey: ["userPlaylists", auth.accessToken],
-    queryFn: () => fetchUserPlaylists({ accessToken: auth.accessToken! }),
+    queryFn: async () => {
+      try {
+        return await fetchUserPlaylists({ accessToken: auth.accessToken!, refreshToken: auth.getTokenSilently });
+      } catch (err: any) {
+        // If authentication failed, prompt user to sign in again
+        if (err.status === 401) {
+          toast.error("Your session expired. Please sign in again.", {
+            action: {
+              label: "Sign In",
+              onClick: () => auth.signIn(),
+            },
+          });
+        }
+        throw err;
+      }
+    },
     enabled: auth.isAuthenticated && Boolean(auth.accessToken),
     staleTime: 1000 * 60,
+    retry: false, // Don't retry on auth errors
   });
 
   const { data: builtinPlaylists } = useQuery({

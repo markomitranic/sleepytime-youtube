@@ -12,17 +12,13 @@ export function BottomNav() {
   const playlist = usePlaylist();
   const hasPlaylist = Boolean(playlist.playlistId);
 
-  if (!isAuthenticated) {
-    return null;
-  }
-
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border">
       <div className="flex items-center justify-around h-16 max-w-screen-md mx-auto px-4">
         <NavItem href="/" icon={Home} label="Home" />
-        <NavItem href="/player" icon={Play} label="Player" disabled={!hasPlaylist} isPlayerButton />
-        <NavItem href="/subscriptions" icon={Users} label="Subscriptions" />
-        <NavItem href="/playlists" icon={ListVideo} label="Playlists" />
+        <NavItem href="/player" icon={Play} label="Player" disabled={!isAuthenticated || !hasPlaylist} isPlayerButton />
+        <NavItem href="/subscriptions" icon={Users} label="Subscriptions" disabled={!isAuthenticated} />
+        <NavItem href="/playlists" icon={ListVideo} label="Playlists" disabled={!isAuthenticated} />
       </div>
     </nav>
   );

@@ -153,6 +153,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
             accessToken: auth.accessToken,
             playlistId,
             signal: loadAbortRef.current?.signal,
+            refreshToken: auth.getTokenSilently,
           });
 
           setState((s) => ({
@@ -176,6 +177,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
               playlistId,
               pageToken: nextPageToken,
               signal: loadAbortRef.current?.signal,
+              refreshToken: auth.getTokenSilently,
             });
             aggregated.push(...res.items);
             nextPageToken = res.nextPageToken;
