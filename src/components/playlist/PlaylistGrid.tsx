@@ -48,12 +48,6 @@ export function PlaylistGrid() {
   // Always show built-in playlists, even if they also exist in the user's collection
   const builtinsToRender = builtinPlaylists ?? [];
 
-  const handleSelect = useCallback(
-    async (playlistId: string) => {
-      await playlist.loadByPlaylistId(playlistId);
-    },
-    [playlist],
-  );
 
   const handleRefresh = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
@@ -109,10 +103,9 @@ export function PlaylistGrid() {
         <ul className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {(userPlaylists ?? []).map((p) => (
             <li key={p.id}>
-              <button
-                type="button"
-                className="w-full text-left group"
-                onClick={() => handleSelect(p.id)}
+              <a
+                href={`/player?list=${p.id}`}
+                className="block w-full text-left group"
               >
                 <div className="aspect-square w-full overflow-hidden rounded-md border bg-secondary/40 relative">
                   {p.thumbnailUrl ? (
@@ -150,7 +143,7 @@ export function PlaylistGrid() {
                     <p className="text-xs text-muted-foreground">{p.itemCount} videos</p>
                   )}
                 </div>
-              </button>
+              </a>
             </li>
           ))}
         </ul>
@@ -171,10 +164,9 @@ export function PlaylistGrid() {
       <ul className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {builtinsToRender.map((p) => (
           <li key={p.id}>
-            <button
-              type="button"
-              className="w-full text-left group"
-              onClick={() => handleSelect(p.id)}
+            <a
+              href={`/player?list=${p.id}`}
+              className="block w-full text-left group"
             >
               <div className="aspect-square w-full overflow-hidden rounded-md border bg-secondary/40 relative">
                 {p.thumbnailUrl ? (
@@ -199,7 +191,7 @@ export function PlaylistGrid() {
                   <p className="text-xs text-muted-foreground">{p.itemCount} videos</p>
                 )}
               </div>
-            </button>
+            </a>
           </li>
         ))}
       </ul>

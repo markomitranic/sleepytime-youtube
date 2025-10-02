@@ -229,9 +229,6 @@ export function Player() {
     })
   );
 
-  const handleBack = useCallback(() => {
-    playlist.clear();
-  }, [playlist]);
 
   const getNextVideoId = useCallback((fromVideoId: string | undefined): string | undefined => {
     if (!fromVideoId) return undefined;
@@ -547,20 +544,6 @@ export function Player() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Top row: Back button on left */}
-      <div className="absolute top-0 left-5 pointer-events-none z-10">
-        <button
-          type="button"
-          aria-label="Back"
-          onClick={handleBack}
-          className="pointer-events-auto group inline-flex items-center justify-start text-muted-foreground transition hover:text-foreground pt-2"
-        >
-          <svg width="35" height="20" viewBox="0 0 35 20" fill="none" className="opacity-90 group-hover:opacity-100">
-            <path d="M3 5 L17.5 15 L32 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-      </div>
-
       {/* Loading spinner on right */}
       {isReordering && (
         <div className="absolute top-0 right-5 pointer-events-none z-10 pt-2">

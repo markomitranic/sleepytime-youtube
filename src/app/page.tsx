@@ -7,8 +7,6 @@ import Image from "next/image";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
-import { Player } from "~/components/playlist/Player";
-import { SkeletonPlayer } from "~/components/playlist/SkeletonPlayer";
 import { PlaylistGrid } from "~/components/playlist/PlaylistGrid";
 import { toast } from "sonner";
 
@@ -17,9 +15,20 @@ export default function HomePage() {
   const defaultValues = useMemo(() => ({ url: playlist.url ?? "" }), [playlist.url]);
   const { register, handleSubmit } = useForm<{ url: string }>({ defaultValues });
 
-  const onSubmit = handleSubmit(({ url }) => {
+  const onSubmit = handleSubmit(async ({ url }) => {
     if (!url) return;
-    playlist.loadFromUrl(url);
+    // Extract playlist ID from URL
+    try {
+      const urlObj = new URL(url);
+      const listId = urlObj.searchParams.get("list");
+      if (listId) {
+        window.location.href = `/player?list=${listId}`;
+      } else {
+        toast.error("Could not find playlist ID in URL");
+      }
+    } catch (e) {
+      toast.error("Invalid URL format");
+    }
   });
 
   const [labelText, setLabelText] = useState<string>("slowedReverb");
@@ -110,56 +119,48 @@ export default function HomePage() {
   return (
     <main className="flex min-h-screen items-start justify-center px-[10px] py-6 pb-24">
       <div className="w-full max-w-[720px] space-y-6">
-        {!playlist.playlistId && <h1 className="text-3xl font-bold">Sleepytime-YouTube</h1>}
-        {!playlist.playlistId && (
-          <div className="space-y-5">
-            <p className="text-lg text-muted-foreground text-center">
-              Having trouble sleeping? Bothersome having to keep hitting play and skipping ads? Add a sleep timer, auto-removal and darker mode to your playlists.
-            </p>
-            <div className="text-center">
-              <a 
-                href="#try-it-out"
-                onClick={(e) => {
-                  e.preventDefault();
-                  const el = document.getElementById("try-it-out");
-                  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
-                className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
-              >
-                Try it out with some <span className="tabular-nums">{labelText}</span> →
-              </a>
-            </div>
-            <form onSubmit={onSubmit} className="flex w-full items-center gap-3">
-              <Input
-                type="url"
-                placeholder="https://www.youtube.com/playlist?list=..."
-                className="h-12 text-lg flex-1"
-                aria-label="YouTube playlist URL"
-                {...register("url", { required: true })}
-              />
-              <Button type="submit" className="h-12 px-6">
-                Load Playlist
-              </Button>
-            </form>
-            <div className="mt-5">
-              <Image
-                src="/sleepytime-underwood.jpg"
-                alt="Sleepytime Celestial Seasonings Bear - by Underwood"
-                width={1200}
-                height={600}
-                className="rounded-md w-full h-auto opacity-40 hover:opacity-100 transition-opacity duration-300"
-              />
-            </div>
-            {/* Divider + Grid */}
-            <PlaylistGrid />
+        <h1 className="text-3xl font-bold">Sleepytime-YouTube</h1>
+        <div className="space-y-5">
+          <p className="text-lg text-muted-foreground text-center">
+            Having trouble sleeping? Bothersome having to keep hitting play and skipping ads? Add a sleep timer, auto-removal and darker mode to your playlists.
+          </p>
+          <div className="text-center">
+            <a 
+              href="#try-it-out"
+              onClick={(e) => {
+                e.preventDefault();
+                const el = document.getElementById("try-it-out");
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
+            >
+              Try it out with some <span className="tabular-nums">{labelText}</span> →
+            </a>
           </div>
-        )}
-
-        {/* Error surfaced via Sonner toast */}
-
-        {playlist.isLoading && <SkeletonPlayer />}
-
-        {playlist.items && playlist.items.length > 0 && !playlist.isLoading && <Player />}
+          <form onSubmit={onSubmit} className="flex w-full items-center gap-3">
+            <Input
+              type="url"
+              placeholder="https://www.youtube.com/playlist?list=..."
+              className="h-12 text-lg flex-1"
+              aria-label="YouTube playlist URL"
+              {...register("url", { required: true })}
+            />
+            <Button type="submit" className="h-12 px-6" disabled={playlist.isLoading}>
+              {playlist.isLoading ? "Loading..." : "Load Playlist"}
+            </Button>
+          </form>
+          <div className="mt-5">
+            <Image
+              src="/sleepytime-underwood.jpg"
+              alt="Sleepytime Celestial Seasonings Bear - by Underwood"
+              width={1200}
+              height={600}
+              className="rounded-md w-full h-auto opacity-40 hover:opacity-100 transition-opacity duration-300"
+            />
+          </div>
+          {/* Divider + Grid */}
+          <PlaylistGrid />
+        </div>
       </div>
     </main>
   );
