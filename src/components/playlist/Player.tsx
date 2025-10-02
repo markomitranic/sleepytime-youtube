@@ -92,7 +92,7 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
       <li
         ref={setNodeRef}
         style={style}
-        className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 hover:bg-secondary select-none ${
+        className={`flex cursor-pointer items-start rounded-md border py-3 pr-3 hover:bg-secondary select-none ${
           isCurrent ? "bg-secondary/60" : ""
         }`}
         onClick={() => {
@@ -117,7 +117,7 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
           <button
             type="button"
             ref={setActivatorNodeRef}
-            className="h-8 w-8 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-secondary cursor-grab active:cursor-grabbing self-center flex-shrink-0 touch-none"
+            className="w-10 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-secondary cursor-grab active:cursor-grabbing self-stretch flex-shrink-0 touch-none"
             aria-label="Drag to reorder"
             onClick={(e) => e.stopPropagation()}
             {...attributes}
@@ -130,11 +130,11 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
         {/* Thumbnail */}
         {item.thumbnailUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.thumbnailUrl} alt="thumbnail" className="h-16 w-28 rounded object-cover flex-shrink-0" />
+          <img src={item.thumbnailUrl} alt="thumbnail" className="h-16 w-28 rounded object-cover flex-shrink-0 mr-3" />
         )}
         
         {/* Content */}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 mr-3">
           <div className="flex items-center gap-2">
             <p className={`truncate font-medium ${isCurrent ? "opacity-80" : ""}`}>{item.title}</p>
           </div>
