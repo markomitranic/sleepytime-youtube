@@ -639,7 +639,7 @@ export function Player() {
           items={playlist.items.map((item) => item.id)}
           strategy={verticalListSortingStrategy}
         >
-          <ul className="grid grid-cols-1 gap-4">
+          <ul className="grid grid-cols-1 gap-1">
             {playlist.items.map((item) => {
               const isCurrent = Boolean(currentVideoId && item.videoId === currentVideoId);
               return (
