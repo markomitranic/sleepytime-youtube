@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical } from "lucide-react";
+import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical, Loader2 } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { useAuth } from "~/components/auth/AuthContext";
@@ -154,6 +154,7 @@ export function Player() {
   const [endedOpen, setEndedOpen] = useState<boolean>(false);
   const endedVideoIdRef = useRef<string | undefined>(undefined);
   const [shuffleEnabled, setShuffleEnabled] = useState<boolean>(false);
+  const [isReordering, setIsReordering] = useState<boolean>(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -215,6 +216,7 @@ export function Player() {
       }
       // Optimistic UI removal
       playlist.removeItem(videoId);
+      setIsReordering(true);
 
       // Trigger background removal on YouTube and then background refresh
       deletePlaylistItem({ accessToken: auth.accessToken, playlistItemId: currentItem.id })
@@ -222,6 +224,9 @@ export function Player() {
         .catch(async () => {
           // Soft reconcile by refreshing once even on failure
           await playlist.refreshItemsOnce({ delayMs: 900 });
+        })
+        .finally(() => {
+          setIsReordering(false);
         });
 
       if (nextVideoId) {
@@ -229,6 +234,7 @@ export function Player() {
       }
     } catch (e) {
       toast.error((e as Error)?.message ?? "Failed to remove video.");
+      setIsReordering(false);
     } finally {
       setEndedOpen(false);
     }
@@ -264,6 +270,7 @@ export function Player() {
         }
       }
 
+      setIsReordering(true);
       try {
         await updatePlaylistItemPosition({
           accessToken: auth.accessToken!,
@@ -277,12 +284,15 @@ export function Player() {
         setTimeout(() => {
           playlist.refreshItemsOnce({ delayMs: 2000 }).catch(() => {
             // Silently fail - optimistic update is already in place
+          }).finally(() => {
+            setIsReordering(false);
           });
         }, 0);
       } catch (e) {
         console.error(e);
         // Only revert on error
         await playlist.refreshItemsOnce({ delayMs: 500 });
+        setIsReordering(false);
       }
     },
     [auth.isAuthenticated, auth.accessToken, playlist.items, playlist.playlistId, playlist.refreshItemsOnce, playlist.reorderItem],
@@ -430,6 +440,16 @@ export function Player() {
           </svg>
         </button>
       </div>
+
+      {/* Loading spinner on right */}
+      {isReordering && (
+        <div className="absolute top-0 right-5 pointer-events-none z-10 pt-2">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="text-sm">Saving...</span>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col items-center gap-2 pt-2 pb-4">
         <h2 className="text-xl font-semibold text-center truncate w-full" title={playlist.snippet?.title ?? undefined}>
