@@ -18,37 +18,9 @@ export function PlaylistGrid() {
   const queryClient = useQueryClient();
   const { data: userPlaylists } = useQuery({
     queryKey: ["userPlaylists", auth.accessToken],
-    queryFn: async () => {
-      if (!auth.isAuthenticated) return [];
-      // Obtain a fresh token if possible; fall back to current token
-      let token: string | null = auth.accessToken ?? null;
-      try {
-        const refreshed = await auth.getTokenSilently();
-        if (refreshed) token = refreshed;
-      } catch {}
-      if (!token) {
-        throw new Error("401 Unauthorized (no token)");
-      }
-      try {
-        return await fetchUserPlaylists({ accessToken: token });
-      } catch (e) {
-        const status = (e as any)?.status;
-        const msg = (e as Error)?.message ?? String(e ?? "");
-        if (status === 401 || msg.includes("401")) {
-          try { toast.error("Your session expired. You’ve been signed out."); } catch {}
-          try { auth.signOut(); } catch {}
-        }
-        throw e;
-      }
-    },
-    enabled: Boolean(auth.isAuthenticated),
-    staleTime: 1000 * 60, // 1 minute is fine
-    retry: (failureCount, error) => {
-      const msg = (error as Error)?.message ?? String(error ?? "");
-      // Do not retry on 401; otherwise allow a single retry
-      if (msg.includes("401")) return false;
-      return failureCount < 1;
-    },
+    queryFn: () => fetchUserPlaylists({ accessToken: auth.accessToken! }),
+    enabled: auth.isAuthenticated && Boolean(auth.accessToken),
+    staleTime: 1000 * 60,
   });
 
   const { data: builtinPlaylists } = useQuery({
@@ -84,8 +56,9 @@ export function PlaylistGrid() {
   );
 
   const handleRefresh = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: ["userPlaylists"] });
-  }, [queryClient]);
+    await queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
+    await queryClient.refetchQueries({ queryKey: ["userPlaylists", auth.accessToken], type: "active" });
+  }, [queryClient, auth.accessToken]);
 
   return (
     <div className="space-y-4">
