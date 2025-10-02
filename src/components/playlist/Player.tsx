@@ -65,6 +65,7 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
@@ -115,7 +116,8 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
         {isAuthenticated && item.videoId && (
           <button
             type="button"
-            className="h-8 w-8 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-secondary cursor-grab active:cursor-grabbing self-center flex-shrink-0"
+            ref={setActivatorNodeRef}
+            className="h-8 w-8 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-secondary cursor-grab active:cursor-grabbing self-center flex-shrink-0 touch-none"
             aria-label="Drag to reorder"
             onClick={(e) => e.stopPropagation()}
             {...attributes}
@@ -179,14 +181,19 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
       
       {/* Delete confirmation dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete from playlist?</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to remove &quot;{item.title}&quot; from the playlist?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
+        <DialogContent className="p-0 overflow-hidden">
+          <div className="p-6 flex flex-col items-center text-center gap-4">
+            <div className="size-16 rounded-full bg-red-500/10 flex items-center justify-center">
+              <Trash2 className="size-8 text-red-500" />
+            </div>
+            <DialogHeader className="p-0">
+              <DialogTitle>Delete from playlist?</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to remove &quot;{item.title}&quot; from the playlist?
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <DialogFooter className="gap-2 p-4">
             <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={isDeleting}>
               Cancel
             </Button>
@@ -212,7 +219,11 @@ export function Player() {
   const [isReordering, setIsReordering] = useState<boolean>(false);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
