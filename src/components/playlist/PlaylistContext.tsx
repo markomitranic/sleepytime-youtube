@@ -1,11 +1,18 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useLocalStorage } from "usehooks-ts";
 import type { YouTubePlaylistItem, YouTubePlaylistSnippet } from "~/lib/youtube";
 import { env } from "~/env";
 import { useAuth } from "~/components/auth/AuthContext";
 import { extractPlaylistIdFromUrl, fetchPlaylistItems, fetchPlaylistSnippet } from "~/lib/youtube";
 import { toast } from "sonner";
+
+type PersistedPlaylistState = {
+  playlistId?: string;
+  currentVideoId?: string;
+  url?: string;
+};
 
 export type SleepTimer = {
   isActive: boolean;
@@ -59,6 +66,10 @@ export type PlaylistActions = {
 const PlaylistContext = createContext<(PlaylistState & PlaylistActions) | null>(null);
 
 export function PlaylistProvider({ children }: { children: React.ReactNode }) {
+  const [persistedState, setPersistedState] = useLocalStorage<PersistedPlaylistState | null>(
+    "sleepytime-playlist",
+    null
+  );
   const [state, setState] = useState<PlaylistState>({ 
     items: [], 
     sleepTimer: { isActive: false, durationMinutes: 30 },
@@ -66,6 +77,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
     darker: false
   });
   const loadAbortRef = useRef<AbortController | null>(null);
+  const hasInitializedFromStorage = useRef(false);
   const auth = useAuth();
 
   const actions: PlaylistActions = useMemo(
@@ -238,6 +250,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           loadAbortRef.current = null;
         }
         setState({ items: [], sleepTimer: { isActive: false, durationMinutes: 30 }, isPaused: false, darker: false });
+        setPersistedState(null); // Clear localStorage
         if (typeof window !== "undefined") {
           const urlObj = new URL(window.location.href);
           urlObj.searchParams.delete("list");
@@ -418,15 +431,36 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [state.sleepTimer.isActive, state.sleepTimer.startTime]);
 
-  // Initialize from URL if ?list= is present (wait until auth is ready for private access)
+  // Persist playlist state to localStorage whenever it changes
+  useEffect(() => {
+    if (state.playlistId) {
+      setPersistedState({
+        playlistId: state.playlistId,
+        currentVideoId: state.currentVideoId,
+        url: state.url,
+      });
+    }
+  }, [state.playlistId, state.currentVideoId, state.url, setPersistedState]);
+
+  // Initialize from URL if ?list= is present, or from localStorage if not
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!auth.isReady) return;
+    if (hasInitializedFromStorage.current) return;
+    
+    hasInitializedFromStorage.current = true;
+    
     const urlObj = new URL(window.location.href);
-    const list = urlObj.searchParams.get("list");
-    if (!list) return;
-    actions.loadByPlaylistId(list);
-  }, [auth.isReady]);
+    const listFromUrl = urlObj.searchParams.get("list");
+    
+    // URL parameter takes precedence over localStorage
+    if (listFromUrl) {
+      actions.loadByPlaylistId(listFromUrl);
+    } else if (persistedState?.playlistId) {
+      // Restore from localStorage if no URL parameter
+      actions.loadByPlaylistId(persistedState.playlistId);
+    }
+  }, [auth.isReady, persistedState?.playlistId, actions]);
 
   return <PlaylistContext.Provider value={value}>{children}</PlaylistContext.Provider>;
 }
