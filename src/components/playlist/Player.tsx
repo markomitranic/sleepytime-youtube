@@ -325,6 +325,7 @@ export function Player() {
         playerInstanceRef.current = new window.YT.Player(playerRef.current, {
           videoId: currentVideoId,
           playerVars: {
+            autoplay: 1,
             enablejsapi: 1,
             playsinline: 1,
             rel: 0,
@@ -333,7 +334,8 @@ export function Player() {
           },
           events: {
             onReady: (event: any) => {
-              // Player is ready
+              // Auto-start video when player is ready
+              event.target.playVideo();
             },
             onStateChange: (event: any) => {
               try {
