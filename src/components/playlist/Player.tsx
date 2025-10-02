@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, ArrowUp, ArrowDown } from "lucide-react";
+import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { useAuth } from "~/components/auth/AuthContext";
@@ -16,6 +16,22 @@ import {
   DialogFooter,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // Declare YouTube IFrame API types
 declare global {
@@ -23,6 +39,110 @@ declare global {
     YT: any;
     onYouTubeIframeAPIReady: () => void;
   }
+}
+
+type PlaylistItem = {
+  id: string;
+  videoId?: string;
+  title: string;
+  thumbnailUrl?: string;
+  channelTitle?: string;
+  channelId?: string;
+};
+
+type SortableItemProps = {
+  item: PlaylistItem;
+  isCurrent: boolean;
+  isAuthenticated: boolean;
+  onSelect: (videoId?: string) => void;
+};
+
+function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect }: SortableItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 hover:bg-secondary ${
+        isCurrent ? "bg-secondary/60" : ""
+      }`}
+      onClick={() => {
+        if (!item.videoId) {
+          toast.error("This video is unavailable (private or removed)", {
+            action: {
+              label: "Copy error",
+              onClick: () => {
+                try {
+                  navigator.clipboard.writeText("This video is unavailable (private or removed)");
+                } catch {}
+              },
+            },
+          });
+          return;
+        }
+        onSelect(item.videoId);
+      }}
+    >
+      {item.thumbnailUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={item.thumbnailUrl} alt="thumbnail" className="h-16 w-28 rounded object-cover" />
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className={`truncate font-medium ${isCurrent ? "opacity-80" : ""}`}>{item.title}</p>
+        </div>
+        {item.channelTitle && (
+          <div className="flex flex-col gap-1">
+            {item.channelId ? (
+              <a
+                href={`https://www.youtube.com/channel/${item.channelId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {item.channelTitle}
+              </a>
+            ) : (
+              <p className="text-xs text-muted-foreground">{item.channelTitle}</p>
+            )}
+            {isCurrent && (
+              <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground w-fit">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_6px_theme(colors.green.500)]" />
+                Playing
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+      {isAuthenticated && item.videoId && (
+        <button
+          type="button"
+          className="h-8 w-8 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-secondary cursor-grab active:cursor-grabbing self-center"
+          aria-label="Drag to reorder"
+          onClick={(e) => e.stopPropagation()}
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-5 w-5" />
+        </button>
+      )}
+    </li>
+  );
 }
 
 export function Player() {
@@ -34,6 +154,13 @@ export function Player() {
   const [endedOpen, setEndedOpen] = useState<boolean>(false);
   const endedVideoIdRef = useRef<string | undefined>(undefined);
   const [shuffleEnabled, setShuffleEnabled] = useState<boolean>(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const handleBack = useCallback(() => {
     playlist.clear();
@@ -107,37 +234,55 @@ export function Player() {
     }
   }, [auth.isAuthenticated, auth.accessToken, currentVideoId, playlist.items, playlist.playlistId, playlist.refreshItemsOnce, playlist.setCurrentVideoId, getNextVideoId]);
 
-  const handleMove = useCallback(
-    async (direction: "up" | "down", videoId?: string) => {
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+
+      if (!over || active.id === over.id) return;
       if (!auth.isAuthenticated || !auth.accessToken) return;
-      if (!videoId || !playlist.playlistId) return;
+      if (!playlist.playlistId) return;
 
-      // Optimistic UI update
-      playlist.reorderItem(videoId, direction);
-
-      // Compute target position against current available list to call API
       const availableVideos = playlist.items.filter((i) => i.videoId);
-      const currentIndex = availableVideos.findIndex((i) => i.videoId === videoId);
-      if (currentIndex === -1) return;
-      const neighborIndex = direction === "up"
-        ? Math.max(0, currentIndex - 1)
-        : Math.min(availableVideos.length - 1, currentIndex + 1);
-      const currentItem = availableVideos[currentIndex]!;
+      const oldIndex = availableVideos.findIndex((i) => i.id === active.id);
+      const newIndex = availableVideos.findIndex((i) => i.id === over.id);
+
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const movedItem = availableVideos[oldIndex]!;
+
+      // Perform multiple single-step reorders to move the item to its target position
+      // This uses the existing optimistic update mechanism
+      if (oldIndex < newIndex) {
+        // Moving down
+        for (let i = 0; i < newIndex - oldIndex; i++) {
+          playlist.reorderItem(movedItem.videoId!, "down");
+        }
+      } else {
+        // Moving up
+        for (let i = 0; i < oldIndex - newIndex; i++) {
+          playlist.reorderItem(movedItem.videoId!, "up");
+        }
+      }
 
       try {
         await updatePlaylistItemPosition({
           accessToken: auth.accessToken!,
-          playlistItemId: currentItem.id,
+          playlistItemId: movedItem.id,
           playlistId: playlist.playlistId,
-          videoId: currentItem.videoId!,
-          position: neighborIndex,
+          videoId: movedItem.videoId!,
+          position: newIndex,
         });
-        // Background refresh after slight delay to let YouTube apply the change
-        await playlist.refreshItemsOnce({ delayMs: 900 });
+        // Background refresh with longer delay to ensure YouTube has processed the change
+        // This happens in the background and won't cause a flicker since our optimistic update is already correct
+        setTimeout(() => {
+          playlist.refreshItemsOnce({ delayMs: 2000 }).catch(() => {
+            // Silently fail - optimistic update is already in place
+          });
+        }, 0);
       } catch (e) {
         console.error(e);
-        // Soft revert by reloading items once
-        await playlist.refreshItemsOnce({ delayMs: 900 });
+        // Only revert on error
+        await playlist.refreshItemsOnce({ delayMs: 500 });
       }
     },
     [auth.isAuthenticated, auth.accessToken, playlist.items, playlist.playlistId, playlist.refreshItemsOnce, playlist.reorderItem],
@@ -345,94 +490,31 @@ export function Player() {
         <div className="flex-1 h-px bg-border"></div>
       </div>
 
-      <ul className="grid grid-cols-1 gap-4">
-        {playlist.items.map((item) => {
-          const isCurrent = Boolean(currentVideoId && item.videoId === currentVideoId);
-          return (
-            <li
-              key={item.id}
-              className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 hover:bg-secondary ${
-                isCurrent ? "bg-secondary/60" : ""
-              }`}
-              onClick={() => {
-                if (!item.videoId) {
-                  toast.error("This video is unavailable (private or removed)", {
-                    action: {
-                      label: "Copy error",
-                      onClick: () => {
-                        try {
-                          navigator.clipboard.writeText("This video is unavailable (private or removed)");
-                        } catch {}
-                      },
-                    },
-                  });
-                  return;
-                }
-                playlist.setCurrentVideoId(item.videoId);
-              }}
-            >
-              {item.thumbnailUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.thumbnailUrl} alt="thumbnail" className="h-16 w-28 rounded object-cover" />
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className={`truncate font-medium ${isCurrent ? "opacity-80" : ""}`}>{item.title}</p>
-                </div>
-                {item.channelTitle && (
-                  <div className="flex flex-col gap-1">
-                    {item.channelId ? (
-                      <a
-                        href={`https://www.youtube.com/channel/${item.channelId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {item.channelTitle}
-                      </a>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">{item.channelTitle}</p>
-                    )}
-                    {isCurrent && (
-                      <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground w-fit">
-                        <span className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_6px_theme(colors.green.500)]" />
-                        Playing
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-              {auth.isAuthenticated && item.videoId && (
-                <div className="flex flex-col items-center gap-1 self-center">
-                  <button
-                    type="button"
-                    className="h-6 w-6 inline-flex items-center justify-center rounded border text-muted-foreground hover:text-foreground hover:bg-secondary"
-                    aria-label="Move up"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMove("up", item.videoId);
-                    }}
-                  >
-                    <ArrowUp className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    className="h-6 w-6 inline-flex items-center justify-center rounded border text-muted-foreground hover:text-foreground hover:bg-secondary"
-                    aria-label="Move down"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMove("down", item.videoId);
-                    }}
-                  >
-                    <ArrowDown className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={playlist.items.map((item) => item.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <ul className="grid grid-cols-1 gap-4">
+            {playlist.items.map((item) => {
+              const isCurrent = Boolean(currentVideoId && item.videoId === currentVideoId);
+              return (
+                <SortablePlaylistItem
+                  key={item.id}
+                  item={item}
+                  isCurrent={isCurrent}
+                  isAuthenticated={auth.isAuthenticated}
+                  onSelect={playlist.setCurrentVideoId}
+                />
+              );
+            })}
+          </ul>
+        </SortableContext>
+      </DndContext>
 
       {/* Footer with social links */}
       <div className="flex items-center justify-center gap-6 pt-8 pb-4 mt-8 border-t">
