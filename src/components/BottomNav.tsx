@@ -17,7 +17,7 @@ export function BottomNav() {
       <div className="flex items-center justify-around h-16 max-w-screen-md mx-auto px-4">
         <NavItem href="/" icon={Home} label="Home" />
         <NavItem href="/player" icon={Play} label="Player" disabled={!isAuthenticated || !hasPlaylist} isPlayerButton />
-        <NavItem href="/subscriptions" icon={Users} label="Subscriptions" disabled={!isAuthenticated} />
+        <NavItem href="/subscriptions" icon={Users} label="Subscriptions" disabled={true} />
         <NavItem href="/playlists" icon={ListVideo} label="Playlists" disabled={!isAuthenticated} />
       </div>
     </nav>
