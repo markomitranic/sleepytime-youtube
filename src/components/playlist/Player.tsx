@@ -92,7 +92,7 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
       <li
         ref={setNodeRef}
         style={style}
-        className={`flex cursor-pointer items-start rounded-md border py-3 pr-3 hover:bg-secondary select-none ${
+        className={`flex cursor-pointer items-start gap-3 rounded-md border py-3 pr-3 hover:bg-secondary select-none ${
           isCurrent ? "bg-secondary/60" : ""
         }`}
         onClick={() => {
@@ -130,11 +130,11 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
         {/* Thumbnail */}
         {item.thumbnailUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.thumbnailUrl} alt="thumbnail" className="h-16 w-28 rounded object-cover flex-shrink-0 mr-3" />
+          <img src={item.thumbnailUrl} alt="thumbnail" className="h-16 w-28 rounded object-cover flex-shrink-0 -ml-3" />
         )}
         
         {/* Content */}
-        <div className="min-w-0 flex-1 mr-3">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className={`truncate font-medium ${isCurrent ? "opacity-80" : ""}`}>{item.title}</p>
           </div>
@@ -591,8 +591,8 @@ export function Player() {
         <button
           type="button"
           onClick={() => setShuffleEnabled((v) => !v)}
-          className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full border transition focus-visible:ring-[3px] hover:text-foreground ${
-            shuffleEnabled ? "bg-blue-500/15 text-white border-blue-300 shadow-sm" : "text-muted-foreground"
+          className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:ring-[3px] hover:text-foreground ${
+            shuffleEnabled ? "bg-blue-500/15 text-white shadow-sm" : "text-muted-foreground"
           }`}
           aria-label={shuffleEnabled ? "Disable shuffle" : "Enable shuffle"}
         >
@@ -611,9 +611,9 @@ export function Player() {
         <SleepTimerDrawer>
           <button
             type="button"
-            className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full border transition focus-visible:ring-[3px] hover:text-foreground ${
+            className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:ring-[3px] hover:text-foreground ${
               playlist.sleepTimer.isActive 
-                ? "bg-blue-100 text-blue-600 border-blue-300 shadow-sm" 
+                ? "bg-blue-100 text-blue-600 shadow-sm" 
                 : "text-muted-foreground"
             }`}
             aria-label={playlist.sleepTimer.isActive ? "Sleep timer active - click to modify" : "Set sleep timer"}
