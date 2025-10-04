@@ -130,7 +130,7 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
           <button
             type="button"
             ref={setActivatorNodeRef}
-            className="w-10 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-secondary cursor-grab active:cursor-grabbing self-stretch flex-shrink-0 touch-none"
+            className="w-8 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-secondary cursor-grab active:cursor-grabbing self-stretch flex-shrink-0 touch-none ml-1"
             aria-label="Drag to reorder"
             onClick={(e) => e.stopPropagation()}
             {...attributes}
@@ -142,7 +142,7 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
         
         {/* Thumbnail */}
         {item.thumbnailUrl && (
-          <div className="relative h-16 w-28 rounded flex-shrink-0 -ml-3">
+          <div className={`relative h-16 w-28 rounded flex-shrink-0 ${isAuthenticated && item.videoId ? "" : "-ml-3"}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={item.thumbnailUrl} alt="thumbnail" className="h-full w-full rounded object-cover" />
             {item.durationSeconds !== undefined && (
@@ -738,7 +738,7 @@ export function Player() {
       {/* New layout: Left side with video, Right sidebar with playlist */}
       <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-6rem)] max-h-[calc(100vh-6rem)]">
         {/* Left side: Video player and controls (2/3) */}
-        <div className={`flex-1 lg:w-2/3 flex flex-col gap-4 transition-opacity duration-500`}>
+        <div className="flex-1 lg:w-2/3 flex flex-col gap-4">
           {/* Video Player */}
           <div className="aspect-video w-full overflow-hidden rounded-md border bg-black flex-shrink-0">
             <div
@@ -764,8 +764,8 @@ export function Player() {
               <button
                 type="button"
                 onClick={() => setShuffleEnabled((v) => !v)}
-                className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:ring-[3px] hover:text-foreground ${
-                  shuffleEnabled ? "bg-blue-500/15 text-white shadow-sm" : "text-muted-foreground"
+                className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:ring-[3px] ${
+                  shuffleEnabled ? "text-white border-2 border-white" : "text-muted-foreground"
                 }`}
                 aria-label={shuffleEnabled ? "Disable shuffle" : "Enable shuffle"}
               >
@@ -775,7 +775,7 @@ export function Player() {
               <button
                 type="button"
                 onClick={handlePlayPause}
-                className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-14 w-14 items-center justify-center rounded-full border text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground"
+                className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-14 w-14 items-center justify-center rounded-full border text-white transition focus-visible:ring-[3px]"
                 aria-label={isPlaying ? "Pause" : "Play"}
               >
                 {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
@@ -793,9 +793,9 @@ export function Player() {
               <SleepTimerDrawer>
                 <button
                   type="button"
-                  className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:ring-[3px] hover:text-foreground ${
+                  className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:ring-[3px] ${
                     playlist.sleepTimer.isActive 
-                      ? "bg-blue-100 text-blue-600 shadow-sm" 
+                      ? "text-white border-2 border-white" 
                       : "text-muted-foreground"
                   }`}
                   aria-label={playlist.sleepTimer.isActive ? "Sleep timer active - click to modify" : "Set sleep timer"}
