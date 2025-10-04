@@ -22,6 +22,8 @@ type PlaylistDetailProps = {
   isLoading: boolean;
   onItemsChanged: () => void;
   onReorderRequest?: (itemId: string, oldIndex: number, newIndex: number) => Promise<void>;
+  mobileMode?: boolean;
+  onMobileMove?: (item: YouTubePlaylistItem) => void;
 };
 
 type SortOrder = "default" | "title-asc" | "title-desc";
@@ -49,7 +51,9 @@ export function PlaylistDetail({
   items, 
   isLoading,
   onItemsChanged,
-  onReorderRequest
+  onReorderRequest,
+  mobileMode = false,
+  onMobileMove,
 }: PlaylistDetailProps) {
   const auth = useAuth();
   const [sortOrder, setSortOrder] = useState<SortOrder>("default");
@@ -193,7 +197,7 @@ export function PlaylistDetail({
   }
 
   return (
-    <div className="p-6 space-y-6 relative">
+    <div className={`p-6 space-y-6 relative ${mobileMode ? 'pt-28' : ''}`}>
       {/* Loading indicator */}
       {isReordering && (
         <div className="absolute top-4 right-4 pointer-events-none z-10">
@@ -204,60 +208,62 @@ export function PlaylistDetail({
         </div>
       )}
 
-      {/* Header */}
-      <div className="space-y-4">
-        <div className="flex items-start gap-6">
-          {/* Large thumbnail */}
-          {items[0]?.thumbnailUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={items[0].thumbnailUrl}
-              alt={snippet.title}
-              className="w-48 h-27 rounded-lg object-cover flex-shrink-0"
-            />
-          ) : (
-            <div className="w-48 h-27 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-              <span className="text-muted-foreground">No image</span>
-            </div>
-          )}
-
-          {/* Metadata */}
-          <div className="flex-1 space-y-2">
-            <h1 className="text-2xl font-bold">{snippet.title}</h1>
-            
-            {snippet.description && (
-              <p className="text-sm text-muted-foreground line-clamp-3">
-                {snippet.description}
-              </p>
+      {/* Header - hide on mobile */}
+      {!mobileMode && (
+        <div className="space-y-4">
+          <div className="flex items-start gap-6">
+            {/* Large thumbnail */}
+            {items[0]?.thumbnailUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={items[0].thumbnailUrl}
+                alt={snippet.title}
+                className="w-48 h-27 rounded-lg object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-48 h-27 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                <span className="text-muted-foreground">No image</span>
+              </div>
             )}
 
-            <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-              <span className="font-medium">{snippet.itemCount ?? items.length} video{(snippet.itemCount ?? items.length) !== 1 ? 's' : ''}</span>
+            {/* Metadata */}
+            <div className="flex-1 space-y-2">
+              <h1 className="text-2xl font-bold">{snippet.title}</h1>
               
-              {playlistMetadata.totalDurationSeconds > 0 && (
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  <span>Total length: {formatDuration(playlistMetadata.totalDurationSeconds)}</span>
-                </div>
+              {snippet.description && (
+                <p className="text-sm text-muted-foreground line-clamp-3">
+                  {snippet.description}
+                </p>
               )}
 
-              {snippet.publishedAt && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>Created: {formatDate(snippet.publishedAt)}</span>
-                </div>
-              )}
+              <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+                <span className="font-medium">{snippet.itemCount ?? items.length} video{(snippet.itemCount ?? items.length) !== 1 ? 's' : ''}</span>
+                
+                {playlistMetadata.totalDurationSeconds > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    <span>Total length: {formatDuration(playlistMetadata.totalDurationSeconds)}</span>
+                  </div>
+                )}
 
-              {playlistMetadata.oldestVideoDate && (
-                <div className="flex items-center gap-2">
-                  <CalendarClock className="h-4 w-4" />
-                  <span>Oldest video: {formatDate(playlistMetadata.oldestVideoDate)}</span>
-                </div>
-              )}
+                {snippet.publishedAt && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>Created: {formatDate(snippet.publishedAt)}</span>
+                  </div>
+                )}
+
+                {playlistMetadata.oldestVideoDate && (
+                  <div className="flex items-center gap-2">
+                    <CalendarClock className="h-4 w-4" />
+                    <span>Oldest video: {formatDate(playlistMetadata.oldestVideoDate)}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Toolbar with sorting */}
       <div className="flex items-center justify-between border-t border-b py-3">
@@ -294,6 +300,8 @@ export function PlaylistDetail({
           // Disable drag and drop when sorting is active (not default order)
           disableDragDrop={sortOrder !== "default"}
           onReplaceVideo={handleReplaceVideo}
+          mobileMode={mobileMode}
+          onMobileMove={onMobileMove}
         />
       ) : (
         <div className="flex items-center justify-center h-32 text-muted-foreground">
