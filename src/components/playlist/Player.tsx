@@ -217,7 +217,6 @@ export function Player() {
   const endedVideoIdRef = useRef<string | undefined>(undefined);
   const [shuffleEnabled, setShuffleEnabled] = useState<boolean>(false);
   const [isReordering, setIsReordering] = useState<boolean>(false);
-  const [isPipSupported, setIsPipSupported] = useState<boolean>(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -488,13 +487,6 @@ export function Player() {
     }
   }, []);
 
-  // Check PiP support on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsPipSupported('documentPictureInPicture' in window);
-    }
-  }, []);
-
   // Load YouTube IFrame API
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -673,16 +665,14 @@ export function Player() {
           <SkipForward className="h-6 w-6" />
         </button>
         
-        {isPipSupported && (
-          <button
-            type="button"
-            onClick={handlePictureInPicture}
-            className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground"
-            aria-label="Picture-in-Picture"
-          >
-            <PictureInPicture className="h-5 w-5" />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handlePictureInPicture}
+          className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground"
+          aria-label="Picture-in-Picture"
+        >
+          <PictureInPicture className="h-5 w-5" />
+        </button>
         
         <SleepTimerDrawer>
           <button
