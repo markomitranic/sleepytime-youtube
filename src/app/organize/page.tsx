@@ -14,6 +14,9 @@ import { env } from "~/env";
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
 import { PlaylistDetail } from "~/components/organize/PlaylistDetail";
+import { MobilePlaylistHeader } from "~/components/organize/MobilePlaylistHeader";
+import { MobilePlaylistSelector } from "~/components/organize/MobilePlaylistSelector";
+import { MoveVideoDialog } from "~/components/organize/MoveVideoDialog";
 
 type LoadingProgress = {
   pagesLoaded: number;
@@ -30,6 +33,9 @@ export default function OrganizePage() {
   const [loadingProgress, setLoadingProgress] = useState<LoadingProgress | null>(null);
   const [draggedVideo, setDraggedVideo] = useState<YouTubePlaylistItem | null>(null);
   const [isMovingVideo, setIsMovingVideo] = useState(false);
+  const [isMobileHeaderExpanded, setIsMobileHeaderExpanded] = useState(false);
+  const [videoToMove, setVideoToMove] = useState<YouTubePlaylistItem | null>(null);
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -298,6 +304,58 @@ export default function OrganizePage() {
     }
   }, [draggedVideo, selectedPlaylistId, playlists, playlistItems, auth.accessToken, auth.getTokenSilently, queryClient, handleVideoReorder]);
 
+  const handleMobileMoveVideo = useCallback((item: YouTubePlaylistItem) => {
+    setVideoToMove(item);
+    setShowMoveDialog(true);
+  }, []);
+
+  const handleMoveVideoToPlaylist = useCallback(async (targetPlaylistId: string) => {
+    if (!videoToMove || !auth.accessToken || !selectedPlaylistId) return;
+
+    const targetPlaylist = playlists?.find(p => p.id === targetPlaylistId);
+    if (!targetPlaylist) return;
+
+    // Optimistic update: Immediately update the query cache to remove the video from current view
+    queryClient.setQueryData<YouTubePlaylistItem[]>(
+      ["playlistItems", selectedPlaylistId],
+      (old) => old?.filter(item => item.id !== videoToMove.id) ?? []
+    );
+
+    setIsMovingVideo(true);
+
+    try {
+      // Add video to target playlist
+      await addVideoToPlaylist({
+        accessToken: auth.accessToken,
+        playlistId: targetPlaylistId,
+        videoId: videoToMove.videoId!,
+        refreshToken: auth.getTokenSilently,
+      });
+
+      // Remove from current playlist
+      await deletePlaylistItem({
+        accessToken: auth.accessToken,
+        playlistItemId: videoToMove.id,
+        refreshToken: auth.getTokenSilently,
+      });
+
+      toast.success(`Moved "${videoToMove.title}" to "${targetPlaylist.title}"`);
+
+      // Only invalidate the target playlist (not the current one - we already updated it optimistically)
+      queryClient.invalidateQueries({ queryKey: ["playlistItems", targetPlaylistId] });
+      
+      setIsMovingVideo(false);
+    } catch (e) {
+      console.error(e);
+      toast.error(`Failed to move video: ${(e as Error)?.message ?? "Unknown error"}`);
+      
+      // Revert optimistic update on error by refetching
+      queryClient.invalidateQueries({ queryKey: ["playlistItems", selectedPlaylistId] });
+      setIsMovingVideo(false);
+      throw e; // Re-throw so dialog can handle it
+    }
+  }, [videoToMove, auth.accessToken, auth.getTokenSilently, selectedPlaylistId, playlists, queryClient]);
+
   // Don't render anything if not authenticated yet
   if (!auth.isReady || !auth.isAuthenticated) {
     return (
@@ -309,7 +367,8 @@ export default function OrganizePage() {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <main className="fixed inset-0 flex flex-col pb-24">
+      {/* Desktop layout */}
+      <main className="hidden md:flex fixed inset-0 flex-col pb-24">
         {isMovingVideo && (
           <div className="fixed top-4 right-4 z-50 bg-background border rounded-lg shadow-lg p-3 flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -378,6 +437,74 @@ export default function OrganizePage() {
             </div>
           )}
         </DragOverlay>
+      </main>
+
+      {/* Mobile layout */}
+      <main className="md:hidden flex flex-col min-h-screen">
+        {isMovingVideo && (
+          <div className="fixed top-4 right-4 z-50 bg-background border rounded-lg shadow-lg p-3 flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm">Moving video...</span>
+          </div>
+        )}
+
+        {selectedPlaylistId ? (
+          <>
+            {/* Mobile header with playlist selector */}
+            <MobilePlaylistHeader
+              snippet={playlistSnippet}
+              thumbnailUrl={playlistItems?.[0]?.thumbnailUrl}
+              playlists={playlists ?? []}
+              selectedPlaylistId={selectedPlaylistId}
+              onSelectPlaylist={setSelectedPlaylistId}
+              isExpanded={isMobileHeaderExpanded}
+              onToggleExpanded={() => setIsMobileHeaderExpanded(!isMobileHeaderExpanded)}
+            />
+
+            {/* Playlist detail content - only show when header is not expanded */}
+            {!isMobileHeaderExpanded && (
+              <div className="flex-1 overflow-y-auto">
+                {(snippetLoading || itemsLoading || loadingProgress) ? (
+                  <SkeletonPlaylistDetail
+                    loadingProgress={loadingProgress}
+                    playlistTitle={playlistSnippet?.title}
+                  />
+                ) : (
+                  <PlaylistDetail
+                    playlistId={selectedPlaylistId}
+                    snippet={playlistSnippet}
+                    items={playlistItems ?? []}
+                    isLoading={false}
+                    onItemsChanged={() => {
+                      setLoadingProgress(null);
+                      refetchItems();
+                    }}
+                    onReorderRequest={handleVideoReorder}
+                    mobileMode={true}
+                    onMobileMove={handleMobileMoveVideo}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Move video dialog */}
+            <MoveVideoDialog
+              open={showMoveDialog}
+              onOpenChange={setShowMoveDialog}
+              video={videoToMove}
+              playlists={playlists ?? []}
+              currentPlaylistId={selectedPlaylistId}
+              onMoveVideo={handleMoveVideoToPlaylist}
+            />
+          </>
+        ) : (
+          // Initial view - show playlist selector
+          <MobilePlaylistSelector
+            playlists={playlists ?? []}
+            isLoading={playlistsLoading}
+            onSelectPlaylist={setSelectedPlaylistId}
+          />
+        )}
       </main>
     </DndContext>
   );
