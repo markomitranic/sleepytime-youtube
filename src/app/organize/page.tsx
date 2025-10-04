@@ -11,7 +11,7 @@ import { SkeletonPlaylistDetail } from "~/components/organize/SkeletonPlaylistDe
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { env } from "~/env";
-import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
 import { PlaylistDetail } from "~/components/organize/PlaylistDetail";
 
@@ -35,6 +35,12 @@ export default function OrganizePage() {
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     })
   );
