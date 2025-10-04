@@ -27,6 +27,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -148,7 +149,7 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
           ref={setActivatorNodeRef}
           className={`w-8 inline-flex items-center justify-center rounded transition-colors self-stretch flex-shrink-0 ml-1 ${
             isAuthenticated && item.videoId
-              ? "text-white hover:text-white/80 hover:bg-secondary/50 cursor-grab active:cursor-grabbing touch-none"
+              ? "text-white hover:text-white/80 hover:bg-secondary/50 cursor-grab active:cursor-grabbing touch-manipulation select-none"
               : "text-muted-foreground/30 cursor-not-allowed"
           }`}
           aria-label="Drag to reorder"
@@ -272,6 +273,12 @@ export function Player() {
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
