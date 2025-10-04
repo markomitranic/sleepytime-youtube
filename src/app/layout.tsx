@@ -13,6 +13,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
+  minimumScale: 1,
 };
 
 export const metadata: Metadata = {
@@ -31,12 +32,6 @@ export const metadata: Metadata = {
   themeColor: "#252525",
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-};
 
 const geist = Geist({ subsets: ["latin"] });
 
@@ -47,6 +42,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+      </head>
       <body className={geist.className}>
         <AppProviders>
           <AuroraBackground />
