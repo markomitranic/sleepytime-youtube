@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical, Loader2, Trash2, RotateCw, Play, Pause, ArrowUpDown, ListVideo } from "lucide-react";
+import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical, Loader2, Trash2, Play, Pause, ArrowUpDown, ListVideo } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { useAuth } from "~/components/auth/useAuth";
@@ -261,7 +261,6 @@ export function Player() {
   const endedVideoIdRef = useRef<string | undefined>(undefined);
   const [shuffleEnabled, setShuffleEnabled] = useState<boolean>(false);
   const [isReordering, setIsReordering] = useState<boolean>(false);
-  const [isPortrait, setIsPortrait] = useState<boolean>(false);
   const [isInactive, setIsInactive] = useState<boolean>(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
@@ -625,24 +624,6 @@ export function Player() {
     }
   }, [playlist.isPaused]);
 
-  // Portrait mode detection
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const checkOrientation = () => {
-      setIsPortrait(window.innerHeight > window.innerWidth);
-    };
-
-    checkOrientation();
-    window.addEventListener('resize', checkOrientation);
-    window.addEventListener('orientationchange', checkOrientation);
-
-    return () => {
-      window.removeEventListener('resize', checkOrientation);
-      window.removeEventListener('orientationchange', checkOrientation);
-    };
-  }, []);
-
   // Inactivity timer - lower opacity after 10s of no interaction
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -685,21 +666,6 @@ export function Player() {
 
   return (
     <>
-      {/* Portrait mode curtain */}
-      {isPortrait && (
-        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-6">
-          <div className="text-center space-y-6 max-w-md">
-            <div className="flex justify-center">
-              <RotateCw className="h-24 w-24 text-blue-500 animate-pulse" />
-            </div>
-            <h2 className="text-2xl font-bold text-white">Please Rotate Your Device</h2>
-            <p className="text-lg text-gray-300">
-              For the best viewing experience, please switch to landscape mode.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Sleep Timer Expiry Dialog */}
       {playlist.sleepTimer.expired && (
         <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-6">
