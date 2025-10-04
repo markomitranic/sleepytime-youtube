@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { Code, List, X, Moon, Trash2 } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
-import { useAuth } from "~/components/auth/AuthContext";
+import { useAuth } from "~/components/auth/useAuth";
 import { deletePlaylistItem } from "~/lib/youtube";
 import {
   DropdownMenu,

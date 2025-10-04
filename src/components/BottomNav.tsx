@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ListVideo, Users, Play } from "lucide-react";
-import { useAuth } from "~/components/auth/AuthContext";
+import { Home, FolderKanban, Users, Play } from "lucide-react";
+import { useAuth } from "~/components/auth/useAuth";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { cn } from "~/lib/utils";
 
@@ -18,7 +18,7 @@ export function BottomNav() {
         <NavItem href="/" icon={Home} label="Home" />
         <NavItem href="/player" icon={Play} label="Player" disabled={!isAuthenticated || !hasPlaylist} isPlayerButton />
         <NavItem href="/subscriptions" icon={Users} label="Subscriptions" disabled={true} />
-        <NavItem href="/playlists" icon={ListVideo} label="Playlists" disabled={!isAuthenticated} />
+        <NavItem href="/organize" icon={FolderKanban} label="Organize" disabled={!isAuthenticated} />
       </div>
     </nav>
   );

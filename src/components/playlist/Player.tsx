@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical, Loader2, Trash2 } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
-import { useAuth } from "~/components/auth/AuthContext";
+import { useAuth } from "~/components/auth/useAuth";
 import { deletePlaylistItem, updatePlaylistItemPosition } from "~/lib/youtube";
 import { toast } from "sonner";
 import {

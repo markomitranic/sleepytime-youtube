@@ -5,6 +5,8 @@ export type YouTubePlaylistItem = {
   videoId?: string;
   channelTitle?: string;
   channelId?: string;
+  publishedAt?: string;
+  durationSeconds?: number;
 };
 
 export type YouTubePlaylistSnippet = {
@@ -12,6 +14,7 @@ export type YouTubePlaylistSnippet = {
   title: string;
   description?: string;
   itemCount?: number;
+  publishedAt?: string;
 };
 
 export type YouTubeUserPlaylist = {
@@ -58,6 +61,7 @@ type YouTubePlaylistItemsResponse = {
       };
       videoOwnerChannelTitle?: string;
       videoOwnerChannelId?: string;
+      publishedAt?: string;
     };
   }>;
 };
@@ -133,6 +137,7 @@ export async function fetchPlaylistItems({
       s.thumbnails?.default?.url;
     const channelTitle = s.videoOwnerChannelTitle;
     const channelId = s.videoOwnerChannelId;
+    const publishedAt = s.publishedAt;
     return {
       id: item.id,
       title,
@@ -140,6 +145,7 @@ export async function fetchPlaylistItems({
       thumbnailUrl: thumb,
       channelTitle,
       channelId,
+      publishedAt,
     };
   });
   return { items: simplified, nextPageToken: json.nextPageToken };
@@ -198,7 +204,7 @@ export async function fetchPlaylistSnippet({
   const json = (await res.json()) as {
     items?: Array<{
       id: string;
-      snippet?: { title?: string; description?: string };
+      snippet?: { title?: string; description?: string; publishedAt?: string };
       contentDetails?: { itemCount?: number };
     }>;
   };
@@ -209,6 +215,7 @@ export async function fetchPlaylistSnippet({
     title: first.snippet?.title ?? "Untitled playlist",
     description: first.snippet?.description,
     itemCount: first.contentDetails?.itemCount,
+    publishedAt: first.snippet?.publishedAt,
   };
 }
 
@@ -422,6 +429,60 @@ export async function fetchPlaylistsByIds({
   return results;
 }
 
+export async function addVideoToPlaylist({
+  accessToken,
+  playlistId,
+  videoId,
+  refreshToken,
+}: {
+  accessToken: string;
+  playlistId: string;
+  videoId: string;
+  refreshToken?: () => Promise<string | null>;
+}): Promise<void> {
+  const url = new URL("https://www.googleapis.com/youtube/v3/playlistItems");
+  url.searchParams.set("part", "snippet");
+  const body = {
+    snippet: {
+      playlistId,
+      resourceId: {
+        kind: "youtube#video",
+        videoId,
+      },
+    },
+  };
+  let res = await fetch(url.toString(), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  // If unauthorized, try to refresh token and retry
+  if (res.status === 401 && refreshToken) {
+    const freshToken = await refreshToken();
+    if (freshToken) {
+      res = await fetch(url.toString(), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${freshToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+    }
+  }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `YouTube API error (add to playlist): ${res.status} ${res.statusText} ${text}`
+    );
+  }
+}
+
 export async function deletePlaylistItem({
   accessToken,
   playlistItemId,
@@ -511,5 +572,92 @@ export async function updatePlaylistItemPosition({
       `YouTube API error (update): ${res.status} ${res.statusText} ${text}`
     );
   }
+}
+
+// Parse ISO 8601 duration (PT1H2M10S) to seconds
+function parseISO8601Duration(duration: string): number {
+  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+  const hours = parseInt(match[1] || "0", 10);
+  const minutes = parseInt(match[2] || "0", 10);
+  const seconds = parseInt(match[3] || "0", 10);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+export async function fetchVideoDurations({
+  apiKey,
+  accessToken,
+  videoIds,
+  refreshToken,
+}: {
+  apiKey?: string;
+  accessToken?: string;
+  videoIds: string[];
+  refreshToken?: () => Promise<string | null>;
+}): Promise<Map<string, number>> {
+  if (!videoIds.length) return new Map();
+
+  const durations = new Map<string, number>();
+
+  // YouTube API allows up to 50 IDs per request
+  const chunks: string[][] = [];
+  for (let i = 0; i < videoIds.length; i += 50) {
+    chunks.push(videoIds.slice(i, i + 50));
+  }
+
+  const headers: Record<string, string> = {};
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+
+  let tokenRefreshed = false;
+
+  for (const ids of chunks) {
+    const url = new URL("https://www.googleapis.com/youtube/v3/videos");
+    url.searchParams.set("part", "contentDetails");
+    url.searchParams.set("id", ids.join(","));
+    if (apiKey && !accessToken) url.searchParams.set("key", apiKey);
+
+    let res = await fetch(url.toString(), { headers });
+
+    // If unauthorized and we haven't refreshed yet, try to refresh token and retry
+    if (res.status === 401 && accessToken && !tokenRefreshed && refreshToken) {
+      const freshToken = await refreshToken();
+      if (freshToken) {
+        headers["Authorization"] = `Bearer ${freshToken}`;
+        tokenRefreshed = true;
+        res = await fetch(url.toString(), { headers });
+      }
+    }
+
+    if (res.status === 401 && apiKey) {
+      try {
+        const retryUrl = new URL(url.toString());
+        retryUrl.searchParams.set("key", apiKey);
+        res = await fetch(retryUrl.toString());
+      } catch { }
+    }
+
+    if (!res.ok) {
+      // Skip this chunk on error but continue processing others
+      continue;
+    }
+
+    const json = (await res.json()) as {
+      items?: Array<{
+        id?: string;
+        contentDetails?: {
+          duration?: string;
+        };
+      }>;
+    };
+
+    for (const item of json.items ?? []) {
+      if (item.id && item.contentDetails?.duration) {
+        const seconds = parseISO8601Duration(item.contentDetails.duration);
+        durations.set(item.id, seconds);
+      }
+    }
+  }
+
+  return durations;
 }
 

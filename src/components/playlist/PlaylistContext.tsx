@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useLocalStorage } from "usehooks-ts";
 import type { YouTubePlaylistItem, YouTubePlaylistSnippet } from "~/lib/youtube";
 import { env } from "~/env";
-import { useAuth } from "~/components/auth/AuthContext";
+import { useAuth } from "~/components/auth/useAuth";
 import { extractPlaylistIdFromUrl, fetchPlaylistItems, fetchPlaylistSnippet } from "~/lib/youtube";
 import { toast } from "sonner";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useAuth } from "~/components/auth/AuthContext";
+import { useAuth } from "~/components/auth/useAuth";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { Badge } from "~/components/ui/badge";
 import { Lock, RefreshCw, Globe, Link as LinkIcon } from "lucide-react";

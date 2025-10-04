@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PlaylistProvider } from "~/components/playlist/PlaylistContext";
-import { AuthProvider } from "~/components/auth/AuthContext";
+import { SessionProvider } from "~/components/auth/SessionProvider";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,9 +27,9 @@ if (typeof window !== "undefined") {
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+      <SessionProvider>
         <PlaylistProvider>{children}</PlaylistProvider>
-      </AuthProvider>
+      </SessionProvider>
     </QueryClientProvider>
   );
 }
