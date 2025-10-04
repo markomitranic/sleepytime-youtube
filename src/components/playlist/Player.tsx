@@ -202,27 +202,25 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
           )}
         </div>
         
-        {/* Delete button on the right - always visible when authenticated */}
-        {isAuthenticated && (
-          <button
-            type="button"
-            className={`h-8 w-8 inline-flex items-center justify-center rounded self-center flex-shrink-0 transition-colors ${
-              item.videoId
-                ? "text-foreground/60 hover:text-red-500 hover:bg-red-500/10"
-                : "text-muted-foreground/30 cursor-not-allowed"
-            }`}
-            aria-label="Delete from playlist"
-            disabled={!item.videoId}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (item.videoId) {
-                setShowDeleteConfirm(true);
-              }
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        )}
+        {/* Delete button on the right - always visible */}
+        <button
+          type="button"
+          className={`h-8 w-8 inline-flex items-center justify-center rounded self-center flex-shrink-0 transition-colors ${
+            isAuthenticated && item.videoId
+              ? "text-white hover:text-red-500 hover:bg-red-500/10"
+              : "text-muted-foreground/30 cursor-not-allowed"
+          }`}
+          aria-label="Delete from playlist"
+          disabled={!isAuthenticated || !item.videoId}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isAuthenticated && item.videoId) {
+              setShowDeleteConfirm(true);
+            }
+          }}
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </li>
       
       {/* Delete confirmation dialog */}
