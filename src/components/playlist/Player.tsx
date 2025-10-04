@@ -142,24 +142,26 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
           onSelect(item.videoId);
         }}
       >
-        {/* Drag handle on the left */}
-        {isAuthenticated && item.videoId && (
-          <button
-            type="button"
-            ref={setActivatorNodeRef}
-            className="w-8 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-secondary cursor-grab active:cursor-grabbing self-stretch flex-shrink-0 touch-none ml-1"
-            aria-label="Drag to reorder"
-            onClick={(e) => e.stopPropagation()}
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical className="h-5 w-5" />
-          </button>
-        )}
+        {/* Drag handle on the left - always visible */}
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          className={`w-8 inline-flex items-center justify-center rounded transition-colors self-stretch flex-shrink-0 ml-1 ${
+            isAuthenticated && item.videoId
+              ? "text-foreground/60 hover:text-foreground hover:bg-secondary/50 cursor-grab active:cursor-grabbing touch-none"
+              : "text-muted-foreground/30 cursor-not-allowed"
+          }`}
+          aria-label="Drag to reorder"
+          onClick={(e) => e.stopPropagation()}
+          disabled={!isAuthenticated || !item.videoId}
+          {...(isAuthenticated && item.videoId ? { ...attributes, ...listeners } : {})}
+        >
+          <GripVertical className="h-5 w-5" />
+        </button>
         
         {/* Thumbnail */}
         {item.thumbnailUrl && (
-          <div className={`relative h-16 w-28 rounded flex-shrink-0 ${isAuthenticated && item.videoId ? "" : "-ml-3"}`}>
+          <div className="relative h-16 w-28 rounded flex-shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={item.thumbnailUrl} alt="thumbnail" className="h-full w-full rounded object-cover" />
             {item.durationSeconds !== undefined && (
@@ -200,15 +202,22 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
           )}
         </div>
         
-        {/* Delete button on the right */}
-        {isAuthenticated && item.videoId && (
+        {/* Delete button on the right - always visible when authenticated */}
+        {isAuthenticated && (
           <button
             type="button"
-            className="h-8 w-8 inline-flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-500/10 self-center flex-shrink-0 transition-colors"
+            className={`h-8 w-8 inline-flex items-center justify-center rounded self-center flex-shrink-0 transition-colors ${
+              item.videoId
+                ? "text-foreground/60 hover:text-red-500 hover:bg-red-500/10"
+                : "text-muted-foreground/30 cursor-not-allowed"
+            }`}
             aria-label="Delete from playlist"
+            disabled={!item.videoId}
             onClick={(e) => {
               e.stopPropagation();
-              setShowDeleteConfirm(true);
+              if (item.videoId) {
+                setShowDeleteConfirm(true);
+              }
             }}
           >
             <Trash2 className="h-4 w-4" />
