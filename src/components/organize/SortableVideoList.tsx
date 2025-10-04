@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { YouTubePlaylistItem } from "~/lib/youtube";
-import { GripVertical, Trash2 } from "lucide-react";
+import { GripVertical, Trash2, RefreshCw } from "lucide-react";
 import {
   SortableContext,
   sortableKeyboardCoordinates,
@@ -20,6 +20,7 @@ import {
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
+import { ReplaceVideoDrawer } from "~/components/organize/ReplaceVideoDrawer";
 
 type SortableVideoListProps = {
   items: YouTubePlaylistItem[];
@@ -27,15 +28,17 @@ type SortableVideoListProps = {
   onReorder: (itemId: string, oldIndex: number, newIndex: number) => Promise<void>;
   isReordering: boolean;
   disableDragDrop?: boolean;
+  onReplaceVideo?: (itemId: string, newVideoId: string) => Promise<void>;
 };
 
 type SortableItemProps = {
   item: YouTubePlaylistItem;
   onDelete: (itemId: string) => Promise<void>;
   disableDragDrop?: boolean;
+  onReplaceVideo?: (itemId: string, newVideoId: string) => Promise<void>;
 };
 
-function SortableVideoItem({ item, onDelete, disableDragDrop }: SortableItemProps) {
+function SortableVideoItem({ item, onDelete, disableDragDrop, onReplaceVideo }: SortableItemProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const {
@@ -63,6 +66,20 @@ function SortableVideoItem({ item, onDelete, disableDragDrop }: SortableItemProp
       setShowDeleteConfirm(false);
     }
   };
+
+  const handleReplaceVideo = async (newVideoId: string) => {
+    if (!onReplaceVideo) return;
+    await onReplaceVideo(item.id, newVideoId);
+  };
+
+  // Detect deleted or private videos
+  // YouTube returns items with videoId but title like "Deleted video" or "Private video"
+  // OR items without videoId at all
+  const isDeletedVideo = !item.videoId || 
+    item.title === "Deleted video" || 
+    item.title === "Private video" ||
+    item.title === "Deleted Video" ||
+    item.title === "Private Video";
 
   return (
     <>
@@ -99,6 +116,11 @@ function SortableVideoItem({ item, onDelete, disableDragDrop }: SortableItemProp
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <p className="truncate font-medium">{item.title}</p>
+            {isDeletedVideo && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 flex-shrink-0">
+                Deleted
+              </span>
+            )}
           </div>
           {item.channelTitle && (
             <div className="flex flex-col gap-1">
@@ -119,20 +141,42 @@ function SortableVideoItem({ item, onDelete, disableDragDrop }: SortableItemProp
           )}
         </div>
         
-        {/* Delete button on the right */}
-        {item.videoId && (
-          <button
-            type="button"
-            className="h-8 w-8 inline-flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-500/10 self-center flex-shrink-0 transition-colors"
-            aria-label="Delete from playlist"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowDeleteConfirm(true);
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        )}
+        {/* Action buttons on the right */}
+        <div className="flex items-center gap-1 self-center flex-shrink-0">
+          {/* Replace button for deleted videos - only show if we have videoId for Wayback search */}
+          {isDeletedVideo && item.videoId && onReplaceVideo && (
+            <ReplaceVideoDrawer
+              videoId={item.videoId}
+              onReplaceVideo={handleReplaceVideo}
+            >
+              <button
+                type="button"
+                className="h-8 w-8 inline-flex items-center justify-center rounded text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-colors"
+                aria-label="Search for alternatives"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                <RefreshCw className="h-4 w-4" />
+              </button>
+            </ReplaceVideoDrawer>
+          )}
+          
+          {/* Delete button - show for all items with videoId, or deleted items without replacement option */}
+          {(item.videoId || isDeletedVideo) && (
+            <button
+              type="button"
+              className="h-8 w-8 inline-flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+              aria-label="Delete from playlist"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDeleteConfirm(true);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </li>
       
       {/* Delete confirmation dialog */}
@@ -168,7 +212,8 @@ export function SortableVideoList({
   onDelete, 
   onReorder, 
   isReordering,
-  disableDragDrop = false 
+  disableDragDrop = false,
+  onReplaceVideo
 }: SortableVideoListProps) {
   if (disableDragDrop) {
     // When sorting is active, just render without drag and drop
@@ -180,6 +225,7 @@ export function SortableVideoList({
             item={item}
             onDelete={onDelete}
             disableDragDrop={true}
+            onReplaceVideo={onReplaceVideo}
           />
         ))}
       </ul>
@@ -199,6 +245,7 @@ export function SortableVideoList({
             item={item}
             onDelete={onDelete}
             disableDragDrop={disableDragDrop}
+            onReplaceVideo={onReplaceVideo}
           />
         ))}
       </ul>
