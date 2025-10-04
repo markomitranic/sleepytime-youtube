@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical, Loader2, Trash2, RotateCw, Play, Pause } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical, Loader2, Trash2, RotateCw, Play, Pause, ArrowUpDown, ListVideo } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { useAuth } from "~/components/auth/useAuth";
@@ -16,6 +16,12 @@ import {
   DialogFooter,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import {
   DndContext,
   closestCenter,
@@ -51,7 +57,7 @@ type PlaylistItem = {
   durationSeconds?: number;
 };
 
-// Helper function to format duration
+// Helper function to format duration (video timestamp)
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -61,6 +67,17 @@ function formatDuration(seconds: number): string {
     return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
   return `${minutes}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Helper function to format total duration (human readable)
+function formatTotalDuration(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
 }
 
 type SortableItemProps = {
@@ -243,6 +260,7 @@ export function Player() {
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const dialogShownForVideoRef = useRef<string | undefined>(undefined);
   const timeCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [sortOrder, setSortOrder] = useState<"first-added" | "last-added">("first-added");
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -255,6 +273,25 @@ export function Player() {
     })
   );
 
+  // Sort items based on sort order
+  const sortedItems = useMemo(() => {
+    if (sortOrder === "last-added") {
+      return [...playlist.items].reverse();
+    }
+    return playlist.items; // first-added (default)
+  }, [playlist.items, sortOrder]);
+
+  // Calculate playlist metadata
+  const playlistMetadata = useMemo(() => {
+    const totalDuration = playlist.items.reduce((sum, item) => {
+      return sum + (item.durationSeconds ?? 0);
+    }, 0);
+
+    return {
+      totalDurationSeconds: totalDuration,
+      videoCount: playlist.items.length,
+    };
+  }, [playlist.items]);
 
   const getNextVideoId = useCallback((fromVideoId: string | undefined): string | undefined => {
     if (!fromVideoId) return undefined;
@@ -853,26 +890,72 @@ export function Player() {
             </div>
           )}
 
-          {/* Playlist header */}
-          <div className="flex items-center gap-2 pb-4">
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-              {playlist.snippet?.title ?? "Playlist"}
-            </h3>
+          {/* Playlist header with metadata */}
+          <div className="pb-4 space-y-3 border-b">
+            <div className="flex items-start gap-3">
+              {/* Thumbnail */}
+              {playlist.items[0]?.thumbnailUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={playlist.items[0].thumbnailUrl}
+                  alt={playlist.snippet?.title ?? "Playlist"}
+                  className="w-20 h-[45px] rounded object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-20 h-[45px] rounded bg-muted flex items-center justify-center flex-shrink-0">
+                  <ListVideo className="h-5 w-5 text-muted-foreground" />
+                </div>
+              )}
+
+              {/* Title and metadata */}
+              <div className="flex-1 min-w-0 space-y-1">
+                <h3 className="font-semibold text-sm truncate" title={playlist.snippet?.title}>
+                  {playlist.snippet?.title ?? "Playlist"}
+                </h3>
+                <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                  <span>{playlistMetadata.videoCount} video{playlistMetadata.videoCount !== 1 ? 's' : ''}</span>
+                  {playlistMetadata.totalDurationSeconds > 0 && (
+                    <span>{formatTotalDuration(playlistMetadata.totalDurationSeconds)} total</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Sort dropdown */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Videos</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    <ArrowUpDown className="h-3 w-3" />
+                    <span>{sortOrder === "first-added" ? "First added" : "Last added"}</span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setSortOrder("first-added")}>
+                    First added
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortOrder("last-added")}>
+                    Last added
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           {/* Playlist items - scrollable */}
-          <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+          <div className="flex-1 overflow-y-auto pr-2 -mr-2 pt-2">
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={playlist.items.map((item) => item.id)}
+                items={sortedItems.map((item) => item.id)}
                 strategy={verticalListSortingStrategy}
               >
                 <ul className="grid grid-cols-1 gap-1">
-                  {playlist.items.map((item) => {
+                  {sortedItems.map((item) => {
                     const isCurrent = Boolean(currentVideoId && item.videoId === currentVideoId);
                     return (
                       <SortablePlaylistItem

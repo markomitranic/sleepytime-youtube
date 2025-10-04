@@ -58,15 +58,31 @@ export function SkeletonPlayer() {
 
       {/* Right sidebar: Playlist (1/3) */}
       <div className="lg:w-1/3 flex flex-col border-l pl-4">
-        {/* Playlist header */}
-        <div className="flex items-center gap-2 pb-4">
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            {playlist.snippet?.title ?? "Loading..."}
-          </h3>
+        {/* Playlist header with metadata */}
+        <div className="pb-4 space-y-3 border-b">
+          <div className="flex items-start gap-3">
+            {/* Thumbnail skeleton */}
+            <div className="w-20 h-[45px] rounded bg-muted/50 flex-shrink-0" />
+
+            {/* Title and metadata skeleton */}
+            <div className="flex-1 min-w-0 space-y-2">
+              <div className="h-4 w-3/4 rounded bg-muted/50" />
+              <div className="space-y-1">
+                <div className="h-3 w-1/2 rounded bg-muted/40" />
+                <div className="h-3 w-2/3 rounded bg-muted/40" />
+              </div>
+            </div>
+          </div>
+
+          {/* Sort dropdown skeleton */}
+          <div className="flex items-center justify-between">
+            <div className="h-3 w-12 rounded bg-muted/40" />
+            <div className="h-3 w-16 rounded bg-muted/40" />
+          </div>
         </div>
 
         {/* Skeleton list items */}
-        <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+        <div className="flex-1 overflow-y-auto pr-2 -mr-2 pt-2">
           <ul className="grid grid-cols-1 gap-1">
             {Array.from({ length: 10 }).map((_, i) => (
               <li key={i} className="flex items-start gap-3 rounded-md border py-3 pr-3">
