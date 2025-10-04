@@ -35,7 +35,7 @@ function PlayerPageContent() {
   if (playlist.playlistId && playlist.items && playlist.items.length > 0) {
     return (
       <main className="flex min-h-screen items-start justify-center px-[10px] py-6 pb-24">
-        <div className="w-full max-w-[720px] space-y-6">
+        <div className="w-full max-w-[1400px]">
           <Player />
         </div>
       </main>

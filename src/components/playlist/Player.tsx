@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical, Loader2, Trash2 } from "lucide-react";
+import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical, Loader2, Trash2, RotateCw, Play, Pause } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { useAuth } from "~/components/auth/useAuth";
@@ -48,7 +48,20 @@ type PlaylistItem = {
   thumbnailUrl?: string;
   channelTitle?: string;
   channelId?: string;
+  durationSeconds?: number;
 };
+
+// Helper function to format duration
+function formatDuration(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${minutes}:${secs.toString().padStart(2, '0')}`;
+}
 
 type SortableItemProps = {
   item: PlaylistItem;
@@ -129,8 +142,15 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
         
         {/* Thumbnail */}
         {item.thumbnailUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.thumbnailUrl} alt="thumbnail" className="h-16 w-28 rounded object-cover flex-shrink-0 -ml-3" />
+          <div className="relative h-16 w-28 rounded flex-shrink-0 -ml-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={item.thumbnailUrl} alt="thumbnail" className="h-full w-full rounded object-cover" />
+            {item.durationSeconds !== undefined && (
+              <div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded font-medium">
+                {formatDuration(item.durationSeconds)}
+              </div>
+            )}
+          </div>
         )}
         
         {/* Content */}
@@ -217,6 +237,12 @@ export function Player() {
   const endedVideoIdRef = useRef<string | undefined>(undefined);
   const [shuffleEnabled, setShuffleEnabled] = useState<boolean>(false);
   const [isReordering, setIsReordering] = useState<boolean>(false);
+  const [isPortrait, setIsPortrait] = useState<boolean>(false);
+  const [isInactive, setIsInactive] = useState<boolean>(false);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isPlaying, setIsPlaying] = useState<boolean>(true);
+  const dialogShownForVideoRef = useRef<string | undefined>(undefined);
+  const timeCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -249,9 +275,22 @@ export function Player() {
   }, [playlist.items, shuffleEnabled]);
 
   const handleNext = useCallback((videoId: string | undefined) => {
-    const nextId = getNextVideoId(videoId);
-    if (nextId) playlist.setCurrentVideoId(nextId);
-  }, [getNextVideoId, playlist.setCurrentVideoId]);
+    // Open dialog before switching, just like when video ends
+    endedVideoIdRef.current = videoId;
+    setEndedOpen(true);
+  }, []);
+
+  const handlePlayPause = useCallback(() => {
+    if (!playerInstanceRef.current) return;
+    
+    if (isPlaying) {
+      playerInstanceRef.current.pauseVideo();
+      setIsPlaying(false);
+    } else {
+      playerInstanceRef.current.playVideo();
+      setIsPlaying(true);
+    }
+  }, [isPlaying]);
 
   const handlePlayNextFromDialog = useCallback(() => {
     const vid = endedVideoIdRef.current ?? currentVideoId;
@@ -437,6 +476,9 @@ export function Player() {
   useEffect(() => {
     if (!currentVideoId || typeof window === 'undefined') return;
 
+    // Reset dialog shown flag for new video
+    dialogShownForVideoRef.current = undefined;
+
     const initPlayer = () => {
       if (window.YT && playerRef.current) {
         playerInstanceRef.current = new window.YT.Player(playerRef.current, {
@@ -453,12 +495,17 @@ export function Player() {
             onReady: (event: any) => {
               // Auto-start video when player is ready
               event.target.playVideo();
+              setIsPlaying(true);
             },
             onStateChange: (event: any) => {
               try {
                 if (event?.data === window?.YT?.PlayerState?.ENDED) {
                   endedVideoIdRef.current = currentVideoId;
                   setEndedOpen(true);
+                } else if (event?.data === window?.YT?.PlayerState?.PLAYING) {
+                  setIsPlaying(true);
+                } else if (event?.data === window?.YT?.PlayerState?.PAUSED) {
+                  setIsPlaying(false);
                 }
               } catch {}
             }
@@ -482,6 +529,46 @@ export function Player() {
     };
   }, [currentVideoId]);
 
+  // Check video time and show dialog 20s before end
+  useEffect(() => {
+    if (!playerInstanceRef.current || !currentVideoId) return;
+
+    // Clear any existing interval
+    if (timeCheckIntervalRef.current) {
+      clearInterval(timeCheckIntervalRef.current);
+    }
+
+    const checkTime = () => {
+      try {
+        if (!playerInstanceRef.current?.getCurrentTime || !playerInstanceRef.current?.getDuration) return;
+
+        const currentTime = playerInstanceRef.current.getCurrentTime();
+        const duration = playerInstanceRef.current.getDuration();
+
+        // Show dialog if we're within 20 seconds of the end and haven't shown it yet for this video
+        if (duration > 0 && currentTime > 0) {
+          const timeRemaining = duration - currentTime;
+          if (timeRemaining <= 20 && timeRemaining > 0 && dialogShownForVideoRef.current !== currentVideoId) {
+            dialogShownForVideoRef.current = currentVideoId;
+            endedVideoIdRef.current = currentVideoId;
+            setEndedOpen(true);
+          }
+        }
+      } catch (e) {
+        // Ignore errors - player might not be ready yet
+      }
+    };
+
+    // Check every second
+    timeCheckIntervalRef.current = setInterval(checkTime, 1000);
+
+    return () => {
+      if (timeCheckIntervalRef.current) {
+        clearInterval(timeCheckIntervalRef.current);
+      }
+    };
+  }, [currentVideoId]);
+
   // Handle pause/play based on isPaused state
   useEffect(() => {
     if (!playerInstanceRef.current) return;
@@ -494,6 +581,57 @@ export function Player() {
     }
   }, [playlist.isPaused]);
 
+  // Portrait mode detection
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const checkOrientation = () => {
+      setIsPortrait(window.innerHeight > window.innerWidth);
+    };
+
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+
+    return () => {
+      window.removeEventListener('resize', checkOrientation);
+      window.removeEventListener('orientationchange', checkOrientation);
+    };
+  }, []);
+
+  // Inactivity timer - lower opacity after 10s of no interaction
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const resetInactivityTimer = () => {
+      setIsInactive(false);
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+      inactivityTimerRef.current = setTimeout(() => {
+        setIsInactive(true);
+      }, 10000); // 10 seconds
+    };
+
+    // Reset timer on any user interaction
+    const events = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll'];
+    events.forEach(event => {
+      window.addEventListener(event, resetInactivityTimer);
+    });
+
+    // Start the timer initially
+    resetInactivityTimer();
+
+    return () => {
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+      events.forEach(event => {
+        window.removeEventListener(event, resetInactivityTimer);
+      });
+    };
+  }, []);
+
   // If no playlist items, don't render anything
   if (!playlist.items.length) return null;
   
@@ -502,7 +640,57 @@ export function Player() {
   const current = playlist.items.find((i) => i.videoId === currentVideoId);
 
   return (
-    <div className={`relative space-y-4 px-5 transition-opacity duration-300 ${playlist.darker ? "opacity-30" : ""}`}>
+    <>
+      {/* Portrait mode curtain */}
+      {isPortrait && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-6">
+          <div className="text-center space-y-6 max-w-md">
+            <div className="flex justify-center">
+              <RotateCw className="h-24 w-24 text-blue-500 animate-pulse" />
+            </div>
+            <h2 className="text-2xl font-bold text-white">Please Rotate Your Device</h2>
+            <p className="text-lg text-gray-300">
+              For the best viewing experience, please switch to landscape mode.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Sleep Timer Expiry Dialog */}
+      {playlist.sleepTimer.expired && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-6">
+          <div className="bg-card rounded-lg p-6 max-w-md w-full space-y-6 text-center border shadow-2xl">
+            <div className="flex justify-center">
+              <Moon className="h-16 w-16 text-blue-500" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Time for Bed</h2>
+              <p className="text-muted-foreground">
+                Your sleep timer has expired. Sweet dreams!
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button 
+                onClick={() => {
+                  playlist.prolongSleepTimer(15);
+                  playlist.setCurrentVideoId(currentVideoId); // Resume video
+                }}
+                className="w-full"
+              >
+                Prolong for 15 Minutes
+              </Button>
+              <Button 
+                onClick={() => playlist.dismissSleepExpiry()}
+                variant="outline"
+                className="w-full"
+              >
+                Dismiss
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Dialog open={endedOpen} onOpenChange={setEndedOpen}>
         <DialogContent className="p-0 overflow-hidden">
           <div className="p-6 flex flex-col items-center text-center gap-4">
@@ -546,138 +734,164 @@ export function Player() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Loading spinner on right */}
-      {isReordering && (
-        <div className="absolute top-0 right-5 pointer-events-none z-10 pt-2">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <span className="text-sm">Saving...</span>
+
+      {/* New layout: Left side with video, Right sidebar with playlist */}
+      <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-6rem)] max-h-[calc(100vh-6rem)]">
+        {/* Left side: Video player and controls (2/3) */}
+        <div className={`flex-1 lg:w-2/3 flex flex-col gap-4 transition-opacity duration-500`}>
+          {/* Video Player */}
+          <div className="aspect-video w-full overflow-hidden rounded-md border bg-black flex-shrink-0">
+            <div
+              ref={playerRef}
+              id={`youtube-player-${currentVideoId}`}
+              className="h-full w-full"
+            />
+          </div>
+
+          {/* Video title and controls */}
+          <div className={`flex flex-col gap-4 transition-opacity duration-500 ${isInactive ? "opacity-30" : ""}`}>
+            <div>
+              <h2 className="text-xl font-semibold truncate" title={current?.title}>
+                {current?.title ?? ""}
+              </h2>
+              {current?.channelTitle && (
+                <p className="text-sm text-muted-foreground truncate">{current.channelTitle}</p>
+              )}
+            </div>
+
+            {/* Player Controls */}
+            <div className="flex items-center justify-center gap-8 py-2">
+              <button
+                type="button"
+                onClick={() => setShuffleEnabled((v) => !v)}
+                className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:ring-[3px] hover:text-foreground ${
+                  shuffleEnabled ? "bg-blue-500/15 text-white shadow-sm" : "text-muted-foreground"
+                }`}
+                aria-label={shuffleEnabled ? "Disable shuffle" : "Enable shuffle"}
+              >
+                <Shuffle className="h-5 w-5" />
+              </button>
+              
+              <button
+                type="button"
+                onClick={handlePlayPause}
+                className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-14 w-14 items-center justify-center rounded-full border text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground"
+                aria-label={isPlaying ? "Pause" : "Play"}
+              >
+                {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => handleNext(currentVideoId)}
+                className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-14 w-14 items-center justify-center rounded-full border text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground"
+                aria-label="Next video"
+              >
+                <SkipForward className="h-6 w-6" />
+              </button>
+              
+              <SleepTimerDrawer>
+                <button
+                  type="button"
+                  className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:ring-[3px] hover:text-foreground ${
+                    playlist.sleepTimer.isActive 
+                      ? "bg-blue-100 text-blue-600 shadow-sm" 
+                      : "text-muted-foreground"
+                  }`}
+                  aria-label={playlist.sleepTimer.isActive ? "Sleep timer active - click to modify" : "Set sleep timer"}
+                >
+                  <Moon className="h-5 w-5" />
+                </button>
+              </SleepTimerDrawer>
+            </div>
+          </div>
+
+          {/* Footer with social links (only visible on larger screens) */}
+          <div className="hidden lg:flex items-center justify-center gap-6 pt-4 mt-auto border-t">
+            <a
+              href="https://github.com/markomitranic/sleepytime-youtube"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="View on GitHub"
+            >
+              <Github className="h-5 w-5" />
+              <span className="text-sm">GitHub</span>
+            </a>
+            
+            <a
+              href="https://www.linkedin.com/in/marko-mitranic/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="LinkedIn Profile"
+            >
+              <Linkedin className="h-5 w-5" />
+              <span className="text-sm">LinkedIn</span>
+            </a>
+            
+            <a
+              href="https://medium.com/homullus"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Medium Blog"
+            >
+              <ExternalLink className="h-5 w-5" />
+              <span className="text-sm">Medium</span>
+            </a>
           </div>
         </div>
-      )}
 
-      <div className="flex flex-col items-center gap-2 pt-2 pb-4">
-        <h2 className="text-xl font-semibold text-center truncate w-full" title={playlist.snippet?.title ?? undefined}>
-          {playlist.snippet?.title ?? "Playlist"}
-        </h2>
+        {/* Right sidebar: Playlist (1/3) */}
+        <div className={`lg:w-1/3 flex flex-col border-l pl-4 transition-opacity duration-500 ${isInactive ? "opacity-30" : ""}`}>
+          {/* Loading spinner */}
+          {isReordering && (
+            <div className="flex items-center gap-2 text-muted-foreground pb-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="text-sm">Saving...</span>
+            </div>
+          )}
+
+          {/* Playlist header */}
+          <div className="flex items-center gap-2 pb-4">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              {playlist.snippet?.title ?? "Playlist"}
+            </h3>
+          </div>
+
+          {/* Playlist items - scrollable */}
+          <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={playlist.items.map((item) => item.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <ul className="grid grid-cols-1 gap-1">
+                  {playlist.items.map((item) => {
+                    const isCurrent = Boolean(currentVideoId && item.videoId === currentVideoId);
+                    return (
+                      <SortablePlaylistItem
+                        key={item.id}
+                        item={item}
+                        isCurrent={isCurrent}
+                        isAuthenticated={auth.isAuthenticated}
+                        onSelect={playlist.setCurrentVideoId}
+                        onDelete={handleDeleteItem}
+                      />
+                    );
+                  })}
+                </ul>
+              </SortableContext>
+            </DndContext>
+          </div>
+        </div>
       </div>
-
-      {/* Video Player */}
-      <div className="aspect-video w-full overflow-hidden rounded-md border bg-black">
-        <div
-          ref={playerRef}
-          id={`youtube-player-${currentVideoId}`}
-          className="h-full w-full"
-        />
-      </div>
-
-      {/* Player Controls */}
-      <div className="flex items-center justify-center gap-8 py-4">
-        <button
-          type="button"
-          onClick={() => setShuffleEnabled((v) => !v)}
-          className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:ring-[3px] hover:text-foreground ${
-            shuffleEnabled ? "bg-blue-500/15 text-white shadow-sm" : "text-muted-foreground"
-          }`}
-          aria-label={shuffleEnabled ? "Disable shuffle" : "Enable shuffle"}
-        >
-          <Shuffle className="h-5 w-5" />
-        </button>
-        
-        <button
-          type="button"
-          onClick={() => handleNext(currentVideoId)}
-          className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-14 w-14 items-center justify-center rounded-full border text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground"
-          aria-label="Next video"
-        >
-          <SkipForward className="h-6 w-6" />
-        </button>
-        
-        <SleepTimerDrawer>
-          <button
-            type="button"
-            className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:ring-[3px] hover:text-foreground ${
-              playlist.sleepTimer.isActive 
-                ? "bg-blue-100 text-blue-600 shadow-sm" 
-                : "text-muted-foreground"
-            }`}
-            aria-label={playlist.sleepTimer.isActive ? "Sleep timer active - click to modify" : "Set sleep timer"}
-          >
-            <Moon className="h-5 w-5" />
-          </button>
-        </SleepTimerDrawer>
-      </div>
-
-      {/* Playlist Divider */}
-      <div className="flex items-center gap-4 pt-2">
-        <div className="flex-1 h-px bg-border"></div>
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Playlist</h3>
-        <div className="flex-1 h-px bg-border"></div>
-      </div>
-
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={playlist.items.map((item) => item.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <ul className="grid grid-cols-1 gap-1">
-            {playlist.items.map((item) => {
-              const isCurrent = Boolean(currentVideoId && item.videoId === currentVideoId);
-              return (
-                <SortablePlaylistItem
-                  key={item.id}
-                  item={item}
-                  isCurrent={isCurrent}
-                  isAuthenticated={auth.isAuthenticated}
-                  onSelect={playlist.setCurrentVideoId}
-                  onDelete={handleDeleteItem}
-                />
-              );
-            })}
-          </ul>
-        </SortableContext>
-      </DndContext>
-
-      {/* Footer with social links */}
-      <div className="flex items-center justify-center gap-6 pt-8 pb-4 mt-8 border-t">
-        <a
-          href="https://github.com/markomitranic/sleepytime-youtube"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="View on GitHub"
-        >
-          <Github className="h-5 w-5" />
-          <span className="text-sm">GitHub</span>
-        </a>
-        
-        <a
-          href="https://www.linkedin.com/in/marko-mitranic/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="LinkedIn Profile"
-        >
-          <Linkedin className="h-5 w-5" />
-          <span className="text-sm">LinkedIn</span>
-        </a>
-        
-        <a
-          href="https://medium.com/homullus"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="Medium Blog"
-        >
-          <ExternalLink className="h-5 w-5" />
-          <span className="text-sm">Medium</span>
-        </a>
-      </div>
-    </div>
+    </>
   );
 }
 
