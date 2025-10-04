@@ -748,8 +748,8 @@ export function Player() {
             />
           </div>
 
-          {/* Video title and controls */}
-          <div className={`flex flex-col gap-4 transition-opacity duration-500 ${isInactive ? "opacity-30" : ""}`}>
+          {/* Video title and controls - wrapped with fade effect */}
+          <div className={`flex-1 flex flex-col gap-4 transition-opacity duration-500 ${isInactive ? "opacity-30" : ""}`}>
             <div>
               <h2 className="text-xl font-semibold truncate" title={current?.title}>
                 {current?.title ?? ""}
@@ -775,7 +775,7 @@ export function Player() {
               <button
                 type="button"
                 onClick={handlePlayPause}
-                className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-14 w-14 items-center justify-center rounded-full border text-white transition focus-visible:ring-[3px]"
+                className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-white text-black hover:bg-white/90 transition focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 aria-label={isPlaying ? "Pause" : "Play"}
               >
                 {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
@@ -804,42 +804,42 @@ export function Player() {
                 </button>
               </SleepTimerDrawer>
             </div>
-          </div>
 
-          {/* Footer with social links (only visible on larger screens) */}
-          <div className="hidden lg:flex items-center justify-center gap-6 pt-4 mt-auto border-t">
-            <a
-              href="https://github.com/markomitranic/sleepytime-youtube"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="View on GitHub"
-            >
-              <Github className="h-5 w-5" />
-              <span className="text-sm">GitHub</span>
-            </a>
-            
-            <a
-              href="https://www.linkedin.com/in/marko-mitranic/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="LinkedIn Profile"
-            >
-              <Linkedin className="h-5 w-5" />
-              <span className="text-sm">LinkedIn</span>
-            </a>
-            
-            <a
-              href="https://medium.com/homullus"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Medium Blog"
-            >
-              <ExternalLink className="h-5 w-5" />
-              <span className="text-sm">Medium</span>
-            </a>
+            {/* Footer with social links (only visible on larger screens) */}
+            <div className="hidden lg:flex items-center justify-center gap-6 pt-4 mt-auto border-t">
+              <a
+                href="https://github.com/markomitranic/sleepytime-youtube"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="View on GitHub"
+              >
+                <Github className="h-5 w-5" />
+                <span className="text-sm">GitHub</span>
+              </a>
+              
+              <a
+                href="https://www.linkedin.com/in/marko-mitranic/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="LinkedIn Profile"
+              >
+                <Linkedin className="h-5 w-5" />
+                <span className="text-sm">LinkedIn</span>
+              </a>
+              
+              <a
+                href="https://medium.com/homullus"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Medium Blog"
+              >
+                <ExternalLink className="h-5 w-5" />
+                <span className="text-sm">Medium</span>
+              </a>
+            </div>
           </div>
         </div>
 

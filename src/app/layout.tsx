@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "~/styles/globals.css";
 import { AppProviders } from "./providers";
@@ -10,6 +10,13 @@ import { BottomNav } from "~/components/BottomNav";
 export const metadata: Metadata = {
   title: "Sleepytime-YouTube",
   description: "Play YouTube playlists one by one",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 const geist = Geist({ subsets: ["latin"] });
