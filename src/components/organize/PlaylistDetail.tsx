@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import type { YouTubePlaylistItem, YouTubePlaylistSnippet } from "~/lib/youtube";
 import { useAuth } from "~/components/auth/useAuth";
-import { deletePlaylistItem } from "~/lib/youtube";
+import { deletePlaylistItem, addVideoToPlaylist } from "~/lib/youtube";
 import { Loader2, ArrowUpDown, Clock, Calendar, CalendarClock } from "lucide-react";
 import { SortableVideoList } from "~/components/organize/SortableVideoList";
 import { toast } from "sonner";
@@ -113,6 +113,54 @@ export function PlaylistDetail({
       }
     },
     [auth.isAuthenticated, auth.accessToken, auth.getTokenSilently, items, onItemsChanged]
+  );
+
+  const handleReplaceVideo = useCallback(
+    async (itemId: string, newVideoId: string) => {
+      if (!auth.isAuthenticated || !auth.accessToken) {
+        toast.error("You must be signed in to replace videos.");
+        throw new Error("Not authenticated");
+      }
+
+      const item = items.find((i) => i.id === itemId);
+      if (!item) {
+        toast.error("Couldn't find this video in the playlist.");
+        throw new Error("Item not found");
+      }
+
+      setIsReordering(true);
+      
+      try {
+        // First, add the new video to the playlist
+        await addVideoToPlaylist({
+          accessToken: auth.accessToken,
+          playlistId: playlistId,
+          videoId: newVideoId,
+          refreshToken: auth.getTokenSilently,
+        });
+
+        // Then, delete the old item
+        await deletePlaylistItem({ 
+          accessToken: auth.accessToken, 
+          playlistItemId: itemId,
+          refreshToken: auth.getTokenSilently,
+        });
+        
+        toast.success("Video replaced successfully");
+        
+        // Refresh the items after a small delay to sync with server
+        setTimeout(() => {
+          onItemsChanged();
+          setIsReordering(false);
+        }, 700);
+      } catch (e) {
+        toast.error((e as Error)?.message ?? "Failed to replace video.");
+        onItemsChanged();
+        setIsReordering(false);
+        throw e;
+      }
+    },
+    [auth.isAuthenticated, auth.accessToken, auth.getTokenSilently, items, playlistId, onItemsChanged]
   );
 
 
@@ -245,6 +293,7 @@ export function PlaylistDetail({
           isReordering={isReordering}
           // Disable drag and drop when sorting is active (not default order)
           disableDragDrop={sortOrder !== "default"}
+          onReplaceVideo={handleReplaceVideo}
         />
       ) : (
         <div className="flex items-center justify-center h-32 text-muted-foreground">
