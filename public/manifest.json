@@ -1,0 +1,17 @@
+{
+  "name": "Sleepytime-YouTube",
+  "short_name": "Sleepytime",
+  "description": "Play YouTube playlists one by one",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#252525",
+  "theme_color": "#252525",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}
