@@ -429,7 +429,23 @@ export function Player() {
         return;
       }
 
-      // Check if Document Picture-in-Picture API is available
+      // Try standard PiP API first (iOS Safari, Firefox, etc.)
+      try {
+        // Try to access video element inside iframe (will fail due to CORS, but worth trying)
+        const iframeDocument = iframe.contentDocument || iframe.contentWindow?.document;
+        const video = iframeDocument?.querySelector('video') as HTMLVideoElement;
+        
+        if (video && 'requestPictureInPicture' in video) {
+          await video.requestPictureInPicture();
+          toast.success("Picture-in-Picture activated!");
+          return;
+        }
+      } catch (e) {
+        // CORS prevents access, try other methods
+        console.log('Standard PiP not accessible due to CORS');
+      }
+
+      // Check if Document Picture-in-Picture API is available (Chromium browsers)
       if ('documentPictureInPicture' in window) {
         const pipWindow = await (window as any).documentPictureInPicture.requestWindow({
           width: 640,
@@ -477,13 +493,16 @@ export function Player() {
 
         toast.success("Picture-in-Picture activated!");
       } else {
-        toast.error("Picture-in-Picture not supported in your browser", {
-          description: "Try using Chrome, Edge, or another Chromium-based browser"
+        // Neither API is available or accessible
+        toast.error("Picture-in-Picture not available", {
+          description: "For iOS Safari: Use the native PiP button in the video controls (tap fullscreen, then PiP icon)"
         });
       }
     } catch (error) {
       console.error('PiP error:', error);
-      toast.error("Failed to enter Picture-in-Picture mode");
+      toast.error("Could not enter Picture-in-Picture", {
+        description: "On iOS Safari: Tap fullscreen on the video, then tap the PiP icon in the controls"
+      });
     }
   }, []);
 
