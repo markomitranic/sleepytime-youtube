@@ -22,6 +22,7 @@ type PlaylistDetailProps = {
   isLoading: boolean;
   onItemsChanged: () => void;
   onReorderRequest?: (itemId: string, oldIndex: number, newIndex: number) => Promise<void>;
+  canEdit?: boolean;
 };
 
 type SortOrder = "default" | "title-asc" | "title-desc";
@@ -49,7 +50,8 @@ export function PlaylistDetail({
   items, 
   isLoading,
   onItemsChanged,
-  onReorderRequest
+  onReorderRequest,
+  canEdit = false,
 }: PlaylistDetailProps) {
   const auth = useAuth();
   const [sortOrder, setSortOrder] = useState<SortOrder>("default");
@@ -294,6 +296,7 @@ export function PlaylistDetail({
           // Disable drag and drop when sorting is active (not default order)
           disableDragDrop={sortOrder !== "default"}
           onReplaceVideo={handleReplaceVideo}
+          canEdit={canEdit}
         />
       ) : (
         <div className="flex items-center justify-center h-32 text-muted-foreground">

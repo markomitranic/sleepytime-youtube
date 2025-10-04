@@ -5,7 +5,7 @@ import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertica
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { useAuth } from "~/components/auth/useAuth";
-import { deletePlaylistItem, updatePlaylistItemPosition } from "~/lib/youtube";
+import { deletePlaylistItem, updatePlaylistItemPosition, fetchUserPlaylists } from "~/lib/youtube";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -39,6 +39,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useQuery } from "@tanstack/react-query";
 
 // Declare YouTube IFrame API types
 declare global {
@@ -84,12 +85,12 @@ function formatTotalDuration(totalSeconds: number): string {
 type SortableItemProps = {
   item: PlaylistItem;
   isCurrent: boolean;
-  isAuthenticated: boolean;
+  canEdit: boolean;
   onSelect: (videoId?: string) => void;
   onDelete: (itemId: string) => Promise<void>;
 };
 
-function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDelete }: SortableItemProps) {
+function SortablePlaylistItem({ item, isCurrent, canEdit, onSelect, onDelete }: SortableItemProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const {
@@ -100,7 +101,7 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id });
+  } = useSortable({ id: item.id, disabled: !canEdit });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -143,22 +144,20 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
           onSelect(item.videoId);
         }}
       >
-        {/* Drag handle on the left - always visible */}
-        <button
-          type="button"
-          ref={setActivatorNodeRef}
-          className={`w-8 inline-flex items-center justify-center rounded transition-colors self-stretch flex-shrink-0 ml-1 ${
-            isAuthenticated && item.videoId
-              ? "text-white hover:text-white/80 hover:bg-secondary/50 cursor-grab active:cursor-grabbing touch-manipulation select-none"
-              : "text-muted-foreground/30 cursor-not-allowed"
-          }`}
-          aria-label="Drag to reorder"
-          onClick={(e) => e.stopPropagation()}
-          disabled={!isAuthenticated || !item.videoId}
-          {...(isAuthenticated && item.videoId ? { ...attributes, ...listeners } : {})}
-        >
-          <GripVertical className="h-5 w-5" />
-        </button>
+        {/* Drag handle on the left - hidden when cannot edit */}
+        {canEdit && item.videoId && (
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            className="w-8 inline-flex items-center justify-center rounded transition-colors self-stretch flex-shrink-0 ml-1 text-white hover:text-white/80 hover:bg-secondary/50 cursor-grab active:cursor-grabbing touch-manipulation select-none"
+            aria-label="Drag to reorder"
+            onClick={(e) => e.stopPropagation()}
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-5 w-5" />
+          </button>
+        )}
         
         {/* Thumbnail */}
         {item.thumbnailUrl && (
@@ -203,25 +202,20 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
           )}
         </div>
         
-        {/* Delete button on the right - always visible */}
-        <button
-          type="button"
-          className={`h-8 w-8 inline-flex items-center justify-center rounded self-center flex-shrink-0 transition-colors ${
-            isAuthenticated && item.videoId
-              ? "text-white hover:text-red-500 hover:bg-red-500/10"
-              : "text-muted-foreground/30 cursor-not-allowed"
-          }`}
-          aria-label="Delete from playlist"
-          disabled={!isAuthenticated || !item.videoId}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isAuthenticated && item.videoId) {
+        {/* Delete button on the right - hidden when cannot edit */}
+        {canEdit && (item.videoId) && (
+          <button
+            type="button"
+            className="h-8 w-8 inline-flex items-center justify-center rounded self-center flex-shrink-0 transition-colors text-white hover:text-red-500 hover:bg-red-500/10"
+            aria-label="Delete from playlist"
+            onClick={(e) => {
+              e.stopPropagation();
               setShowDeleteConfirm(true);
-            }
-          }}
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
       </li>
       
       {/* Delete confirmation dialog */}
@@ -255,6 +249,24 @@ function SortablePlaylistItem({ item, isCurrent, isAuthenticated, onSelect, onDe
 export function Player() {
   const playlist = usePlaylist();
   const auth = useAuth();
+  const { data: userPlaylists } = useQuery({
+    queryKey: ["userPlaylists", auth.accessToken],
+    queryFn: async () => {
+      if (!auth.isAuthenticated || !auth.accessToken) return [];
+      try {
+        return await fetchUserPlaylists({ accessToken: auth.accessToken, refreshToken: auth.getTokenSilently });
+      } catch {
+        return [];
+      }
+    },
+    enabled: Boolean(auth.isAuthenticated && auth.accessToken),
+    staleTime: 1000 * 60,
+  });
+  const canEdit = Boolean(
+    auth.isAuthenticated &&
+    playlist.playlistId &&
+    (userPlaylists?.some(p => p.id === playlist.playlistId) ?? false)
+  );
   const currentVideoId = playlist.currentVideoId;
   const playerRef = useRef<any>(null);
   const playerInstanceRef = useRef<any>(null);
@@ -942,7 +954,7 @@ export function Player() {
                         key={item.id}
                         item={item}
                         isCurrent={isCurrent}
-                        isAuthenticated={auth.isAuthenticated}
+                        canEdit={canEdit}
                         onSelect={playlist.setCurrentVideoId}
                         onDelete={handleDeleteItem}
                       />

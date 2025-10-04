@@ -29,6 +29,7 @@ type SortableVideoListProps = {
   isReordering: boolean;
   disableDragDrop?: boolean;
   onReplaceVideo?: (itemId: string, newVideoId: string) => Promise<void>;
+  canEdit?: boolean;
 };
 
 type SortableItemProps = {
@@ -36,9 +37,10 @@ type SortableItemProps = {
   onDelete: (itemId: string) => Promise<void>;
   disableDragDrop?: boolean;
   onReplaceVideo?: (itemId: string, newVideoId: string) => Promise<void>;
+  canEdit?: boolean;
 };
 
-function SortableVideoItem({ item, onDelete, disableDragDrop, onReplaceVideo }: SortableItemProps) {
+function SortableVideoItem({ item, onDelete, disableDragDrop, onReplaceVideo, canEdit }: SortableItemProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const {
@@ -49,7 +51,7 @@ function SortableVideoItem({ item, onDelete, disableDragDrop, onReplaceVideo }: 
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id, disabled: disableDragDrop });
+  } = useSortable({ id: item.id, disabled: (disableDragDrop || !canEdit) });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -89,7 +91,7 @@ function SortableVideoItem({ item, onDelete, disableDragDrop, onReplaceVideo }: 
         className="flex items-start gap-3 rounded-md border py-3 pr-3 hover:bg-secondary select-none"
       >
         {/* Drag handle on the left */}
-        {!disableDragDrop && item.videoId && (
+        {canEdit && !disableDragDrop && item.videoId && (
           <button
             type="button"
             ref={setActivatorNodeRef}
@@ -108,7 +110,7 @@ function SortableVideoItem({ item, onDelete, disableDragDrop, onReplaceVideo }: 
           <img 
             src={item.thumbnailUrl} 
             alt="thumbnail" 
-            className={`h-16 w-28 rounded object-cover flex-shrink-0 ${disableDragDrop ? '' : '-ml-3'}`}
+            className={`h-16 w-28 rounded object-cover flex-shrink-0 ${(disableDragDrop || !canEdit) ? '' : '-ml-3'}`}
           />
         )}
         
@@ -144,7 +146,7 @@ function SortableVideoItem({ item, onDelete, disableDragDrop, onReplaceVideo }: 
         {/* Action buttons on the right */}
         <div className="flex items-center gap-1 self-center flex-shrink-0">
           {/* Replace button for deleted videos - only show if we have videoId for Wayback search */}
-          {isDeletedVideo && item.videoId && onReplaceVideo && (
+          {canEdit && isDeletedVideo && item.videoId && onReplaceVideo && (
             <ReplaceVideoDrawer
               videoId={item.videoId}
               onReplaceVideo={handleReplaceVideo}
@@ -163,7 +165,7 @@ function SortableVideoItem({ item, onDelete, disableDragDrop, onReplaceVideo }: 
           )}
           
           {/* Delete button - show for all items with videoId, or deleted items without replacement option */}
-          {(item.videoId || isDeletedVideo) && (
+          {canEdit && (item.videoId || isDeletedVideo) && (
             <button
               type="button"
               className="h-8 w-8 inline-flex items-center justify-center rounded text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
@@ -213,7 +215,8 @@ export function SortableVideoList({
   onReorder, 
   isReordering,
   disableDragDrop = false,
-  onReplaceVideo
+  onReplaceVideo,
+  canEdit = false,
 }: SortableVideoListProps) {
   if (disableDragDrop) {
     // When sorting is active, just render without drag and drop
@@ -226,6 +229,7 @@ export function SortableVideoList({
             onDelete={onDelete}
             disableDragDrop={true}
             onReplaceVideo={onReplaceVideo}
+            canEdit={canEdit}
           />
         ))}
       </ul>
@@ -246,6 +250,7 @@ export function SortableVideoList({
             onDelete={onDelete}
             disableDragDrop={disableDragDrop}
             onReplaceVideo={onReplaceVideo}
+            canEdit={canEdit}
           />
         ))}
       </ul>
