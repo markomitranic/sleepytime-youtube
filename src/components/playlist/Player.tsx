@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical, Loader2, Trash2 } from "lucide-react";
+import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical, Loader2, Trash2, PictureInPicture } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { useAuth } from "~/components/auth/useAuth";
@@ -217,6 +217,7 @@ export function Player() {
   const endedVideoIdRef = useRef<string | undefined>(undefined);
   const [shuffleEnabled, setShuffleEnabled] = useState<boolean>(false);
   const [isReordering, setIsReordering] = useState<boolean>(false);
+  const [isPipSupported, setIsPipSupported] = useState<boolean>(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -415,6 +416,85 @@ export function Player() {
     [auth.isAuthenticated, auth.accessToken, playlist.items, playlist.playlistId, playlist.refreshItemsOnce, playlist.reorderItem],
   );
 
+  const handlePictureInPicture = useCallback(async () => {
+    try {
+      if (!playerInstanceRef.current) {
+        toast.error("Player not ready");
+        return;
+      }
+
+      // Get the iframe element
+      const iframe = playerInstanceRef.current.getIframe();
+      if (!iframe) {
+        toast.error("Could not access video player");
+        return;
+      }
+
+      // Check if Document Picture-in-Picture API is available
+      if ('documentPictureInPicture' in window) {
+        const pipWindow = await (window as any).documentPictureInPicture.requestWindow({
+          width: 640,
+          height: 360,
+        });
+
+        // Copy styles to PiP window
+        const allCSS = [...document.styleSheets]
+          .map((styleSheet) => {
+            try {
+              return [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
+            } catch (e) {
+              // Handle CORS-protected stylesheets
+              const link = document.createElement('link');
+              link.rel = 'stylesheet';
+              link.href = styleSheet.href || '';
+              pipWindow.document.head.appendChild(link);
+              return '';
+            }
+          })
+          .filter(Boolean)
+          .join('\n');
+
+        const style = pipWindow.document.createElement('style');
+        style.textContent = allCSS;
+        pipWindow.document.head.appendChild(style);
+
+        // Clone and move the iframe to PiP window
+        const clonedIframe = iframe.cloneNode(true) as HTMLIFrameElement;
+        clonedIframe.style.width = '100%';
+        clonedIframe.style.height = '100%';
+        clonedIframe.style.border = 'none';
+        
+        pipWindow.document.body.style.margin = '0';
+        pipWindow.document.body.style.overflow = 'hidden';
+        pipWindow.document.body.appendChild(clonedIframe);
+
+        // Hide original iframe
+        iframe.style.display = 'none';
+
+        // Restore original iframe when PiP window closes
+        pipWindow.addEventListener('pagehide', () => {
+          iframe.style.display = '';
+        });
+
+        toast.success("Picture-in-Picture activated!");
+      } else {
+        toast.error("Picture-in-Picture not supported in your browser", {
+          description: "Try using Chrome, Edge, or another Chromium-based browser"
+        });
+      }
+    } catch (error) {
+      console.error('PiP error:', error);
+      toast.error("Failed to enter Picture-in-Picture mode");
+    }
+  }, []);
+
+  // Check PiP support on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsPipSupported('documentPictureInPicture' in window);
+    }
+  }, []);
+
   // Load YouTube IFrame API
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -592,6 +672,17 @@ export function Player() {
         >
           <SkipForward className="h-6 w-6" />
         </button>
+        
+        {isPipSupported && (
+          <button
+            type="button"
+            onClick={handlePictureInPicture}
+            className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground"
+            aria-label="Picture-in-Picture"
+          >
+            <PictureInPicture className="h-5 w-5" />
+          </button>
+        )}
         
         <SleepTimerDrawer>
           <button
