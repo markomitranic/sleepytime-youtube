@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { Player } from "~/components/playlist/Player";
 import { SkeletonPlayer } from "~/components/playlist/SkeletonPlayer";
 
-export default function PlayerPage() {
+function PlayerPageContent() {
   const playlist = usePlaylist();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -44,5 +44,19 @@ export default function PlayerPage() {
 
   // Fallback - will redirect via useEffect
   return null;
+}
+
+export default function PlayerPage() {
+  return (
+    <Suspense fallback={
+      <main className="flex min-h-screen items-start justify-center px-[10px] py-6 pb-24">
+        <div className="w-full max-w-[720px] space-y-6">
+          <SkeletonPlayer />
+        </div>
+      </main>
+    }>
+      <PlayerPageContent />
+    </Suspense>
+  );
 }
 
