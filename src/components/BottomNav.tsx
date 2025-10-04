@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, FolderKanban, Users, Play } from "lucide-react";
+import { Home, FolderKanban, Play } from "lucide-react";
 import { useAuth } from "~/components/auth/useAuth";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { cn } from "~/lib/utils";
@@ -17,7 +17,6 @@ export function BottomNav() {
       <div className="flex items-center justify-around h-16 max-w-screen-md mx-auto px-4">
         <NavItem href="/" icon={Home} label="Home" />
         <NavItem href="/player" icon={Play} label="Player" disabled={!isAuthenticated || !hasPlaylist} isPlayerButton />
-        <NavItem href="/subscriptions" icon={Users} label="Subscriptions" disabled={true} />
         <NavItem href="/organize" icon={FolderKanban} label="Organize" disabled={!isAuthenticated} />
       </div>
     </nav>
@@ -60,7 +59,7 @@ function NavItem({ href, icon: Icon, label, isPlayerButton = false, disabled = f
       className={cn(
         "flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-lg transition-colors min-w-[72px]",
         isActive
-          ? "text-primary"
+          ? "text-white bg-gray-600"
           : "text-muted-foreground hover:text-foreground hover:bg-accent"
       )}
     >
