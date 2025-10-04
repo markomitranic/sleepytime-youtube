@@ -110,6 +110,10 @@ export default function OrganizePage() {
     enabled: Boolean(selectedPlaylistId),
   });
 
+  // Determine if the user can edit the selected playlist
+  // On Organize page, user is authenticated and viewing their own playlists list, so they own the selected
+  const canEditSelected = Boolean(auth.isAuthenticated && selectedPlaylistId);
+
   // Fetch selected playlist items
   const { data: playlistItems, isLoading: itemsLoading, refetch: refetchItems } = useQuery({
     queryKey: ["playlistItems", selectedPlaylistId],
@@ -354,6 +358,7 @@ export default function OrganizePage() {
                     refetchItems();
                   }}
                   onReorderRequest={handleVideoReorder}
+                  canEdit={canEditSelected}
                 />
               )
             ) : (
