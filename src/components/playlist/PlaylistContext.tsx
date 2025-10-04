@@ -5,7 +5,7 @@ import { useLocalStorage } from "usehooks-ts";
 import type { YouTubePlaylistItem, YouTubePlaylistSnippet } from "~/lib/youtube";
 import { env } from "~/env";
 import { useAuth } from "~/components/auth/useAuth";
-import { extractPlaylistIdFromUrl, fetchPlaylistItems, fetchPlaylistSnippet } from "~/lib/youtube";
+import { extractPlaylistIdFromUrl, fetchPlaylistItems, fetchPlaylistSnippet, fetchVideoDurations } from "~/lib/youtube";
 import { toast } from "sonner";
 
 type PersistedPlaylistState = {
@@ -19,6 +19,7 @@ export type SleepTimer = {
   durationMinutes: number;
   startTime?: number;
   remainingSeconds?: number;
+  expired?: boolean;
 };
 
 export type PlaylistState = {
@@ -55,6 +56,8 @@ export type PlaylistActions = {
   clear: () => void;
   setSleepTimer: (durationMinutes: number) => void;
   deactivateSleepTimer: () => void;
+  dismissSleepExpiry: () => void;
+  prolongSleepTimer: (additionalMinutes: number) => void;
   triggerSleep: () => void;
   toggleDarker: () => void;
   reloadPlaylist: () => Promise<void>;
@@ -193,6 +196,27 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
             }));
           } while (nextPageToken);
 
+          // Fetch video durations
+          const videoIds = aggregated.filter(item => item.videoId).map(item => item.videoId!);
+          if (videoIds.length > 0) {
+            try {
+              const durations = await fetchVideoDurations({
+                apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY,
+                accessToken: auth.accessToken,
+                videoIds,
+                refreshToken: auth.getTokenSilently,
+              });
+              // Merge durations into items
+              aggregated.forEach(item => {
+                if (item.videoId && durations.has(item.videoId)) {
+                  item.durationSeconds = durations.get(item.videoId);
+                }
+              });
+            } catch (e) {
+              console.warn("Failed to fetch video durations", e);
+            }
+          }
+
           // Use ?v from URL if valid as initial selection
           const v = typeof window !== "undefined" ? new URL(window.location.href).searchParams.get("v") ?? undefined : undefined;
           const initialFromParam = v && aggregated.some((i) => i.videoId === v) ? v : undefined;
@@ -276,16 +300,33 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
       deactivateSleepTimer: () => {
         setState(s => ({
           ...s,
-          sleepTimer: { isActive: false, durationMinutes: s.sleepTimer.durationMinutes }
+          sleepTimer: { isActive: false, durationMinutes: s.sleepTimer.durationMinutes, expired: false }
+        }));
+      },
+      dismissSleepExpiry: () => {
+        setState(s => ({
+          ...s,
+          sleepTimer: { ...s.sleepTimer, expired: false, isActive: false }
+        }));
+      },
+      prolongSleepTimer: (additionalMinutes: number) => {
+        setState(s => ({
+          ...s,
+          sleepTimer: {
+            isActive: true,
+            durationMinutes: additionalMinutes,
+            startTime: Date.now(),
+            remainingSeconds: additionalMinutes * 60,
+            expired: false,
+          }
         }));
       },
       triggerSleep: () => {
-        // Sleep action: pause video playback and deactivate timer
-        // Keep playlist and current video, just mark as paused
+        // Sleep action: pause video playback and show expiry dialog
         setState(s => ({
           ...s,
-          isPaused: true, // Mark video as paused instead of clearing currentVideoId
-          sleepTimer: { isActive: false, durationMinutes: s.sleepTimer.durationMinutes }
+          isPaused: true,
+          sleepTimer: { ...s.sleepTimer, isActive: false, expired: true }
         }));
       },
       toggleDarker: () => {
@@ -414,10 +455,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
         if (remainingSeconds <= 0) {
           // Timer expired - trigger sleep action
           setTimeout(() => actions.triggerSleep(), 0);
-          return {
-            ...prev,
-            sleepTimer: { isActive: false, durationMinutes: prev.sleepTimer.durationMinutes }
-          };
+          return prev;
         }
 
         return {

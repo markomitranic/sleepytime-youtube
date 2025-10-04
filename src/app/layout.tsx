@@ -31,6 +31,13 @@ export const metadata: Metadata = {
   themeColor: "#252525",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 const geist = Geist({ subsets: ["latin"] });
 
 export default function RootLayout({
