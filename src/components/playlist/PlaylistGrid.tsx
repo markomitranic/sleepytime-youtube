@@ -165,7 +165,7 @@ export function PlaylistGrid() {
         </ul>
       ) : (
         <div className="text-sm text-muted-foreground">
-          Sign in to see your playlist collection. Or paste a URL above to play as guest.
+          Sign in to see your playlist collection.
         </div>
       )}
 

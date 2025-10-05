@@ -5,7 +5,7 @@ import { useLocalStorage } from "usehooks-ts";
 import type { YouTubePlaylistItem, YouTubePlaylistSnippet } from "~/lib/youtube";
 import { env } from "~/env";
 import { useAuth } from "~/components/auth/useAuth";
-import { extractPlaylistIdFromUrl, fetchPlaylistItems, fetchPlaylistSnippet, fetchVideoDurations } from "~/lib/youtube";
+import { fetchPlaylistItems, fetchPlaylistSnippet, fetchVideoDurations } from "~/lib/youtube";
 import { toast } from "sonner";
 
 type PersistedPlaylistState = {
@@ -50,7 +50,6 @@ export type PlaylistActions = {
     items: YouTubePlaylistItem[];
     currentVideoId?: string;
   }) => void;
-  loadFromUrl: (url: string) => Promise<void>;
   loadByPlaylistId: (playlistId: string) => Promise<void>;
   setCurrentVideoId: (videoId: string | undefined) => void;
   clear: () => void;
@@ -107,21 +106,6 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
             darker: prev.darker, // Preserve existing darker state
           };
         });
-      },
-      loadFromUrl: async (url) => {
-        try {
-          setState((s) => ({ ...s, isLoading: true, loading: null, error: null, errorDetails: null }));
-          const id = extractPlaylistIdFromUrl(url);
-          if (!id) {
-            setState((s) => ({ ...s, isLoading: false, loading: null, error: "Invalid playlist URL. It must include a \"list\" parameter.", errorDetails: null }));
-            return;
-          }
-          await actions.loadByPlaylistId(id);
-          // Preserve provided URL for context consumers
-          setState((s) => ({ ...s, url }));
-        } catch (e) {
-          setState((s) => ({ ...s, isLoading: false, loading: null, error: (e as Error)?.message ?? "Failed to load playlist.", errorDetails: (e as Error)?.message ?? null }));
-        }
       },
       loadByPlaylistId: async (playlistId) => {
         try {
