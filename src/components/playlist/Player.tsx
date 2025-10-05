@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical, Loader2, Trash2, Play, Pause, ArrowUpDown, ListVideo } from "lucide-react";
+import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical, Loader2, Trash2, Play, Pause, ArrowUpDown, ListVideo, ChevronRight } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { useAuth } from "~/components/auth/useAuth";
@@ -179,19 +179,7 @@ function SortablePlaylistItem({ item, isCurrent, canEdit, onSelect, onDelete }: 
           </div>
           {item.channelTitle && (
             <div className="flex flex-col gap-1">
-              {item.channelId ? (
-                <a
-                  href={`https://www.youtube.com/channel/${item.channelId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {item.channelTitle}
-                </a>
-              ) : (
-                <p className="text-xs text-muted-foreground">{item.channelTitle}</p>
-              )}
+              <p className="text-xs text-muted-foreground">{item.channelTitle}</p>
               {isCurrent && (
                 <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground w-fit">
                   <span className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_6px_theme(colors.green.500)]" />
@@ -784,7 +772,15 @@ export function Player() {
                 {current?.title ?? ""}
               </h2>
               {current?.channelTitle && (
-                <p className="text-sm text-muted-foreground truncate">{current.channelTitle}</p>
+                <a
+                  href={`https://www.youtube.com/channel/${current.channelId || ''}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors truncate inline-flex items-center gap-1 w-fit"
+                >
+                  {current.channelTitle}
+                  <ChevronRight className="h-3 w-3 flex-shrink-0" />
+                </a>
               )}
             </div>
 
