@@ -240,4 +240,24 @@
     background-color: #22c55e; /* Tailwind green-500 */
     animation: led-breathe 2.2s ease-in-out infinite;
   }
+
+  /* Touch drag improvements */
+  .touch-drag-handle {
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  .touch-drag-container {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .touch-drag-container.dragging {
+    overflow: hidden !important;
+    -webkit-overflow-scrolling: auto;
+  }
 }

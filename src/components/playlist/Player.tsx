@@ -149,7 +149,7 @@ function SortablePlaylistItem({ item, isCurrent, canEdit, onSelect, onDelete }: 
           <button
             type="button"
             ref={setActivatorNodeRef}
-            className="w-8 inline-flex items-center justify-center rounded transition-colors self-stretch flex-shrink-0 ml-1 text-white hover:text-white/80 hover:bg-secondary/50 cursor-grab active:cursor-grabbing touch-manipulation select-none"
+            className="w-8 inline-flex items-center justify-center rounded transition-colors self-stretch flex-shrink-0 ml-1 text-white hover:text-white/80 hover:bg-secondary/50 cursor-grab active:cursor-grabbing touch-manipulation select-none touch-drag-handle"
             aria-label="Drag to reorder"
             onClick={(e) => e.stopPropagation()}
             {...attributes}
@@ -280,6 +280,7 @@ export function Player() {
   const dialogShownForVideoRef = useRef<string | undefined>(undefined);
   const timeCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [sortOrder, setSortOrder] = useState<"first-added" | "last-added">("first-added");
+  const [isDragging, setIsDragging] = useState<boolean>(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -289,8 +290,8 @@ export function Player() {
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250,
-        tolerance: 5,
+        delay: 100,
+        tolerance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -457,8 +458,13 @@ export function Player() {
     [auth.isAuthenticated, auth.accessToken, currentVideoId, playlist, getNextVideoId]
   );
 
+  const handleDragStart = useCallback(() => {
+    setIsDragging(true);
+  }, []);
+
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
+      setIsDragging(false);
       const { active, over } = event;
 
       if (!over || active.id === over.id) return;
@@ -936,10 +942,11 @@ export function Player() {
           </div>
 
           {/* Playlist items - scrollable */}
-          <div className="flex-1 overflow-y-auto pr-2 -mr-2 pt-2">
+          <div className={`flex-1 pr-2 -mr-2 pt-2 touch-drag-container ${isDragging ? 'dragging' : 'overflow-y-auto'}`}>
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
             >
               <SortableContext
