@@ -123,7 +123,7 @@ export function PlaylistGrid() {
                 href={`/player?list=${p.id}`}
                 className="block w-full text-left group"
               >
-                <div className="aspect-video w-2/3 overflow-hidden rounded-md border bg-secondary/40 relative">
+                <div className="aspect-video w-full overflow-hidden rounded-md border bg-secondary/40 relative">
                   {p.thumbnailUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={p.thumbnailUrl} alt="thumbnail" className="h-full w-full object-cover scale-110 origin-center group-hover:opacity-90 transition-opacity" />
@@ -184,7 +184,7 @@ export function PlaylistGrid() {
               href={`/player?list=${p.id}`}
               className="block w-full text-left group"
             >
-              <div className="aspect-video w-2/3 overflow-hidden rounded-md border bg-secondary/40 relative">
+              <div className="aspect-video w-full overflow-hidden rounded-md border bg-secondary/40 relative">
                 {p.thumbnailUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={p.thumbnailUrl} alt="thumbnail" className="h-full w-full object-cover scale-110 origin-center group-hover:opacity-90 transition-opacity" />
