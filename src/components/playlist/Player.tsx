@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical, Loader2, Trash2, Play, Pause, ArrowUpDown, ListVideo, ChevronRight } from "lucide-react";
+import { Shuffle, SkipForward, Moon, Github, Linkedin, ExternalLink, GripVertical, Loader2, Trash2, Play, Pause, ArrowUpDown, ListVideo, ChevronRight, ChevronDown, ExternalLink as ExternalLinkIcon } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
+import { usePlayer } from "~/components/playlist/PlayerContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
+import { PlaylistSwitcherDrawer } from "~/components/playlist/PlaylistSwitcherDrawer";
 import { useAuth } from "~/components/auth/useAuth";
 import { deletePlaylistItem, updatePlaylistItemPosition, fetchUserPlaylists } from "~/lib/youtube";
 import { toast } from "sonner";
@@ -236,6 +238,7 @@ function SortablePlaylistItem({ item, isCurrent, canEdit, onSelect, onDelete }: 
 
 export function Player() {
   const playlist = usePlaylist();
+  const player = usePlayer();
   const auth = useAuth();
   const { data: userPlaylists } = useQuery({
     queryKey: ["userPlaylists", auth.accessToken],
@@ -262,8 +265,6 @@ export function Player() {
   const endedVideoIdRef = useRef<string | undefined>(undefined);
   const [shuffleEnabled, setShuffleEnabled] = useState<boolean>(false);
   const [isReordering, setIsReordering] = useState<boolean>(false);
-  const [isInactive, setIsInactive] = useState<boolean>(false);
-  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const dialogShownForVideoRef = useRef<string | undefined>(undefined);
   const timeCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -669,38 +670,6 @@ export function Player() {
     }
   }, [playlist.isPaused]);
 
-  // Inactivity timer - lower opacity after 10s of no interaction
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const resetInactivityTimer = () => {
-      setIsInactive(false);
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-      }
-      inactivityTimerRef.current = setTimeout(() => {
-        setIsInactive(true);
-      }, 10000); // 10 seconds
-    };
-
-    // Reset timer on any user interaction
-    const events = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll'];
-    events.forEach(event => {
-      window.addEventListener(event, resetInactivityTimer);
-    });
-
-    // Start the timer initially
-    resetInactivityTimer();
-
-    return () => {
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-      }
-      events.forEach(event => {
-        window.removeEventListener(event, resetInactivityTimer);
-      });
-    };
-  }, []);
 
   // If no playlist items, don't render anything
   if (!playlist.items.length) return null;
@@ -791,7 +760,7 @@ export function Player() {
       </Dialog>
 
       {/* New layout: Left side with video, Right sidebar with playlist */}
-      <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-6rem)] max-h-[calc(100vh-6rem)]">
+      <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)]">
         {/* Left side: Video player and controls (2/3) */}
         <div className="flex-1 lg:w-2/3 flex flex-col gap-4">
           {/* Video Player */}
@@ -812,11 +781,23 @@ export function Player() {
           </div>
 
           {/* Video title and controls - wrapped with fade effect */}
-          <div className={`flex-1 flex flex-col gap-4 transition-opacity duration-500 ${isInactive ? "opacity-30" : ""}`}>
+          <div className={`flex-1 flex flex-col gap-4 transition-opacity duration-500 ${player.isInactive ? "opacity-30" : ""}`}>
             <div>
-              <h2 className="text-xl font-semibold truncate" title={current?.title}>
-                {current?.title ?? ""}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-semibold truncate" title={current?.title}>
+                  {current?.title ?? ""}
+                </h2>
+                {current?.videoId && (
+                  <button
+                    onClick={() => window.open(`https://www.youtube.com/watch?v=${current.videoId}`, '_blank', 'noopener,noreferrer')}
+                    className="flex-shrink-0 p-1 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Open video in new tab"
+                    title="Open video in new tab"
+                  >
+                    <ExternalLinkIcon className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
               {current?.channelTitle && (
                 <a
                   href={`https://www.youtube.com/channel/${current.channelId || ''}`}
@@ -915,7 +896,7 @@ export function Player() {
         </div>
 
         {/* Right sidebar: Playlist (1/3) */}
-        <div className={`lg:w-1/3 flex flex-col border-l pl-4 transition-opacity duration-500 ${isInactive ? "opacity-30" : ""}`}>
+        <div className={`lg:w-1/3 flex flex-col lg:border-l pl-4 transition-opacity duration-500 ${player.isInactive ? "opacity-30" : ""}`}>
           {/* Loading spinner */}
           {isReordering && (
             <div className="flex items-center gap-2 text-muted-foreground pb-2">
@@ -955,25 +936,33 @@ export function Player() {
               </div>
             </div>
 
-            {/* Sort dropdown */}
+            {/* Sort dropdown and playlist switcher */}
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Videos</span>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              <div className="flex items-center gap-2">
+                <PlaylistSwitcherDrawer>
                   <button className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                    <ArrowUpDown className="h-3 w-3" />
-                    <span>{sortOrder === "first-added" ? "First added" : "Last added"}</span>
+                    <ChevronDown className="h-3 w-3" />
+                    <span>Switch</span>
                   </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setSortOrder("first-added")}>
-                    First added
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setSortOrder("last-added")}>
-                    Last added
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </PlaylistSwitcherDrawer>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                      <ArrowUpDown className="h-3 w-3" />
+                      <span>{sortOrder === "first-added" ? "First added" : "Last added"}</span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setSortOrder("first-added")}>
+                      First added
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSortOrder("last-added")}>
+                      Last added
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </div>
 

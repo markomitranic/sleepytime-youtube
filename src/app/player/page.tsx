@@ -23,8 +23,8 @@ function PlayerPageContent() {
   // Show loading state if loading or if we have a list param but no playlist yet
   if (playlist.isLoading || (listParam && !playlist.playlistId)) {
     return (
-      <main className="flex min-h-screen items-start justify-center px-[10px] py-6 pb-24">
-        <div className="w-full max-w-[720px] space-y-6">
+      <main className="h-screen flex items-center justify-center">
+        <div className="w-full max-w-[1400px] px-4">
           <SkeletonPlayer />
         </div>
       </main>
@@ -34,8 +34,8 @@ function PlayerPageContent() {
   // Show player if we have items
   if (playlist.playlistId && playlist.items && playlist.items.length > 0) {
     return (
-      <main className="flex min-h-screen items-start justify-center px-[10px] py-6 pb-24">
-        <div className="w-full max-w-[1400px]">
+      <main className="h-screen flex items-center justify-center">
+        <div className="w-full max-w-[1400px] px-4">
           <Player />
         </div>
       </main>
@@ -49,8 +49,8 @@ function PlayerPageContent() {
 export default function PlayerPage() {
   return (
     <Suspense fallback={
-      <main className="flex min-h-screen items-start justify-center px-[10px] py-6 pb-24">
-        <div className="w-full max-w-[720px] space-y-6">
+      <main className="h-screen flex items-center justify-center">
+        <div className="w-full max-w-[1400px] px-4">
           <SkeletonPlayer />
         </div>
       </main>

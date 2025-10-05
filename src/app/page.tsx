@@ -4,11 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { BUILTIN_PLAYLISTS } from "~/lib/builtinPlaylists";
 import Image from "next/image";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
-import { PlaylistGrid } from "~/components/playlist/PlaylistGrid";
+import { BuiltinPlaylistGrid } from "~/components/playlist/BuiltinPlaylistGrid";
+import { useAuth } from "~/components/auth/useAuth";
+import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
 
 export default function HomePage() {
   const playlist = usePlaylist();
+  const auth = useAuth();
 
   const [labelText, setLabelText] = useState<string>("slowedReverb");
   const typingIndexRef = useRef<number>(0);
@@ -125,8 +128,51 @@ export default function HomePage() {
               className="rounded-md w-full h-auto opacity-40 hover:opacity-100 transition-opacity duration-300"
             />
           </div>
-          {/* Divider + Grid */}
-          <PlaylistGrid />
+          {/* Built-in playlists only */}
+          <BuiltinPlaylistGrid />
+
+          {/* CTA Section - Only show if not authenticated */}
+          {!auth.isAuthenticated && (
+            <div className="mt-12 p-8 rounded-lg border bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 text-center space-y-6">
+              <div className="space-y-3">
+                <h2 className="text-2xl font-bold">Ready to manage your playlists?</h2>
+                <p className="text-muted-foreground max-w-2xl mx-auto">
+                  Sign in with your YouTube account to access, play, and manage your personal playlists. 
+                  Reorder videos, remove unwanted content, and create the perfect sleep experience.
+                </p>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    <span>Access your YouTube playlists</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    <span>Reorder and manage videos</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    <span>Set sleep timers</span>
+                  </div>
+                </div>
+                
+                <div className="text-xs text-muted-foreground/80 max-w-xl mx-auto">
+                  <strong>Your privacy matters:</strong> We store nothing on our servers. All data remains in your browser. 
+                  No tracking, no analytics, no data collection. Your information stays private.
+                </div>
+              </div>
+
+              <Button 
+                onClick={() => auth.signIn()}
+                size="lg"
+                className="px-8 py-3 text-base font-medium"
+              >
+                Sign in with Google
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </main>

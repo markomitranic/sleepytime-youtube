@@ -8,6 +8,11 @@ export type AuthState = {
   isAuthenticated: boolean;
   accessToken?: string;
   error?: string | null;
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  };
 };
 
 export type AuthActions = {
@@ -28,6 +33,7 @@ export function useAuth(): AuthState & AuthActions {
   const isAuthenticated = status === "authenticated" && Boolean(session?.accessToken);
   const accessToken = session?.accessToken;
   const error = session?.error === "RefreshTokenError" ? "Authentication expired" : null;
+  const user = session?.user;
 
   const handleSignIn = useCallback(async () => {
     await signIn("google");
@@ -59,11 +65,12 @@ export function useAuth(): AuthState & AuthActions {
       isAuthenticated,
       accessToken,
       error,
+      user,
       signIn: handleSignIn,
       signOut: handleSignOut,
       getTokenSilently,
     }),
-    [isReady, isAuthenticated, accessToken, error, handleSignIn, handleSignOut, getTokenSilently]
+    [isReady, isAuthenticated, accessToken, error, user, handleSignIn, handleSignOut, getTokenSilently]
   );
 }
 

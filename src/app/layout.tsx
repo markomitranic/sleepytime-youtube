@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "~/styles/globals.css";
 import { AppProviders } from "./providers";
-import { DevToolbar } from "~/components/DevToolbar";
+import { PlayerProvider } from "~/components/playlist/PlayerContext";
 import { AuroraBackground } from "./AuroraBackground";
 import { Toaster } from "sonner";
 import { BottomNav } from "~/components/BottomNav";
@@ -89,11 +89,12 @@ export default function RootLayout({
       </head>
       <body className={geist.className}>
         <AppProviders>
-          <AuroraBackground />
-          {children}
-          <BottomNav />
-          <DevToolbar />
-          <Toaster richColors position="bottom-center" closeButton />
+          <PlayerProvider>
+            <AuroraBackground />
+            {children}
+            <BottomNav />
+            <Toaster richColors position="bottom-center" closeButton />
+          </PlayerProvider>
         </AppProviders>
       </body>
     </html>
