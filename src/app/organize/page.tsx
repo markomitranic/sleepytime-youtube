@@ -224,6 +224,7 @@ export default function OrganizePage() {
       toast.error("Failed to reorder video");
       // Revert optimistic update on error
       queryClient.invalidateQueries({ queryKey: ["playlistItems", selectedPlaylistId] });
+      queryClient.invalidateQueries({ queryKey: ["playlistSnippet", selectedPlaylistId] });
       setIsMovingVideo(false);
     }
   }, [auth.isAuthenticated, auth.accessToken, auth.getTokenSilently, selectedPlaylistId, playlistItems, queryClient]);
@@ -293,9 +294,15 @@ export default function OrganizePage() {
 
       toast.success(`Moved "${currentDraggedVideo.title}" to "${targetPlaylist.title}"`);
 
-      // Only invalidate the target playlist (not the current one - we already updated it optimistically)
-      // This ensures the target playlist will be fresh when the user switches to it
+      // Invalidate queries to update counts in sidebar and headers
+      // Target playlist items (will be fresh when user switches to it)
       queryClient.invalidateQueries({ queryKey: ["playlistItems", targetId] });
+      // Target playlist snippet (for header count)
+      queryClient.invalidateQueries({ queryKey: ["playlistSnippet", targetId] });
+      // Source playlist snippet (for header count)
+      queryClient.invalidateQueries({ queryKey: ["playlistSnippet", selectedPlaylistId] });
+      // User playlists (for sidebar counts)
+      queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
       
       setIsMovingVideo(false);
     } catch (e) {
@@ -304,6 +311,8 @@ export default function OrganizePage() {
       
       // Revert optimistic update on error by refetching
       queryClient.invalidateQueries({ queryKey: ["playlistItems", selectedPlaylistId] });
+      queryClient.invalidateQueries({ queryKey: ["playlistSnippet", selectedPlaylistId] });
+      queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
       setIsMovingVideo(false);
     }
   }, [draggedVideo, selectedPlaylistId, playlists, playlistItems, auth.accessToken, auth.getTokenSilently, queryClient, handleVideoReorder]);
@@ -356,6 +365,9 @@ export default function OrganizePage() {
                   onItemsChanged={() => {
                     setLoadingProgress(null);
                     refetchItems();
+                    // Also update counts in sidebar and header
+                    queryClient.invalidateQueries({ queryKey: ["playlistSnippet", selectedPlaylistId] });
+                    queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
                   }}
                   onReorderRequest={handleVideoReorder}
                   canEdit={canEditSelected}
