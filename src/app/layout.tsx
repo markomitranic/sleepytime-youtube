@@ -6,6 +6,7 @@ import { PlayerProvider } from "~/components/playlist/PlayerContext";
 import { AuroraBackground } from "./AuroraBackground";
 import { Toaster } from "sonner";
 import { BottomNav } from "~/components/BottomNav";
+import { MiniPlayer } from "~/components/playlist/MiniPlayer";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -92,6 +93,7 @@ export default function RootLayout({
           <PlayerProvider>
             <AuroraBackground />
             {children}
+            <MiniPlayer />
             <BottomNav />
             <Toaster richColors position="bottom-center" closeButton />
           </PlayerProvider>

@@ -268,6 +268,7 @@ export function Player() {
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const dialogShownForVideoRef = useRef<string | undefined>(undefined);
   const timeCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [sortOrder, setSortOrder] = useState<"first-added" | "last-added">("first-added");
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
@@ -538,6 +539,15 @@ export function Player() {
 
     const initPlayer = () => {
       if (window.YT && playerRef.current) {
+        // Destroy existing player if it exists
+        if (playerInstanceRef.current && playerInstanceRef.current.destroy) {
+          try {
+            playerInstanceRef.current.destroy();
+          } catch (error) {
+            console.warn('Error destroying existing player:', error);
+          }
+        }
+        
         playerInstanceRef.current = new window.YT.Player(playerRef.current, {
           videoId: currentVideoId,
           playerVars: {
@@ -560,11 +570,25 @@ export function Player() {
           },
           events: {
             onReady: (event: any) => {
+              // Store player instance in PlayerContext
+              player.setPlayerInstance(event.target);
+              
+              // Check if there's saved progress for this video
+              const savedProgress = player.getSavedProgress(currentVideoId);
+              if (savedProgress && savedProgress > 0) {
+                try {
+                  event.target.seekTo(savedProgress, true);
+                } catch (error) {
+                  console.warn('Failed to seek to saved position:', error);
+                }
+              }
+              
               // For iOS PWA, we need to ensure user interaction before autoplay
               const playVideo = () => {
                 try {
                   event.target.playVideo();
                   setIsPlaying(true);
+                  player.setIsPlaying(true);
                 } catch (error) {
                   console.log('Autoplay prevented, user interaction required');
                   // If autoplay fails, we'll rely on user clicking play
@@ -589,12 +613,16 @@ export function Player() {
             onStateChange: (event: any) => {
               try {
                 if (event?.data === window?.YT?.PlayerState?.ENDED) {
+                  // Clear saved progress when video ends
+                  player.clearSavedProgress(currentVideoId);
                   endedVideoIdRef.current = currentVideoId;
                   setEndedOpen(true);
                 } else if (event?.data === window?.YT?.PlayerState?.PLAYING) {
                   setIsPlaying(true);
+                  player.setIsPlaying(true);
                 } else if (event?.data === window?.YT?.PlayerState?.PAUSED) {
                   setIsPlaying(false);
+                  player.setIsPlaying(false);
                 }
               } catch {}
             }
@@ -612,11 +640,54 @@ export function Player() {
 
     return () => {
       if (playerInstanceRef.current && playerInstanceRef.current.destroy) {
-        playerInstanceRef.current.destroy();
+        try {
+          playerInstanceRef.current.destroy();
+        } catch (error) {
+          console.warn('Error destroying player on cleanup:', error);
+        }
         playerInstanceRef.current = null;
+      }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
       }
     };
   }, [currentVideoId]);
+
+  // Progress tracking for mini player
+  useEffect(() => {
+    if (!playerInstanceRef.current || !currentVideoId) return;
+
+    // Clear any existing progress interval
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+
+    const trackProgress = () => {
+      try {
+        if (!playerInstanceRef.current?.getCurrentTime || !playerInstanceRef.current?.getDuration) return;
+
+        const currentTime = playerInstanceRef.current.getCurrentTime();
+        const duration = playerInstanceRef.current.getDuration();
+
+        if (duration > 0) {
+          player.updateProgress(currentTime, duration, currentVideoId);
+        }
+      } catch (e) {
+        // Ignore errors - player might not be ready yet
+      }
+    };
+
+    // Track progress every second
+    progressIntervalRef.current = setInterval(trackProgress, 1000);
+
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+    };
+  }, [currentVideoId, player.updateProgress]);
 
   // Check video time and show dialog 20s before end
   useEffect(() => {
