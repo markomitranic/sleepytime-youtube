@@ -433,11 +433,13 @@ export async function addVideoToPlaylist({
   accessToken,
   playlistId,
   videoId,
+  position,
   refreshToken,
 }: {
   accessToken: string;
   playlistId: string;
   videoId: string;
+  position?: number;
   refreshToken?: () => Promise<string | null>;
 }): Promise<void> {
   const url = new URL("https://www.googleapis.com/youtube/v3/playlistItems");
@@ -449,6 +451,7 @@ export async function addVideoToPlaylist({
         kind: "youtube#video",
         videoId,
       },
+      ...(position !== undefined && { position }),
     },
   };
   let res = await fetch(url.toString(), {

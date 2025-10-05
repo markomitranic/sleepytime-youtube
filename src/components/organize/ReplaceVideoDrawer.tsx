@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Search, AlertCircle } from "lucide-react";
+import { Loader2, Search, AlertCircle, Eye } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -17,6 +17,7 @@ import {
 import { getOriginalVideoTitle, searchYouTube, type YouTubeSearchResult } from "~/lib/videoReplace";
 import { env } from "~/env";
 import { useAuth } from "~/components/auth/useAuth";
+import { VideoPreviewDialog } from "./VideoPreviewDialog";
 
 type ReplaceVideoDrawerProps = {
   children: React.ReactNode;
@@ -33,6 +34,8 @@ export function ReplaceVideoDrawer({ children, videoId, onReplaceVideo }: Replac
   const [originalTitle, setOriginalTitle] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<YouTubeSearchResult[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [previewVideo, setPreviewVideo] = useState<YouTubeSearchResult | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   // Reset state when drawer opens
   const handleOpenChange = useCallback((open: boolean) => {
@@ -106,6 +109,22 @@ export function ReplaceVideoDrawer({ children, videoId, onReplaceVideo }: Replac
     }
   }, [onReplaceVideo]);
 
+  const handlePreviewVideo = useCallback((video: YouTubeSearchResult) => {
+    setPreviewVideo(video);
+    setIsPreviewOpen(true);
+  }, []);
+
+  const handlePreviewAccept = useCallback(async (videoId: string) => {
+    setIsPreviewOpen(false);
+    setPreviewVideo(null);
+    await handleSelectVideo(videoId);
+  }, [handleSelectVideo]);
+
+  const handlePreviewClose = useCallback(() => {
+    setIsPreviewOpen(false);
+    setPreviewVideo(null);
+  }, []);
+
   const isLoading = loadingState !== "idle";
 
   return (
@@ -170,11 +189,9 @@ export function ReplaceVideoDrawer({ children, videoId, onReplaceVideo }: Replac
                 
                 <div className="space-y-2">
                   {searchResults.map((result) => (
-                    <button
+                    <div
                       key={result.videoId}
-                      type="button"
-                      onClick={() => handleSelectVideo(result.videoId)}
-                      className="w-full flex items-start gap-3 p-3 rounded-lg border hover:bg-secondary transition-colors text-left"
+                      className="w-full flex items-start gap-3 p-3 rounded-lg border hover:bg-secondary transition-colors"
                     >
                       {/* Thumbnail */}
                       {result.thumbnailUrl && (
@@ -196,7 +213,27 @@ export function ReplaceVideoDrawer({ children, videoId, onReplaceVideo }: Replac
                           </p>
                         )}
                       </div>
-                    </button>
+
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePreviewVideo(result)}
+                          className="flex items-center gap-2"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Preview
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleSelectVideo(result.videoId)}
+                          className="flex items-center gap-2"
+                        >
+                          Use This
+                        </Button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -220,6 +257,14 @@ export function ReplaceVideoDrawer({ children, videoId, onReplaceVideo }: Replac
           </DrawerFooter>
         </div>
       </DrawerContent>
+      
+      {/* Video Preview Dialog */}
+      <VideoPreviewDialog
+        video={previewVideo}
+        isOpen={isPreviewOpen}
+        onClose={handlePreviewClose}
+        onAccept={handlePreviewAccept}
+      />
     </Drawer>
   );
 }

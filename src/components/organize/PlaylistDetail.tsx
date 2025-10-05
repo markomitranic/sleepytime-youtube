@@ -130,14 +130,22 @@ export function PlaylistDetail({
         throw new Error("Item not found");
       }
 
+      // Find the position of the item in the playlist
+      const itemIndex = items.findIndex((i) => i.id === itemId);
+      if (itemIndex === -1) {
+        toast.error("Couldn't find this video's position in the playlist.");
+        throw new Error("Item position not found");
+      }
+
       setIsReordering(true);
       
       try {
-        // First, add the new video to the playlist
+        // First, add the new video to the playlist at the same position
         await addVideoToPlaylist({
           accessToken: auth.accessToken,
           playlistId: playlistId,
           videoId: newVideoId,
+          position: itemIndex,
           refreshToken: auth.getTokenSilently,
         });
 
