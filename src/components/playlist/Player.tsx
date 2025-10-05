@@ -551,13 +551,45 @@ export function Player() {
             playsinline: 1,
             rel: 0,
             modestbranding: 1,
-            controls: 1
+            controls: 1,
+            fs: 1,
+            cc_load_policy: 0,
+            iv_load_policy: 3,
+            disablekb: 0,
+            start: 0,
+            end: 0,
+            loop: 0,
+            mute: 0,
+            showinfo: 0,
+            origin: window.location.origin
           },
           events: {
             onReady: (event: any) => {
-              // Auto-start video when player is ready
-              event.target.playVideo();
-              setIsPlaying(true);
+              // For iOS PWA, we need to ensure user interaction before autoplay
+              const playVideo = () => {
+                try {
+                  event.target.playVideo();
+                  setIsPlaying(true);
+                } catch (error) {
+                  console.log('Autoplay prevented, user interaction required');
+                  // If autoplay fails, we'll rely on user clicking play
+                }
+              };
+
+              // Try to play immediately
+              playVideo();
+
+              // If that fails, add a click handler to the player container
+              if (playerRef.current) {
+                const handleUserInteraction = () => {
+                  playVideo();
+                  playerRef.current?.removeEventListener('click', handleUserInteraction);
+                  playerRef.current?.removeEventListener('touchstart', handleUserInteraction);
+                };
+                
+                playerRef.current.addEventListener('click', handleUserInteraction);
+                playerRef.current.addEventListener('touchstart', handleUserInteraction);
+              }
             },
             onStateChange: (event: any) => {
               try {
@@ -774,6 +806,15 @@ export function Player() {
               ref={playerRef}
               id={`youtube-player-${currentVideoId}`}
               className="h-full w-full"
+              style={{
+                // @ts-ignore - These are valid CSS properties for iOS
+                WebkitPlaysInline: true,
+                playsInline: true,
+                WebkitMediaControls: 'none',
+                mediaControls: 'none'
+              }}
+              webkit-playsinline="true"
+              playsinline="true"
             />
           </div>
 
