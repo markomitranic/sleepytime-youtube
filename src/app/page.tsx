@@ -1,35 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BUILTIN_PLAYLISTS } from "~/lib/builtinPlaylists";
-import { useForm } from "react-hook-form";
 import Image from "next/image";
-import { Input } from "~/components/ui/input";
-import { Button } from "~/components/ui/button";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { PlaylistGrid } from "~/components/playlist/PlaylistGrid";
 import { toast } from "sonner";
 
 export default function HomePage() {
   const playlist = usePlaylist();
-  const defaultValues = useMemo(() => ({ url: playlist.url ?? "" }), [playlist.url]);
-  const { register, handleSubmit } = useForm<{ url: string }>({ defaultValues });
-
-  const onSubmit = handleSubmit(async ({ url }) => {
-    if (!url) return;
-    // Extract playlist ID from URL
-    try {
-      const urlObj = new URL(url);
-      const listId = urlObj.searchParams.get("list");
-      if (listId) {
-        window.location.href = `/player?list=${listId}`;
-      } else {
-        toast.error("Could not find playlist ID in URL");
-      }
-    } catch (e) {
-      toast.error("Invalid URL format");
-    }
-  });
 
   const [labelText, setLabelText] = useState<string>("slowedReverb");
   const typingIndexRef = useRef<number>(0);
@@ -137,18 +116,6 @@ export default function HomePage() {
               Try it out with some <span className="tabular-nums">{labelText}</span> →
             </a>
           </div>
-          <form onSubmit={onSubmit} className="flex w-full items-center gap-3">
-            <Input
-              type="url"
-              placeholder="https://www.youtube.com/playlist?list=..."
-              className="h-12 text-lg flex-1"
-              aria-label="YouTube playlist URL"
-              {...register("url", { required: true })}
-            />
-            <Button type="submit" className="h-12 px-6" disabled={playlist.isLoading}>
-              {playlist.isLoading ? "Loading..." : "Load Playlist"}
-            </Button>
-          </form>
           <div className="mt-5">
             <Image
               src="/sleepytime-underwood.jpg"
