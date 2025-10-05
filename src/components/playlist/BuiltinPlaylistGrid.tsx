@@ -6,7 +6,11 @@ import { fetchPlaylistsByIds } from "~/lib/youtube";
 import { BUILTIN_PLAYLIST_IDS, BUILTIN_PLAYLISTS } from "~/lib/builtinPlaylists";
 import { env } from "~/env";
 
-export function BuiltinPlaylistGrid() {
+type BuiltinPlaylistGridProps = {
+  hasScrolled?: boolean;
+};
+
+export function BuiltinPlaylistGrid({ hasScrolled = false }: BuiltinPlaylistGridProps) {
   const { data: builtinPlaylists } = useQuery({
     queryKey: ["builtinPlaylists"],
     queryFn: async () => {
@@ -42,7 +46,7 @@ export function BuiltinPlaylistGrid() {
       </div>
 
       {/* Built-in playlists grid */}
-      <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <ul className={`grid grid-cols-1 md:grid-cols-2 gap-4 transition-opacity duration-300 ${hasScrolled ? 'opacity-100' : 'opacity-80 hover:opacity-100'}`}>
         {builtinsToRender.map((p) => (
           <li key={p.id}>
             <a

@@ -15,6 +15,7 @@ export default function HomePage() {
   const auth = useAuth();
 
   const [labelText, setLabelText] = useState<string>("slowedReverb");
+  const [hasScrolled, setHasScrolled] = useState<boolean>(false);
   const typingIndexRef = useRef<number>(0);
   const labelIndexRef = useRef<number>(0);
   const deletingRef = useRef<boolean>(false);
@@ -83,6 +84,16 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    function handleScroll() {
+      const scrollY = window.scrollY;
+      setHasScrolled(scrollY > 10);
+    }
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
     if (!playlist.error) return;
     const message = playlist.error;
     const technical = playlist.errorDetails ?? "";
@@ -126,11 +137,11 @@ export default function HomePage() {
               alt="Sleepytime Celestial Seasonings Bear - by Underwood"
               width={1200}
               height={600}
-              className="rounded-md w-full h-auto opacity-40 hover:opacity-100 transition-opacity duration-300"
+              className="rounded-md w-full h-auto"
             />
           </div>
           {/* Built-in playlists only */}
-          <BuiltinPlaylistGrid />
+          <BuiltinPlaylistGrid hasScrolled={hasScrolled} />
 
           {/* CTA Section - Only show if not authenticated */}
           {!auth.isAuthenticated && (
