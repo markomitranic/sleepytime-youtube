@@ -46,7 +46,7 @@ export function BuiltinPlaylistGrid({ hasScrolled = false }: BuiltinPlaylistGrid
       </div>
 
       {/* Built-in playlists grid */}
-      <ul className={`grid grid-cols-1 md:grid-cols-2 gap-4 transition-opacity duration-300 ${hasScrolled ? 'opacity-100' : 'opacity-80 hover:opacity-100'}`}>
+      <ul className={`grid grid-cols-1 md:grid-cols-2 gap-4 transition-opacity duration-300 ${hasScrolled ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}>
         {builtinsToRender.map((p) => (
           <li key={p.id}>
             <a

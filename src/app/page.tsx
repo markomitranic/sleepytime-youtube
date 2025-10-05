@@ -111,115 +111,120 @@ export default function HomePage() {
   }, [playlist.error, playlist.errorDetails]);
 
   return (
-    <main className="flex min-h-screen items-start justify-center px-[10px] py-6 pb-24">
-      <div className="w-full max-w-[720px] space-y-6">
-        <h1 className="text-3xl font-bold">Sleepytime-YouTube</h1>
-        <div className="space-y-5">
-          <p className="text-lg text-muted-foreground text-center">
-            Having trouble sleeping? Bothersome having to keep hitting play and skipping ads? Add a sleep timer, auto-removal and darker mode to your playlists.
-          </p>
-          <div className="text-center">
-            <a 
-              href="#try-it-out"
-              onClick={(e) => {
-                e.preventDefault();
-                const el = document.getElementById("try-it-out");
-                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-              className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
-            >
-              Try it out with some <span className="tabular-nums">{labelText}</span> →
-            </a>
-          </div>
-          <div className="mt-5">
-            <Image
-              src="/sleepytime-underwood.jpg"
-              alt="Sleepytime Celestial Seasonings Bear - by Underwood"
-              width={1200}
-              height={600}
-              className="rounded-md w-full h-auto"
-            />
-          </div>
-          {/* Built-in playlists only */}
-          <BuiltinPlaylistGrid hasScrolled={hasScrolled} />
+    <main className="min-h-screen">
+      {/* Hero Section - Full width with responsive padding */}
+      <div className="w-full max-w-[1600px] mx-auto px-0 md:px-[40px] pt-5">
+        <Image
+          src="/sleepytime-underwood.jpg"
+          alt="Sleepytime Celestial Seasonings Bear - by Underwood"
+          width={1200}
+          height={600}
+          className={`w-full h-auto rounded-md transition-opacity duration-300 ${hasScrolled ? 'opacity-60' : 'opacity-100'}`}
+        />
+      </div>
 
-          {/* CTA Section - Only show if not authenticated */}
-          {!auth.isAuthenticated && (
-            <div className="mt-12 p-8 rounded-lg border bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 text-center space-y-6">
-              <div className="space-y-3">
-                <h2 className="text-2xl font-bold">Ready to manage your playlists?</h2>
-                <p className="text-muted-foreground max-w-2xl mx-auto">
-                  Sign in with your YouTube account to access, play, and manage your personal playlists. 
-                  Reorder videos, remove unwanted content, and create the perfect sleep experience.
-                </p>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <span>Access your YouTube playlists</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <span>Reorder and manage videos</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <span>Set sleep timers</span>
-                  </div>
+      {/* Content Section - Centered container */}
+      <div className="flex justify-center px-[10px] py-6 pb-24">
+        <div className="w-full max-w-[720px] space-y-6">
+          <h1 className="text-3xl font-bold">Sleepytime-YouTube</h1>
+          <div className="space-y-5">
+            <p className="text-lg text-muted-foreground text-center">
+              Having trouble sleeping? Bothersome having to keep hitting play and skipping ads? Add a sleep timer, auto-removal and darker mode to your playlists.
+            </p>
+            <div className="text-center">
+              <a 
+                href="#try-it-out"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const el = document.getElementById("try-it-out");
+                  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+                className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
+              >
+                Try it out with some <span className="tabular-nums">{labelText}</span> →
+              </a>
+            </div>
+            {/* Built-in playlists only */}
+            <BuiltinPlaylistGrid hasScrolled={hasScrolled} />
+
+            {/* CTA Section - Only show if not authenticated */}
+            {!auth.isAuthenticated && (
+              <div className="mt-12 p-8 rounded-lg border bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 text-center space-y-6">
+                <div className="space-y-3">
+                  <h2 className="text-2xl font-bold">Ready to manage your playlists?</h2>
+                  <p className="text-muted-foreground max-w-2xl mx-auto">
+                    Sign in with your YouTube account to access, play, and manage your personal playlists. 
+                    Reorder videos, remove unwanted content, and create the perfect sleep experience.
+                  </p>
                 </div>
                 
-                <div className="text-xs text-muted-foreground/80 max-w-xl mx-auto">
-                  <strong>Your privacy matters:</strong> We store nothing on our servers. All data remains in your browser. 
-                  No tracking, no analytics, no data collection. Your information stays private.
+                <div className="space-y-4">
+                  <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      <span>Access your YouTube playlists</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      <span>Reorder and manage videos</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      <span>Set sleep timers</span>
+                    </div>
+                  </div>
+                  
+                  <div className="text-xs text-muted-foreground/80 max-w-xl mx-auto">
+                    <strong>Your privacy matters:</strong> We store nothing on our servers. All data remains in your browser. 
+                    No tracking, no analytics, no data collection. Your information stays private.
+                  </div>
                 </div>
+
+                <Button 
+                  onClick={() => auth.signIn()}
+                  size="lg"
+                  className="px-8 py-3 text-base font-medium"
+                >
+                  Sign in with Google
+                </Button>
               </div>
+            )}
 
-              <Button 
-                onClick={() => auth.signIn()}
-                size="lg"
-                className="px-8 py-3 text-base font-medium"
+            {/* Footer with social links */}
+            <div className="flex items-center justify-center gap-6 pt-8 mt-12 border-t">
+              <a
+                href="https://github.com/markomitranic/sleepytime-youtube"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="View on GitHub"
               >
-                Sign in with Google
-              </Button>
+                <Github className="h-5 w-5" />
+                <span className="text-sm">GitHub</span>
+              </a>
+              
+              <a
+                href="https://www.linkedin.com/in/marko-mitranic/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="LinkedIn Profile"
+              >
+                <Linkedin className="h-5 w-5" />
+                <span className="text-sm">LinkedIn</span>
+              </a>
+              
+              <a
+                href="https://medium.com/homullus"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Medium Blog"
+              >
+                <ExternalLink className="h-5 w-5" />
+                <span className="text-sm">Medium</span>
+              </a>
             </div>
-          )}
-
-          {/* Footer with social links */}
-          <div className="flex items-center justify-center gap-6 pt-8 mt-12 border-t">
-            <a
-              href="https://github.com/markomitranic/sleepytime-youtube"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="View on GitHub"
-            >
-              <Github className="h-5 w-5" />
-              <span className="text-sm">GitHub</span>
-            </a>
-            
-            <a
-              href="https://www.linkedin.com/in/marko-mitranic/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="LinkedIn Profile"
-            >
-              <Linkedin className="h-5 w-5" />
-              <span className="text-sm">LinkedIn</span>
-            </a>
-            
-            <a
-              href="https://medium.com/homullus"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Medium Blog"
-            >
-              <ExternalLink className="h-5 w-5" />
-              <span className="text-sm">Medium</span>
-            </a>
           </div>
         </div>
       </div>
