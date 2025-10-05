@@ -8,6 +8,7 @@ import { BuiltinPlaylistGrid } from "~/components/playlist/BuiltinPlaylistGrid";
 import { useAuth } from "~/components/auth/useAuth";
 import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
+import { Github, Linkedin, ExternalLink } from "lucide-react";
 
 export default function HomePage() {
   const playlist = usePlaylist();
@@ -173,6 +174,42 @@ export default function HomePage() {
               </Button>
             </div>
           )}
+
+          {/* Footer with social links */}
+          <div className="flex items-center justify-center gap-6 pt-8 mt-12 border-t">
+            <a
+              href="https://github.com/markomitranic/sleepytime-youtube"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="View on GitHub"
+            >
+              <Github className="h-5 w-5" />
+              <span className="text-sm">GitHub</span>
+            </a>
+            
+            <a
+              href="https://www.linkedin.com/in/marko-mitranic/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="LinkedIn Profile"
+            >
+              <Linkedin className="h-5 w-5" />
+              <span className="text-sm">LinkedIn</span>
+            </a>
+            
+            <a
+              href="https://medium.com/homullus"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Medium Blog"
+            >
+              <ExternalLink className="h-5 w-5" />
+              <span className="text-sm">Medium</span>
+            </a>
+          </div>
         </div>
       </div>
     </main>
