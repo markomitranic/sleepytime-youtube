@@ -116,17 +116,17 @@ export function PlaylistGrid() {
 
       {/* User playlists grid (if authenticated) */}
       {auth.isAuthenticated ? (
-        <ul className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {(userPlaylists ?? []).map((p) => (
             <li key={p.id}>
               <a
                 href={`/player?list=${p.id}`}
                 className="block w-full text-left group"
               >
-                <div className="aspect-square w-full overflow-hidden rounded-md border bg-secondary/40 relative">
+                <div className="aspect-video w-2/3 overflow-hidden rounded-md border bg-secondary/40 relative">
                   {p.thumbnailUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.thumbnailUrl} alt="thumbnail" className="h-full w-full object-cover scale-[1.34] origin-center group-hover:opacity-90 transition-opacity" />
+                    <img src={p.thumbnailUrl} alt="thumbnail" className="h-full w-full object-cover scale-110 origin-center group-hover:opacity-90 transition-opacity" />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">No thumbnail</div>
                   )}
@@ -177,17 +177,17 @@ export function PlaylistGrid() {
       </div>
 
       {/* Built-in playlists grid */}
-      <ul className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {builtinsToRender.map((p) => (
           <li key={p.id}>
             <a
               href={`/player?list=${p.id}`}
               className="block w-full text-left group"
             >
-              <div className="aspect-square w-full overflow-hidden rounded-md border bg-secondary/40 relative">
+              <div className="aspect-video w-2/3 overflow-hidden rounded-md border bg-secondary/40 relative">
                 {p.thumbnailUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.thumbnailUrl} alt="thumbnail" className="h-full w-full object-cover scale-[1.34] origin-center group-hover:opacity-90 transition-opacity" />
+                  <img src={p.thumbnailUrl} alt="thumbnail" className="h-full w-full object-cover scale-110 origin-center group-hover:opacity-90 transition-opacity" />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center text-xs text-muted-foreground">No thumbnail</div>
                 )}
