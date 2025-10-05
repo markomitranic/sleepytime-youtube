@@ -58,7 +58,7 @@ export function ReplaceVideoDrawer({ children, videoId, onReplaceVideo }: Replac
         const title = await getOriginalVideoTitle(videoId!);
         
         if (!title) {
-          setError("Could not find the original video title in the Wayback Machine archive. The video may not have been archived.");
+          setError("Could not find the original video title in the Wayback Machine archive. The video may not have been archived or the archive may be incomplete.");
           setLoadingState("idle");
           return;
         }
@@ -80,7 +80,7 @@ export function ReplaceVideoDrawer({ children, videoId, onReplaceVideo }: Replac
         setLoadingState("idle");
         
         if (results.length === 0) {
-          setError("No alternative videos found for this title.");
+          setError(`Found the original title "${title}" but no alternative videos were found. Try searching manually with a different search term.`);
         }
       } catch (err) {
         console.error("Error searching for alternatives:", err);
