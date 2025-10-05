@@ -807,8 +807,7 @@ export function Player() {
                 WebkitMediaControls: 'none',
                 mediaControls: 'none'
               }}
-              webkit-playsinline="true"
-              playsinline="true"
+              playsInline={true}
             />
           </div>
 
