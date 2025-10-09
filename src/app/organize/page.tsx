@@ -60,19 +60,6 @@ export default function OrganizePage() {
     setShowOnlyUnavailable(false);
   }, [selectedPlaylistId]);
 
-  // Auto-disable filter when there are no unavailable videos
-  useEffect(() => {
-    if (playlistItems && showOnlyUnavailable) {
-      const unavailableCount = playlistItems.filter(item => 
-        !item.videoId || item.title === "Deleted video" || item.title === "Private video"
-      ).length;
-      
-      if (unavailableCount === 0) {
-        setShowOnlyUnavailable(false);
-      }
-    }
-  }, [playlistItems, showOnlyUnavailable]);
-
   // Fetch user playlists
   const { data: playlists, isLoading: playlistsLoading, error: playlistsError } = useQuery({
     queryKey: ["userPlaylists", auth.accessToken],
@@ -189,6 +176,19 @@ export default function OrganizePage() {
     },
     enabled: Boolean(selectedPlaylistId),
   });
+
+  // Auto-disable filter when there are no unavailable videos
+  useEffect(() => {
+    if (playlistItems && showOnlyUnavailable) {
+      const unavailableCount = playlistItems.filter(item => 
+        !item.videoId || item.title === "Deleted video" || item.title === "Private video"
+      ).length;
+      
+      if (unavailableCount === 0) {
+        setShowOnlyUnavailable(false);
+      }
+    }
+  }, [playlistItems, showOnlyUnavailable]);
 
   const handleVideoReorder = useCallback(async (itemId: string, oldIndex: number, newIndex: number) => {
     if (!auth.isAuthenticated || !auth.accessToken || !selectedPlaylistId || !playlistItems) return;
