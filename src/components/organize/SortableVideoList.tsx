@@ -26,7 +26,6 @@ type SortableVideoListProps = {
   items: YouTubePlaylistItem[];
   onDelete: (itemId: string) => Promise<void>;
   onReorder: (itemId: string, oldIndex: number, newIndex: number) => Promise<void>;
-  isReordering: boolean;
   disableDragDrop?: boolean;
   onReplaceVideo?: (itemId: string, newVideoId: string) => Promise<void>;
   canEdit?: boolean;
@@ -201,7 +200,6 @@ export function SortableVideoList({
   items, 
   onDelete, 
   onReorder, 
-  isReordering,
   disableDragDrop = false,
   onReplaceVideo,
   canEdit = false,

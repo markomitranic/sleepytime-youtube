@@ -478,6 +478,16 @@ export default function OrganizePage() {
                       queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
                     }}
                     onReorderRequest={handleVideoReorder}
+                    onDeleteItem={(itemId) => {
+                      // Optimistic update: immediately remove from cache
+                      queryClient.setQueryData<YouTubePlaylistItem[]>(
+                        ["playlistItems", selectedPlaylistId],
+                        (old) => old?.filter(item => item.id !== itemId) ?? []
+                      );
+                      // Invalidate count queries immediately for visual feedback
+                      queryClient.invalidateQueries({ queryKey: ["playlistSnippet", selectedPlaylistId] });
+                      queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
+                    }}
                     canEdit={canEditSelected}
                     showOnlyUnavailable={showOnlyUnavailable}
                     onShowOnlyUnavailableChange={setShowOnlyUnavailable}

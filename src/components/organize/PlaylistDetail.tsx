@@ -61,7 +61,6 @@ export function PlaylistDetail({
 }: PlaylistDetailProps) {
   const auth = useAuth();
   const [sortOrder, setSortOrder] = useState<SortOrder>("default");
-  const [isReordering, setIsReordering] = useState(false);
 
   // Helper function to check if a video is unavailable (deleted)
   const isVideoUnavailable = useCallback((item: YouTubePlaylistItem) => {
@@ -104,9 +103,13 @@ export function PlaylistDetail({
 
   const handleDeleteItem = useCallback(
     async (itemId: string) => {
-      // Use custom delete handler if provided (e.g., for Watch Later)
+      // First, call the custom delete handler to do optimistic update
       if (customDeleteHandler) {
         customDeleteHandler(itemId);
+      }
+
+      // For Watch Later items, we only do the optimistic update (no API call)
+      if (customDeleteHandler) {
         return;
       }
 
@@ -121,8 +124,8 @@ export function PlaylistDetail({
         throw new Error("Item not found");
       }
 
-      setIsReordering(true);
-      
+      // Optimistically remove the item - no refetch needed unless there's an error
+      // The parent component handles the optimistic cache update
       try {
         await deletePlaylistItem({ 
           accessToken: auth.accessToken, 
@@ -131,16 +134,10 @@ export function PlaylistDetail({
         });
         
         toast.success("Video removed from playlist");
-        
-        // Refresh the items after a small delay to sync with server
-        setTimeout(() => {
-          onItemsChanged();
-          setIsReordering(false);
-        }, 700);
       } catch (e) {
         toast.error((e as Error)?.message ?? "Failed to remove video.");
+        // On error, trigger a refetch to restore correct state
         onItemsChanged();
-        setIsReordering(false);
         throw e;
       }
     },
@@ -167,8 +164,6 @@ export function PlaylistDetail({
         throw new Error("Item position not found");
       }
 
-      setIsReordering(true);
-      
       try {
         // First, add the new video to the playlist at the same position
         await addVideoToPlaylist({
@@ -188,16 +183,11 @@ export function PlaylistDetail({
         
         toast.success("Video replaced successfully");
         
-        // Refresh the items after a small delay to sync with server
-        // This will preserve the filter state since we're not resetting the component
-        setTimeout(() => {
-          onItemsChanged();
-          setIsReordering(false);
-        }, 700);
+        // Refetch to get the new video details
+        onItemsChanged();
       } catch (e) {
         toast.error((e as Error)?.message ?? "Failed to replace video.");
         onItemsChanged();
-        setIsReordering(false);
         throw e;
       }
     },
@@ -235,16 +225,6 @@ export function PlaylistDetail({
 
   return (
     <div className="p-6 space-y-6 relative">
-      {/* Loading indicator */}
-      {isReordering && (
-        <div className="absolute top-4 right-4 pointer-events-none z-10">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <span className="text-sm">Saving...</span>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="space-y-4">
         <div className="flex items-start gap-6">
@@ -358,7 +338,6 @@ export function PlaylistDetail({
           items={sortedItems}
           onDelete={handleDeleteItem}
           onReorder={async () => {}}
-          isReordering={isReordering}
           // Disable drag and drop when sorting is active (not default order)
           disableDragDrop={sortOrder !== "default"}
           onReplaceVideo={handleReplaceVideo}
