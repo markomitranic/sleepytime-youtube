@@ -664,3 +664,101 @@ export async function fetchVideoDurations({
   return durations;
 }
 
+export async function fetchVideosByIds({
+  apiKey,
+  accessToken,
+  videoIds,
+  refreshToken,
+}: {
+  apiKey?: string;
+  accessToken?: string;
+  videoIds: string[];
+  refreshToken?: () => Promise<string | null>;
+}): Promise<YouTubePlaylistItem[]> {
+  if (!videoIds.length) return [];
+
+  const headers: Record<string, string> = {};
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+
+  let tokenRefreshed = false;
+  const results: YouTubePlaylistItem[] = [];
+
+  // YouTube API allows up to 50 IDs per request
+  for (let i = 0; i < videoIds.length; i += 50) {
+    const ids = videoIds.slice(i, i + 50);
+    const url = new URL("https://www.googleapis.com/youtube/v3/videos");
+    url.searchParams.set("part", "snippet,contentDetails");
+    url.searchParams.set("id", ids.join(","));
+    if (apiKey && !accessToken) url.searchParams.set("key", apiKey);
+
+    let res = await fetch(url.toString(), { headers });
+
+    // If unauthorized and we haven't refreshed yet, try to refresh token and retry
+    if (res.status === 401 && accessToken && !tokenRefreshed && refreshToken) {
+      const freshToken = await refreshToken();
+      if (freshToken) {
+        headers["Authorization"] = `Bearer ${freshToken}`;
+        tokenRefreshed = true;
+        res = await fetch(url.toString(), { headers });
+      }
+    }
+
+    if (res.status === 401 && apiKey) {
+      try {
+        const retryUrl = new URL(url.toString());
+        retryUrl.searchParams.set("key", apiKey);
+        res = await fetch(retryUrl.toString());
+      } catch { }
+    }
+
+    if (!res.ok) {
+      continue;
+    }
+
+    const json = (await res.json()) as {
+      items?: Array<{
+        id?: string;
+        snippet?: {
+          title?: string;
+          channelTitle?: string;
+          channelId?: string;
+          publishedAt?: string;
+          thumbnails?: {
+            default?: { url?: string };
+            medium?: { url?: string };
+            high?: { url?: string };
+          };
+        };
+        contentDetails?: { duration?: string };
+      }>;
+    };
+
+    for (const item of json.items ?? []) {
+      if (!item.id) continue;
+      const s = item.snippet ?? {};
+      const thumb =
+        s.thumbnails?.high?.url ||
+        s.thumbnails?.medium?.url ||
+        s.thumbnails?.default?.url;
+      const durationSeconds = item.contentDetails?.duration
+        ? parseISO8601Duration(item.contentDetails.duration)
+        : undefined;
+      results.push({
+        id: item.id, // Use videoId as stable id in manual lists
+        title: s.title ?? "Untitled",
+        videoId: item.id,
+        thumbnailUrl: thumb,
+        channelTitle: s.channelTitle,
+        channelId: s.channelId,
+        publishedAt: s.publishedAt,
+        durationSeconds,
+      });
+    }
+  }
+
+  // Preserve original input order
+  const order = new Map(videoIds.map((id, idx) => [id, idx] as const));
+  results.sort((a, b) => (order.get(a.videoId!) ?? 0) - (order.get(b.videoId!) ?? 0));
+  return results;
+}
+

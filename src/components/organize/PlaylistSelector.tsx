@@ -1,8 +1,9 @@
 "use client";
 
 import type { YouTubeUserPlaylist } from "~/lib/youtube";
-import { Loader2, Lock, Globe } from "lucide-react";
+import { Loader2, Lock, Globe, Plus } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
 import { useDroppable } from "@dnd-kit/core";
 
 type PlaylistSelectorProps = {
@@ -10,6 +11,7 @@ type PlaylistSelectorProps = {
   isLoading: boolean;
   selectedPlaylistId: string | null;
   onSelectPlaylist: (playlistId: string) => void;
+  onImportWatchLater: () => void;
 };
 
 type PlaylistItemProps = {
@@ -92,7 +94,8 @@ export function PlaylistSelector({
   playlists, 
   isLoading, 
   selectedPlaylistId, 
-  onSelectPlaylist 
+  onSelectPlaylist,
+  onImportWatchLater,
 }: PlaylistSelectorProps) {
   if (isLoading) {
     return (
@@ -114,7 +117,18 @@ export function PlaylistSelector({
   return (
     <div className="p-4 space-y-2">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold mb-1">Your Playlists</h2>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-lg font-semibold">Your Playlists</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onImportWatchLater}
+            className="h-7 w-7 p-0"
+            title="Import Watch Later"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
         <p className="text-xs text-muted-foreground">{playlists.length} playlist{playlists.length !== 1 ? 's' : ''}</p>
         <p className="text-xs text-muted-foreground mt-1 italic">Drag videos here to move them</p>
       </div>

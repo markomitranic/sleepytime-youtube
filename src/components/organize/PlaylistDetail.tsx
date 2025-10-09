@@ -22,6 +22,7 @@ type PlaylistDetailProps = {
   isLoading: boolean;
   onItemsChanged: () => void;
   onReorderRequest?: (itemId: string, oldIndex: number, newIndex: number) => Promise<void>;
+  onDeleteItem?: (itemId: string) => void;
   canEdit?: boolean;
   showOnlyUnavailable?: boolean;
   onShowOnlyUnavailableChange?: (show: boolean) => void;
@@ -53,6 +54,7 @@ export function PlaylistDetail({
   isLoading,
   onItemsChanged,
   onReorderRequest,
+  onDeleteItem: customDeleteHandler,
   canEdit = false,
   showOnlyUnavailable = false,
   onShowOnlyUnavailableChange,
@@ -102,6 +104,12 @@ export function PlaylistDetail({
 
   const handleDeleteItem = useCallback(
     async (itemId: string) => {
+      // Use custom delete handler if provided (e.g., for Watch Later)
+      if (customDeleteHandler) {
+        customDeleteHandler(itemId);
+        return;
+      }
+
       if (!auth.isAuthenticated || !auth.accessToken) {
         toast.error("You must be signed in to delete from playlist.");
         throw new Error("Not authenticated");
@@ -136,7 +144,7 @@ export function PlaylistDetail({
         throw e;
       }
     },
-    [auth.isAuthenticated, auth.accessToken, auth.getTokenSilently, items, onItemsChanged]
+    [customDeleteHandler, auth.isAuthenticated, auth.accessToken, auth.getTokenSilently, items, onItemsChanged]
   );
 
   const handleReplaceVideo = useCallback(

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "~/components/auth/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchUserPlaylists, fetchPlaylistItems, fetchPlaylistSnippet, fetchVideoDurations, addVideoToPlaylist, deletePlaylistItem, updatePlaylistItemPosition } from "~/lib/youtube";
+import { fetchUserPlaylists, fetchPlaylistItems, fetchPlaylistSnippet, fetchVideoDurations, addVideoToPlaylist, deletePlaylistItem, updatePlaylistItemPosition, fetchVideosByIds } from "~/lib/youtube";
 import type { YouTubeUserPlaylist, YouTubePlaylistItem, YouTubePlaylistSnippet } from "~/lib/youtube";
 import { PlaylistSelector } from "~/components/organize/PlaylistSelector";
 import { SkeletonPlaylistDetail } from "~/components/organize/SkeletonPlaylistDetail";
@@ -14,6 +14,7 @@ import { env } from "~/env";
 import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
 import { PlaylistDetail } from "~/components/organize/PlaylistDetail";
+import { ManualWatchLaterDialog } from "~/components/organize/ManualWatchLaterDialog";
 
 type LoadingProgress = {
   pagesLoaded: number;
@@ -21,6 +22,8 @@ type LoadingProgress = {
   itemsLoaded: number;
   totalItems?: number;
 };
+
+const WATCH_LATER_ID = "__watch_later_manual__";
 
 export default function OrganizePage() {
   const router = useRouter();
@@ -31,6 +34,8 @@ export default function OrganizePage() {
   const [draggedVideo, setDraggedVideo] = useState<YouTubePlaylistItem | null>(null);
   const [isMovingVideo, setIsMovingVideo] = useState(false);
   const [showOnlyUnavailable, setShowOnlyUnavailable] = useState(false);
+  const [isWLDialogOpen, setIsWLDialogOpen] = useState(false);
+  const [watchLaterItems, setWatchLaterItems] = useState<YouTubePlaylistItem[]>([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -190,6 +195,38 @@ export default function OrganizePage() {
     }
   }, [playlistItems, showOnlyUnavailable]);
 
+  // Handle Watch Later import
+  const handleWatchLaterImport = useCallback(async (videoIds: string[]) => {
+    try {
+      const items = await fetchVideosByIds({
+        apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY,
+        accessToken: auth.accessToken,
+        videoIds,
+        refreshToken: auth.getTokenSilently,
+      });
+      setWatchLaterItems(items);
+      toast.success(`Imported ${items.length} video${items.length !== 1 ? 's' : ''} from Watch Later`);
+    } catch (err) {
+      toast.error("Failed to fetch video metadata");
+      console.error(err);
+    }
+  }, [auth.accessToken, auth.getTokenSilently]);
+
+  // Handle opening Watch Later import dialog
+  const handleOpenWLDialog = useCallback(() => {
+    setIsWLDialogOpen(true);
+  }, []);
+
+  // Handle delete from Watch Later (just remove from state)
+  const handleWatchLaterDelete = useCallback((itemId: string) => {
+    setWatchLaterItems(prev => prev.filter(item => item.id !== itemId));
+    toast.success("Video removed from Watch Later");
+  }, []);
+
+  // Determine if we're viewing Watch Later
+  const isViewingWatchLater = selectedPlaylistId === WATCH_LATER_ID;
+  const currentItems = isViewingWatchLater ? watchLaterItems : playlistItems;
+
   const handleVideoReorder = useCallback(async (itemId: string, oldIndex: number, newIndex: number) => {
     if (!auth.isAuthenticated || !auth.accessToken || !selectedPlaylistId || !playlistItems) return;
 
@@ -246,12 +283,12 @@ export default function OrganizePage() {
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event;
-    // Find the video being dragged from the current playlist
-    const video = playlistItems?.find(item => item.id === active.id);
+    // Find the video being dragged from the current playlist (or Watch Later)
+    const video = currentItems?.find(item => item.id === active.id);
     if (video) {
       setDraggedVideo(video);
     }
-  }, [playlistItems]);
+  }, [currentItems]);
 
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event;
@@ -263,9 +300,9 @@ export default function OrganizePage() {
     const targetId = over.id as string;
     
     // Check if target is a video (reordering within playlist)
-    const targetVideo = playlistItems?.find(item => item.id === targetId);
-    if (targetVideo && targetId !== active.id && selectedPlaylistId) {
-      // Reorder within current playlist
+    const targetVideo = currentItems?.find(item => item.id === targetId);
+    if (targetVideo && targetId !== active.id && selectedPlaylistId && !isViewingWatchLater) {
+      // Reorder within current playlist (not supported for Watch Later)
       const availableVideos = (playlistItems ?? []).filter((i) => i.videoId);
       const oldIndex = availableVideos.findIndex((i) => i.id === active.id);
       const newIndex = availableVideos.findIndex((i) => i.id === targetId);
@@ -282,6 +319,37 @@ export default function OrganizePage() {
     
     // Don't do anything if dropped on the same playlist
     if (targetId === selectedPlaylistId) return;
+
+    // Handle moving from Watch Later (no delete needed)
+    if (isViewingWatchLater) {
+      setIsMovingVideo(true);
+      try {
+        // Add video to target playlist
+        await addVideoToPlaylist({
+          accessToken: auth.accessToken,
+          playlistId: targetId,
+          videoId: currentDraggedVideo.videoId!,
+          refreshToken: auth.getTokenSilently,
+        });
+
+        toast.success(`Moved "${currentDraggedVideo.title}" to "${targetPlaylist.title}"`);
+
+        // Remove from Watch Later state
+        setWatchLaterItems(prev => prev.filter(item => item.id !== currentDraggedVideo.id));
+
+        // Invalidate target playlist queries
+        queryClient.invalidateQueries({ queryKey: ["playlistItems", targetId] });
+        queryClient.invalidateQueries({ queryKey: ["playlistSnippet", targetId] });
+        queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
+        
+        setIsMovingVideo(false);
+      } catch (e) {
+        console.error(e);
+        toast.error(`Failed to move video: ${(e as Error)?.message ?? "Unknown error"}`);
+        setIsMovingVideo(false);
+      }
+      return;
+    }
 
     // Optimistic update: Immediately update the query cache to remove the video from current view
     queryClient.setQueryData<YouTubePlaylistItem[]>(
@@ -330,7 +398,7 @@ export default function OrganizePage() {
       queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
       setIsMovingVideo(false);
     }
-  }, [draggedVideo, selectedPlaylistId, playlists, playlistItems, auth.accessToken, auth.getTokenSilently, queryClient, handleVideoReorder]);
+  }, [draggedVideo, selectedPlaylistId, playlists, playlistItems, currentItems, isViewingWatchLater, watchLaterItems, auth.accessToken, auth.getTokenSilently, queryClient, handleVideoReorder]);
 
   // Don't render anything if not authenticated yet
   if (!auth.isReady || !auth.isAuthenticated) {
@@ -359,36 +427,62 @@ export default function OrganizePage() {
               isLoading={playlistsLoading}
               selectedPlaylistId={selectedPlaylistId}
               onSelectPlaylist={setSelectedPlaylistId}
+              onImportWatchLater={handleOpenWLDialog}
             />
           </div>
 
           {/* Right side - Playlist details with independent scroll */}
           <div className="flex-1 overflow-y-auto min-w-0">
             {selectedPlaylistId ? (
-              // Show skeleton while loading or when we have loading progress
-              (snippetLoading || itemsLoading || loadingProgress) ? (
-                <SkeletonPlaylistDetail
-                  loadingProgress={loadingProgress}
-                  playlistTitle={playlistSnippet?.title}
-                />
-              ) : (
+              isViewingWatchLater ? (
+                // Render Watch Later items
                 <PlaylistDetail
-                  playlistId={selectedPlaylistId}
-                  snippet={playlistSnippet}
-                  items={playlistItems ?? []}
+                  playlistId={WATCH_LATER_ID}
+                  snippet={{
+                    id: WATCH_LATER_ID,
+                    title: "Watch Later (manual)",
+                    description: "Videos imported from your YouTube Watch Later playlist. Drag them to any playlist to organize.",
+                    itemCount: watchLaterItems.length,
+                  }}
+                  items={watchLaterItems}
                   isLoading={false}
                   onItemsChanged={() => {
-                    setLoadingProgress(null);
-                    refetchItems();
-                    // Also update counts in sidebar and header
-                    queryClient.invalidateQueries({ queryKey: ["playlistSnippet", selectedPlaylistId] });
-                    queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
+                    // No refetch for manual list
                   }}
-                  onReorderRequest={handleVideoReorder}
-                  canEdit={canEditSelected}
-                  showOnlyUnavailable={showOnlyUnavailable}
-                  onShowOnlyUnavailableChange={setShowOnlyUnavailable}
+                  onReorderRequest={async () => {
+                    // No reordering for manual list
+                  }}
+                  onDeleteItem={handleWatchLaterDelete}
+                  canEdit={true}
+                  showOnlyUnavailable={false}
+                  onShowOnlyUnavailableChange={() => {}}
                 />
+              ) : (
+                // Show skeleton while loading or when we have loading progress
+                (snippetLoading || itemsLoading || loadingProgress) ? (
+                  <SkeletonPlaylistDetail
+                    loadingProgress={loadingProgress}
+                    playlistTitle={playlistSnippet?.title}
+                  />
+                ) : (
+                  <PlaylistDetail
+                    playlistId={selectedPlaylistId}
+                    snippet={playlistSnippet}
+                    items={playlistItems ?? []}
+                    isLoading={false}
+                    onItemsChanged={() => {
+                      setLoadingProgress(null);
+                      refetchItems();
+                      // Also update counts in sidebar and header
+                      queryClient.invalidateQueries({ queryKey: ["playlistSnippet", selectedPlaylistId] });
+                      queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
+                    }}
+                    onReorderRequest={handleVideoReorder}
+                    canEdit={canEditSelected}
+                    showOnlyUnavailable={showOnlyUnavailable}
+                    onShowOnlyUnavailableChange={setShowOnlyUnavailable}
+                  />
+                )
               )
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -397,6 +491,16 @@ export default function OrganizePage() {
             )}
           </div>
         </div>
+
+        {/* Manual Watch Later Import Dialog */}
+        <ManualWatchLaterDialog
+          isOpen={isWLDialogOpen}
+          onClose={() => setIsWLDialogOpen(false)}
+          onVideoIdsSubmit={async (videoIds) => {
+            await handleWatchLaterImport(videoIds);
+            setSelectedPlaylistId(WATCH_LATER_ID);
+          }}
+        />
 
         <DragOverlay>
           {draggedVideo && (
