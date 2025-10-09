@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import type { YouTubePlaylistItem, YouTubePlaylistSnippet } from "~/lib/youtube";
 import { useAuth } from "~/components/auth/useAuth";
 import { deletePlaylistItem, addVideoToPlaylist } from "~/lib/youtube";
-import { Loader2, ArrowUpDown, Clock, Calendar, CalendarClock } from "lucide-react";
+import { Loader2, ArrowUpDown, Clock, Calendar, CalendarClock, ExternalLink as ExternalLinkIcon } from "lucide-react";
 import { SortableVideoList } from "~/components/organize/SortableVideoList";
 import { toast } from "sonner";
 import {
@@ -23,6 +23,8 @@ type PlaylistDetailProps = {
   onItemsChanged: () => void;
   onReorderRequest?: (itemId: string, oldIndex: number, newIndex: number) => Promise<void>;
   canEdit?: boolean;
+  showOnlyUnavailable?: boolean;
+  onShowOnlyUnavailableChange?: (show: boolean) => void;
 };
 
 type SortOrder = "default" | "title-asc" | "title-desc";
@@ -52,10 +54,30 @@ export function PlaylistDetail({
   onItemsChanged,
   onReorderRequest,
   canEdit = false,
+  showOnlyUnavailable = false,
+  onShowOnlyUnavailableChange,
 }: PlaylistDetailProps) {
   const auth = useAuth();
   const [sortOrder, setSortOrder] = useState<SortOrder>("default");
   const [isReordering, setIsReordering] = useState(false);
+
+  // Helper function to check if a video is unavailable (deleted)
+  const isVideoUnavailable = useCallback((item: YouTubePlaylistItem) => {
+    return !item.videoId || item.title === "Deleted video" || item.title === "Private video";
+  }, []);
+
+  // Count unavailable videos
+  const unavailableCount = useMemo(() => {
+    return items.filter(isVideoUnavailable).length;
+  }, [items, isVideoUnavailable]);
+
+  // Filter items based on showOnlyUnavailable state
+  const filteredItems = useMemo(() => {
+    if (showOnlyUnavailable) {
+      return items.filter(isVideoUnavailable);
+    }
+    return items;
+  }, [items, showOnlyUnavailable, isVideoUnavailable]);
 
   // Calculate playlist metadata
   const playlistMetadata = useMemo(() => {
@@ -159,6 +181,7 @@ export function PlaylistDetail({
         toast.success("Video replaced successfully");
         
         // Refresh the items after a small delay to sync with server
+        // This will preserve the filter state since we're not resetting the component
         setTimeout(() => {
           onItemsChanged();
           setIsReordering(false);
@@ -174,8 +197,8 @@ export function PlaylistDetail({
   );
 
 
-  // Sort items based on sort order
-  const sortedItems = [...items].sort((a, b) => {
+  // Sort filtered items based on sort order
+  const sortedItems = [...filteredItems].sort((a, b) => {
     if (sortOrder === "title-asc") {
       return a.title.localeCompare(b.title);
     }
@@ -233,7 +256,17 @@ export function PlaylistDetail({
 
           {/* Metadata */}
           <div className="flex-1 space-y-2">
-            <h1 className="text-2xl font-bold">{snippet.title}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">{snippet.title}</h1>
+              <button
+                onClick={() => window.open(`https://www.youtube.com/playlist?list=${playlistId}`, '_blank', 'noopener,noreferrer')}
+                className="flex-shrink-0 p-1 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Open playlist in new tab"
+                title="Open playlist in new tab"
+              >
+                <ExternalLinkIcon className="h-5 w-5" />
+              </button>
+            </div>
             
             {snippet.description && (
               <p className="text-sm text-muted-foreground line-clamp-3">
@@ -242,7 +275,24 @@ export function PlaylistDetail({
             )}
 
             <div className="flex flex-col gap-2 text-sm text-muted-foreground">
-              <span className="font-medium">{snippet.itemCount ?? items.length} video{(snippet.itemCount ?? items.length) !== 1 ? 's' : ''}</span>
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{snippet.itemCount ?? items.length} video{(snippet.itemCount ?? items.length) !== 1 ? 's' : ''}</span>
+                {unavailableCount > 0 && onShowOnlyUnavailableChange && (
+                  <button
+                    onClick={() => onShowOnlyUnavailableChange(!showOnlyUnavailable)}
+                    className={`text-sm font-medium transition-colors hover:underline ${
+                      showOnlyUnavailable 
+                        ? 'text-orange-600' 
+                        : 'text-red-600 hover:text-red-700'
+                    }`}
+                  >
+                    {showOnlyUnavailable 
+                      ? 'showing only unavailable' 
+                      : `${unavailableCount} unavailable`
+                    }
+                  </button>
+                )}
+              </div>
               
               {playlistMetadata.totalDurationSeconds > 0 && (
                 <div className="flex items-center gap-2">
@@ -308,7 +358,12 @@ export function PlaylistDetail({
         />
       ) : (
         <div className="flex items-center justify-center h-32 text-muted-foreground">
-          <p>This playlist is empty</p>
+          <p>
+            {showOnlyUnavailable 
+              ? 'No unavailable videos found' 
+              : 'This playlist is empty'
+            }
+          </p>
         </div>
       )}
     </div>

@@ -126,19 +126,7 @@ function SortableVideoItem({ item, onDelete, disableDragDrop, onReplaceVideo, ca
           </div>
           {item.channelTitle && (
             <div className="flex flex-col gap-1">
-              {item.channelId ? (
-                <a
-                  href={`https://www.youtube.com/channel/${item.channelId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors w-fit"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {item.channelTitle}
-                </a>
-              ) : (
-                <p className="text-xs text-muted-foreground">{item.channelTitle}</p>
-              )}
+              <p className="text-xs text-muted-foreground">{item.channelTitle}</p>
             </div>
           )}
         </div>

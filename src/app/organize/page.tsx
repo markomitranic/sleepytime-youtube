@@ -30,6 +30,7 @@ export default function OrganizePage() {
   const [loadingProgress, setLoadingProgress] = useState<LoadingProgress | null>(null);
   const [draggedVideo, setDraggedVideo] = useState<YouTubePlaylistItem | null>(null);
   const [isMovingVideo, setIsMovingVideo] = useState(false);
+  const [showOnlyUnavailable, setShowOnlyUnavailable] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -53,10 +54,24 @@ export default function OrganizePage() {
     }
   }, [auth.isReady, auth.isAuthenticated, router]);
 
-  // Reset loading progress when playlist changes
+  // Reset loading progress and filter state when playlist changes
   useEffect(() => {
     setLoadingProgress(null);
+    setShowOnlyUnavailable(false);
   }, [selectedPlaylistId]);
+
+  // Auto-disable filter when there are no unavailable videos
+  useEffect(() => {
+    if (playlistItems && showOnlyUnavailable) {
+      const unavailableCount = playlistItems.filter(item => 
+        !item.videoId || item.title === "Deleted video" || item.title === "Private video"
+      ).length;
+      
+      if (unavailableCount === 0) {
+        setShowOnlyUnavailable(false);
+      }
+    }
+  }, [playlistItems, showOnlyUnavailable]);
 
   // Fetch user playlists
   const { data: playlists, isLoading: playlistsLoading, error: playlistsError } = useQuery({
@@ -371,6 +386,8 @@ export default function OrganizePage() {
                   }}
                   onReorderRequest={handleVideoReorder}
                   canEdit={canEditSelected}
+                  showOnlyUnavailable={showOnlyUnavailable}
+                  onShowOnlyUnavailableChange={setShowOnlyUnavailable}
                 />
               )
             ) : (

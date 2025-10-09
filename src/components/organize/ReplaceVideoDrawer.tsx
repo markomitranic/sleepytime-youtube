@@ -18,6 +18,7 @@ import { getOriginalVideoTitle, searchYouTube, type YouTubeSearchResult } from "
 import { env } from "~/env";
 import { useAuth } from "~/components/auth/useAuth";
 import { VideoPreviewDialog } from "./VideoPreviewDialog";
+import { ManualSearchDialog } from "./ManualSearchDialog";
 
 type ReplaceVideoDrawerProps = {
   children: React.ReactNode;
@@ -36,6 +37,7 @@ export function ReplaceVideoDrawer({ children, videoId, onReplaceVideo }: Replac
   const [error, setError] = useState<string | null>(null);
   const [previewVideo, setPreviewVideo] = useState<YouTubeSearchResult | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isManualSearchOpen, setIsManualSearchOpen] = useState(false);
 
   // Reset state when drawer opens
   const handleOpenChange = useCallback((open: boolean) => {
@@ -125,6 +127,19 @@ export function ReplaceVideoDrawer({ children, videoId, onReplaceVideo }: Replac
     setPreviewVideo(null);
   }, []);
 
+  const handleManualSearch = useCallback(() => {
+    setIsManualSearchOpen(true);
+  }, []);
+
+  const handleManualSearchClose = useCallback(() => {
+    setIsManualSearchOpen(false);
+  }, []);
+
+  const handleManualSearchSelect = useCallback(async (videoId: string) => {
+    setIsManualSearchOpen(false);
+    await handleSelectVideo(videoId);
+  }, [handleSelectVideo]);
+
   const isLoading = loadingState !== "idle";
 
   return (
@@ -173,6 +188,14 @@ export function ReplaceVideoDrawer({ children, videoId, onReplaceVideo }: Replac
                   <AlertCircle className="size-6 text-red-500" />
                 </div>
                 <p className="text-sm text-muted-foreground text-center max-w-md">{error}</p>
+                {originalTitle && (
+                  <button
+                    onClick={handleManualSearch}
+                    className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                  >
+                    Try it yourself →
+                  </button>
+                )}
               </div>
             )}
             
@@ -264,6 +287,14 @@ export function ReplaceVideoDrawer({ children, videoId, onReplaceVideo }: Replac
         isOpen={isPreviewOpen}
         onClose={handlePreviewClose}
         onAccept={handlePreviewAccept}
+      />
+      
+      {/* Manual Search Dialog */}
+      <ManualSearchDialog
+        isOpen={isManualSearchOpen}
+        onClose={handleManualSearchClose}
+        onSelectVideo={handleManualSearchSelect}
+        initialQuery={originalTitle || ""}
       />
     </Drawer>
   );
