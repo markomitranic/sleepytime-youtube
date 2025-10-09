@@ -23,6 +23,7 @@ type PlaylistDetailProps = {
   onItemsChanged: () => void;
   onReorderRequest?: (itemId: string, oldIndex: number, newIndex: number) => Promise<void>;
   onDeleteItem?: (itemId: string) => void;
+  onBeforeDelete?: (itemId: string) => void;
   canEdit?: boolean;
   showOnlyUnavailable?: boolean;
   onShowOnlyUnavailableChange?: (show: boolean) => void;
@@ -55,6 +56,7 @@ export function PlaylistDetail({
   onItemsChanged,
   onReorderRequest,
   onDeleteItem: customDeleteHandler,
+  onBeforeDelete,
   canEdit = false,
   showOnlyUnavailable = false,
   onShowOnlyUnavailableChange,
@@ -103,13 +105,9 @@ export function PlaylistDetail({
 
   const handleDeleteItem = useCallback(
     async (itemId: string) => {
-      // First, call the custom delete handler to do optimistic update
+      // Use custom delete handler if provided (e.g., for Watch Later where there's no API call)
       if (customDeleteHandler) {
         customDeleteHandler(itemId);
-      }
-
-      // For Watch Later items, we only do the optimistic update (no API call)
-      if (customDeleteHandler) {
         return;
       }
 
@@ -124,8 +122,12 @@ export function PlaylistDetail({
         throw new Error("Item not found");
       }
 
-      // Optimistically remove the item - no refetch needed unless there's an error
-      // The parent component handles the optimistic cache update
+      // Call the optimistic update callback before making the API call
+      if (onBeforeDelete) {
+        onBeforeDelete(itemId);
+      }
+
+      // For regular playlists: make the API call
       try {
         await deletePlaylistItem({ 
           accessToken: auth.accessToken, 
@@ -141,7 +143,7 @@ export function PlaylistDetail({
         throw e;
       }
     },
-    [customDeleteHandler, auth.isAuthenticated, auth.accessToken, auth.getTokenSilently, items, onItemsChanged]
+    [customDeleteHandler, onBeforeDelete, auth.isAuthenticated, auth.accessToken, auth.getTokenSilently, items, onItemsChanged]
   );
 
   const handleReplaceVideo = useCallback(

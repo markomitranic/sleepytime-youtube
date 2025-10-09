@@ -322,6 +322,34 @@ export default function OrganizePage() {
 
     // Handle moving from Watch Later (no delete needed)
     if (isViewingWatchLater) {
+      // Optimistically remove from Watch Later state
+      setWatchLaterItems(prev => prev.filter(item => item.id !== currentDraggedVideo.id));
+
+      // Optimistically update target playlist count in snippet
+      queryClient.setQueryData<YouTubePlaylistSnippet | null>(
+        ["playlistSnippet", targetId],
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            itemCount: (old.itemCount ?? 0) + 1,
+          };
+        }
+      );
+
+      // Optimistically update target playlist count in sidebar (userPlaylists)
+      queryClient.setQueryData<YouTubeUserPlaylist[]>(
+        ["userPlaylists", auth.accessToken],
+        (old) => {
+          if (!old) return old;
+          return old.map(playlist => 
+            playlist.id === targetId 
+              ? { ...playlist, itemCount: (playlist.itemCount ?? 0) + 1 }
+              : playlist
+          );
+        }
+      );
+
       setIsMovingVideo(true);
       try {
         // Add video to target playlist
@@ -334,18 +362,18 @@ export default function OrganizePage() {
 
         toast.success(`Moved "${currentDraggedVideo.title}" to "${targetPlaylist.title}"`);
 
-        // Remove from Watch Later state
-        setWatchLaterItems(prev => prev.filter(item => item.id !== currentDraggedVideo.id));
-
-        // Invalidate target playlist queries
-        queryClient.invalidateQueries({ queryKey: ["playlistItems", targetId] });
-        queryClient.invalidateQueries({ queryKey: ["playlistSnippet", targetId] });
-        queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
+        // Mark target playlist items as stale so they'll refetch when user switches to it
+        queryClient.invalidateQueries({ queryKey: ["playlistItems", targetId], refetchType: 'none' });
         
         setIsMovingVideo(false);
       } catch (e) {
         console.error(e);
         toast.error(`Failed to move video: ${(e as Error)?.message ?? "Unknown error"}`);
+        
+        // Revert optimistic updates
+        setWatchLaterItems(prev => [...prev, currentDraggedVideo]);
+        queryClient.invalidateQueries({ queryKey: ["playlistSnippet", targetId] });
+        queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
         setIsMovingVideo(false);
       }
       return;
@@ -355,6 +383,47 @@ export default function OrganizePage() {
     queryClient.setQueryData<YouTubePlaylistItem[]>(
       ["playlistItems", selectedPlaylistId],
       (old) => old?.filter(item => item.id !== currentDraggedVideo.id) ?? []
+    );
+
+    // Optimistically update source playlist count in snippet
+    queryClient.setQueryData<YouTubePlaylistSnippet | null>(
+      ["playlistSnippet", selectedPlaylistId],
+      (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          itemCount: Math.max(0, (old.itemCount ?? 1) - 1),
+        };
+      }
+    );
+
+    // Optimistically update target playlist count in snippet
+    queryClient.setQueryData<YouTubePlaylistSnippet | null>(
+      ["playlistSnippet", targetId],
+      (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          itemCount: (old.itemCount ?? 0) + 1,
+        };
+      }
+    );
+
+    // Optimistically update both playlist counts in sidebar (userPlaylists)
+    queryClient.setQueryData<YouTubeUserPlaylist[]>(
+      ["userPlaylists", auth.accessToken],
+      (old) => {
+        if (!old) return old;
+        return old.map(playlist => {
+          if (playlist.id === selectedPlaylistId) {
+            return { ...playlist, itemCount: Math.max(0, (playlist.itemCount ?? 1) - 1) };
+          }
+          if (playlist.id === targetId) {
+            return { ...playlist, itemCount: (playlist.itemCount ?? 0) + 1 };
+          }
+          return playlist;
+        });
+      }
     );
 
     setIsMovingVideo(true);
@@ -377,15 +446,9 @@ export default function OrganizePage() {
 
       toast.success(`Moved "${currentDraggedVideo.title}" to "${targetPlaylist.title}"`);
 
-      // Invalidate queries to update counts in sidebar and headers
-      // Target playlist items (will be fresh when user switches to it)
-      queryClient.invalidateQueries({ queryKey: ["playlistItems", targetId] });
-      // Target playlist snippet (for header count)
-      queryClient.invalidateQueries({ queryKey: ["playlistSnippet", targetId] });
-      // Source playlist snippet (for header count)
-      queryClient.invalidateQueries({ queryKey: ["playlistSnippet", selectedPlaylistId] });
-      // User playlists (for sidebar counts)
-      queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
+      // Mark target playlist items as stale so they'll refetch when user switches to it
+      // But don't refetch the current playlist to avoid loading state
+      queryClient.invalidateQueries({ queryKey: ["playlistItems", targetId], refetchType: 'none' });
       
       setIsMovingVideo(false);
     } catch (e) {
@@ -395,6 +458,7 @@ export default function OrganizePage() {
       // Revert optimistic update on error by refetching
       queryClient.invalidateQueries({ queryKey: ["playlistItems", selectedPlaylistId] });
       queryClient.invalidateQueries({ queryKey: ["playlistSnippet", selectedPlaylistId] });
+      queryClient.invalidateQueries({ queryKey: ["playlistSnippet", targetId] });
       queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
       setIsMovingVideo(false);
     }
@@ -478,15 +542,35 @@ export default function OrganizePage() {
                       queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
                     }}
                     onReorderRequest={handleVideoReorder}
-                    onDeleteItem={(itemId) => {
+                    onBeforeDelete={(itemId) => {
                       // Optimistic update: immediately remove from cache
                       queryClient.setQueryData<YouTubePlaylistItem[]>(
                         ["playlistItems", selectedPlaylistId],
                         (old) => old?.filter(item => item.id !== itemId) ?? []
                       );
-                      // Invalidate count queries immediately for visual feedback
-                      queryClient.invalidateQueries({ queryKey: ["playlistSnippet", selectedPlaylistId] });
-                      queryClient.invalidateQueries({ queryKey: ["userPlaylists", auth.accessToken] });
+                      // Also optimistically update the count in the snippet
+                      queryClient.setQueryData<YouTubePlaylistSnippet | null>(
+                        ["playlistSnippet", selectedPlaylistId],
+                        (old) => {
+                          if (!old) return old;
+                          return {
+                            ...old,
+                            itemCount: Math.max(0, (old.itemCount ?? 1) - 1),
+                          };
+                        }
+                      );
+                      // Also optimistically update the count in the sidebar (userPlaylists)
+                      queryClient.setQueryData<YouTubeUserPlaylist[]>(
+                        ["userPlaylists", auth.accessToken],
+                        (old) => {
+                          if (!old) return old;
+                          return old.map(playlist => 
+                            playlist.id === selectedPlaylistId 
+                              ? { ...playlist, itemCount: Math.max(0, (playlist.itemCount ?? 1) - 1) }
+                              : playlist
+                          );
+                        }
+                      );
                     }}
                     canEdit={canEditSelected}
                     showOnlyUnavailable={showOnlyUnavailable}
