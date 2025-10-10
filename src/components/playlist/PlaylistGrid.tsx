@@ -6,9 +6,7 @@ import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { Badge } from "~/components/ui/badge";
 import { Lock, RefreshCw, Globe, Link as LinkIcon } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchUserPlaylists, fetchPlaylistsByIds } from "~/lib/youtube";
-import { BUILTIN_PLAYLIST_IDS, BUILTIN_PLAYLISTS } from "~/lib/builtinPlaylists";
-import { env } from "~/env";
+import { fetchUserPlaylists, type YouTubeUserPlaylist } from "~/lib/youtube";
 import { toast } from "sonner";
 
 export function PlaylistGrid() {
@@ -42,21 +40,12 @@ export function PlaylistGrid() {
   const { data: builtinPlaylists } = useQuery({
     queryKey: ["builtinPlaylists"],
     queryFn: async () => {
-      // Always use public API key for built-ins; don't send Authorization header
-      const apiResults = await fetchPlaylistsByIds({
-        apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY,
-        playlistIds: Array.from(BUILTIN_PLAYLIST_IDS),
-      });
-      const overrides = new Map(BUILTIN_PLAYLISTS.map((b) => [b.id, b] as const));
-      return apiResults.map((p) => {
-        const o = overrides.get(p.id);
-        return {
-          ...p,
-          title: o?.title ?? p.title,
-          thumbnailUrl: o?.thumbnail ?? p.thumbnailUrl,
-          channelTitle: o?.channel ?? p.channelTitle,
-        };
-      });
+      // Fetch from cached API route (server-side cached for 72 hours)
+      const response = await fetch('/api/builtin-playlists');
+      if (!response.ok) {
+        throw new Error('Failed to fetch built-in playlists');
+      }
+      return response.json() as Promise<YouTubeUserPlaylist[]>;
     },
     staleTime: 1000 * 60 * 10,
   });

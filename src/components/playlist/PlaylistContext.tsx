@@ -82,6 +82,12 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
   const hasInitializedFromStorage = useRef(false);
   const auth = useAuth();
 
+  // Stable ref for auth.getTokenSilently to avoid recreating actions
+  const getTokenSilentlyRef = useRef(auth.getTokenSilently);
+  useEffect(() => {
+    getTokenSilentlyRef.current = auth.getTokenSilently;
+  }, [auth.getTokenSilently]);
+
   const actions: PlaylistActions = useMemo(
     () => ({
       loadPlaylist: ({ url, playlistId, snippet, items, currentVideoId }) => {
@@ -131,8 +137,8 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
             try { window.scrollTo(0, 0); } catch {}
           }
           // Ensure we have a fresh token ONLY if already authenticated (avoid prompting on public playlists)
-          if (auth.isAuthenticated && (auth as any).getTokenSilently) {
-            try { await (auth as any).getTokenSilently(); } catch {}
+          if (auth.isAuthenticated && getTokenSilentlyRef.current) {
+            try { await getTokenSilentlyRef.current(); } catch {}
           }
           // Fetch snippet early for title and total count
           const snippet = await fetchPlaylistSnippet({
@@ -140,7 +146,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
             accessToken: auth.accessToken,
             playlistId,
             signal: loadAbortRef.current?.signal,
-            refreshToken: auth.getTokenSilently,
+            refreshToken: getTokenSilentlyRef.current,
           });
 
           setState((s) => ({
@@ -164,7 +170,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
               playlistId,
               pageToken: nextPageToken,
               signal: loadAbortRef.current?.signal,
-              refreshToken: auth.getTokenSilently,
+              refreshToken: getTokenSilentlyRef.current,
             });
             aggregated.push(...res.items);
             nextPageToken = res.nextPageToken;
@@ -188,7 +194,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
                 apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY,
                 accessToken: auth.accessToken,
                 videoIds,
-                refreshToken: auth.getTokenSilently,
+                refreshToken: getTokenSilentlyRef.current,
               });
               // Merge durations into items
               aggregated.forEach(item => {
@@ -369,6 +375,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
               accessToken: auth.accessToken,
               playlistId,
               pageToken: nextPageToken,
+              refreshToken: getTokenSilentlyRef.current,
             });
             aggregated.push(...res.items);
             nextPageToken = res.nextPageToken;

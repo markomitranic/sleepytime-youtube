@@ -14,9 +14,7 @@ import {
 } from "~/components/ui/drawer";
 import { useAuth } from "~/components/auth/useAuth";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
-import { fetchUserPlaylists, fetchPlaylistsByIds } from "~/lib/youtube";
-import { BUILTIN_PLAYLIST_IDS, BUILTIN_PLAYLISTS } from "~/lib/builtinPlaylists";
-import { env } from "~/env";
+import { fetchUserPlaylists, type YouTubeUserPlaylist } from "~/lib/youtube";
 import { Lock, Globe, Link as LinkIcon, ChevronDown, Play } from "lucide-react";
 
 type PlaylistSwitcherDrawerProps = {
@@ -46,20 +44,12 @@ export function PlaylistSwitcherDrawer({ children }: PlaylistSwitcherDrawerProps
   const { data: builtinPlaylists } = useQuery({
     queryKey: ["builtinPlaylists"],
     queryFn: async () => {
-      const apiResults = await fetchPlaylistsByIds({
-        apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY,
-        playlistIds: Array.from(BUILTIN_PLAYLIST_IDS),
-      });
-      const overrides = new Map(BUILTIN_PLAYLISTS.map((b) => [b.id, b] as const));
-      return apiResults.map((p) => {
-        const o = overrides.get(p.id);
-        return {
-          ...p,
-          title: o?.title ?? p.title,
-          thumbnailUrl: o?.thumbnail ?? p.thumbnailUrl,
-          channelTitle: o?.channel ?? p.channelTitle,
-        };
-      });
+      // Fetch from cached API route (server-side cached for 72 hours)
+      const response = await fetch('/api/builtin-playlists');
+      if (!response.ok) {
+        throw new Error('Failed to fetch built-in playlists');
+      }
+      return response.json() as Promise<YouTubeUserPlaylist[]>;
     },
     staleTime: 1000 * 60 * 10,
   });
