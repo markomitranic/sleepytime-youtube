@@ -249,6 +249,8 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
               const href = newQuery ? `${urlObj.pathname}?${newQuery}` : urlObj.pathname;
               window.history.replaceState(null, "", href);
             } catch {}
+            // Clear localStorage when playlist is not found to prevent infinite 404 loops
+            setPersistedState(null);
           }
           // If 401 or not found and the user appears signed in, sign them out to clear bad/expired token
           try {
