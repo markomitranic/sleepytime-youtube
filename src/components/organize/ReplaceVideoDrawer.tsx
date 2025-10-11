@@ -16,7 +16,7 @@ import {
 } from "~/components/ui/drawer";
 import { getOriginalVideoTitle, searchYouTube, type YouTubeSearchResult } from "~/lib/videoReplace";
 import { env } from "~/env";
-import { useAuth } from "~/components/auth/useAuth";
+import { useAuth } from "~/components/auth/AuthContext";
 import { VideoPreviewDialog } from "./VideoPreviewDialog";
 import { ManualSearchDialog } from "./ManualSearchDialog";
 

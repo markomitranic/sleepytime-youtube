@@ -6,7 +6,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Loader2, Search, Eye } from "lucide-react";
 import { searchYouTube, type YouTubeSearchResult } from "~/lib/videoReplace";
-import { useAuth } from "~/components/auth/useAuth";
+import { useAuth } from "~/components/auth/AuthContext";
 import { env } from "~/env";
 import { VideoPreviewDialog } from "./VideoPreviewDialog";
 

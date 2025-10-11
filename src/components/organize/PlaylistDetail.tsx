@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import type { YouTubePlaylistItem, YouTubePlaylistSnippet } from "~/lib/youtube";
-import { useAuth } from "~/components/auth/useAuth";
+import { useAuth } from "~/components/auth/AuthContext";
 import { deletePlaylistItem, addVideoToPlaylist } from "~/lib/youtube";
 import { Loader2, ArrowUpDown, Clock, Calendar, CalendarClock, ExternalLink as ExternalLinkIcon } from "lucide-react";
 import { SortableVideoList } from "~/components/organize/SortableVideoList";

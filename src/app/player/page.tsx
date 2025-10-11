@@ -1,26 +1,17 @@
 "use client";
 
-import { useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { Player } from "~/components/playlist/Player";
 import { SkeletonPlayer } from "~/components/playlist/SkeletonPlayer";
 
 function PlayerPageContent() {
   const playlist = usePlaylist();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const listParam = searchParams.get("list");
 
-  // Only redirect if there's no list parameter AND no playlist loaded
-  // The PlaylistContext will handle loading from the URL parameter
-  useEffect(() => {
-    if (!listParam && !playlist.playlistId && !playlist.isLoading) {
-      router.push("/");
-    }
-  }, [listParam, playlist.playlistId, playlist.isLoading, router]);
-
-  // Show loading state if loading or if we have a list param but no playlist yet
+  // Show loading state while playlist is loading
   if (playlist.isLoading || (listParam && !playlist.playlistId)) {
     return (
       <main className="h-screen flex items-center justify-center">
@@ -31,32 +22,28 @@ function PlayerPageContent() {
     );
   }
 
-  // Show player if we have items
-  if (playlist.playlistId && playlist.items && playlist.items.length > 0) {
-    return (
-      <main className="h-screen flex items-center justify-center">
-        <div className="w-full max-w-[1400px] px-4">
-          <Player />
-        </div>
-      </main>
-    );
-  }
-
-  // Fallback - will redirect via useEffect
-  return null;
+  // Always show player (it handles its own empty state)
+  return (
+    <main className="h-screen flex items-center justify-center">
+      <div className="w-full max-w-[1400px] px-4">
+        <Player />
+      </div>
+    </main>
+  );
 }
 
 export default function PlayerPage() {
   return (
-    <Suspense fallback={
-      <main className="h-screen flex items-center justify-center">
-        <div className="w-full max-w-[1400px] px-4">
-          <SkeletonPlayer />
-        </div>
-      </main>
-    }>
+    <Suspense
+      fallback={
+        <main className="h-screen flex items-center justify-center">
+          <div className="w-full max-w-[1400px] px-4">
+            <SkeletonPlayer />
+          </div>
+        </main>
+      }
+    >
       <PlayerPageContent />
     </Suspense>
   );
 }
-

@@ -1,9 +1,10 @@
 "use client";
 
+import { createContext, useContext, useMemo } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 
-export type AuthState = {
+type AuthState = {
   isReady: boolean;
   isAuthenticated: boolean;
   accessToken?: string;
@@ -15,18 +16,17 @@ export type AuthState = {
   };
 };
 
-export type AuthActions = {
+type AuthActions = {
   signIn: () => Promise<void>;
   signOut: () => void;
-  // Returns a fresh access token string if obtained, otherwise null
   getTokenSilently: () => Promise<string | null>;
 };
 
-/**
- * Custom hook that provides auth state and actions compatible with the old AuthContext
- * while using Auth.js under the hood
- */
-export function useAuth(): AuthState & AuthActions {
+type AuthContextType = AuthState & AuthActions;
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
 
   const isReady = status !== "loading";
@@ -44,8 +44,6 @@ export function useAuth(): AuthState & AuthActions {
   }, []);
 
   const getTokenSilently = useCallback(async (): Promise<string | null> => {
-    // With Auth.js, the session is automatically refreshed
-    // We just need to check if we have a valid token
     if (!session?.accessToken) {
       console.log("[Auth] No access token available");
       return null;
@@ -59,7 +57,7 @@ export function useAuth(): AuthState & AuthActions {
     return session.accessToken;
   }, [session]);
 
-  return useMemo(
+  const value = useMemo(
     () => ({
       isReady,
       isAuthenticated,
@@ -72,6 +70,14 @@ export function useAuth(): AuthState & AuthActions {
     }),
     [isReady, isAuthenticated, accessToken, error, user, handleSignIn, handleSignOut, getTokenSilently]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+  return context;
+}

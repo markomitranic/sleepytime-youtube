@@ -5,7 +5,7 @@ import { BUILTIN_PLAYLISTS } from "~/lib/builtinPlaylists";
 import Image from "next/image";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { BuiltinPlaylistGrid } from "~/components/playlist/BuiltinPlaylistGrid";
-import { useAuth } from "~/components/auth/useAuth";
+import { useAuth } from "~/components/auth/AuthContext";
 import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
 import { Github, Linkedin, ExternalLink } from "lucide-react";

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "~/components/ui/button";
 import {
@@ -10,7 +11,7 @@ import {
   DrawerTrigger,
   DrawerClose,
 } from "~/components/ui/drawer";
-import { useAuth } from "~/components/auth/useAuth";
+import { useAuth } from "~/components/auth/AuthContext";
 import { fetchUserPlaylists } from "~/lib/youtube";
 import { LogOut, User, X } from "lucide-react";
 
@@ -20,6 +21,7 @@ type AccountDrawerProps = {
 
 export function AccountDrawer({ children }: AccountDrawerProps) {
   const auth = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
 
   const { data: userPlaylists } = useQuery({
     queryKey: ["userPlaylists", auth.accessToken],
@@ -31,14 +33,14 @@ export function AccountDrawer({ children }: AccountDrawerProps) {
         return [];
       }
     },
-    enabled: Boolean(auth.isAuthenticated && auth.accessToken),
+    enabled: Boolean(auth.isAuthenticated && auth.accessToken && isOpen),
     staleTime: 1000 * 60,
   });
 
   const playlistCount = userPlaylists?.length ?? 0;
 
   return (
-    <Drawer direction="bottom">
+    <Drawer direction="bottom" open={isOpen} onOpenChange={setIsOpen}>
       <DrawerTrigger asChild>
         {children}
       </DrawerTrigger>

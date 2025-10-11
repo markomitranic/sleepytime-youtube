@@ -12,9 +12,10 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "~/components/ui/drawer";
-import { useAuth } from "~/components/auth/useAuth";
+import { useAuth } from "~/components/auth/AuthContext";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
-import { fetchUserPlaylists, type YouTubeUserPlaylist } from "~/lib/youtube";
+import { fetchUserPlaylists } from "~/lib/youtube";
+import { useBuiltinPlaylists } from "~/lib/queries";
 import { Lock, Globe, Link as LinkIcon, ChevronDown, Play } from "lucide-react";
 
 type PlaylistSwitcherDrawerProps = {
@@ -41,18 +42,7 @@ export function PlaylistSwitcherDrawer({ children }: PlaylistSwitcherDrawerProps
     staleTime: 1000 * 60,
   });
 
-  const { data: builtinPlaylists } = useQuery({
-    queryKey: ["builtinPlaylists"],
-    queryFn: async () => {
-      // Fetch from cached API route (server-side cached for 72 hours)
-      const response = await fetch('/api/builtin-playlists');
-      if (!response.ok) {
-        throw new Error('Failed to fetch built-in playlists');
-      }
-      return response.json() as Promise<YouTubeUserPlaylist[]>;
-    },
-    staleTime: 1000 * 60 * 10,
-  });
+  const { data: builtinPlaylists } = useBuiltinPlaylists(true);
 
   const handlePlaylistSelect = async (playlistId: string) => {
     console.log('Playlist selected:', playlistId);

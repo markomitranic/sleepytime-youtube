@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback } from "react";
-import { useAuth } from "~/components/auth/useAuth";
+import { useAuth } from "~/components/auth/AuthContext";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { Badge } from "~/components/ui/badge";
 import { Lock, RefreshCw, Globe, Link as LinkIcon } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchUserPlaylists, type YouTubeUserPlaylist } from "~/lib/youtube";
+import { fetchUserPlaylists } from "~/lib/youtube";
+import { useBuiltinPlaylists } from "~/lib/queries";
 import { toast } from "sonner";
 
 export function PlaylistGrid() {
@@ -37,18 +38,7 @@ export function PlaylistGrid() {
     retry: false, // Don't retry on auth errors
   });
 
-  const { data: builtinPlaylists } = useQuery({
-    queryKey: ["builtinPlaylists"],
-    queryFn: async () => {
-      // Fetch from cached API route (server-side cached for 72 hours)
-      const response = await fetch('/api/builtin-playlists');
-      if (!response.ok) {
-        throw new Error('Failed to fetch built-in playlists');
-      }
-      return response.json() as Promise<YouTubeUserPlaylist[]>;
-    },
-    staleTime: 1000 * 60 * 10,
-  });
+  const { data: builtinPlaylists } = useBuiltinPlaylists(true);
 
   // Always show built-in playlists, even if they also exist in the user's collection
   const builtinsToRender = builtinPlaylists ?? [];

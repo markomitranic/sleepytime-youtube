@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "~/components/auth/useAuth";
+import { useAuth } from "~/components/auth/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchUserPlaylists, fetchPlaylistItems, fetchPlaylistSnippet, fetchVideoDurations, addVideoToPlaylist, deletePlaylistItem, updatePlaylistItemPosition, fetchVideosByIds } from "~/lib/youtube";
 import type { YouTubeUserPlaylist, YouTubePlaylistItem, YouTubePlaylistSnippet } from "~/lib/youtube";

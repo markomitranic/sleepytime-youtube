@@ -6,7 +6,6 @@ import { PlayerProvider } from "~/components/playlist/PlayerContext";
 import { AuroraBackground } from "./AuroraBackground";
 import { Toaster } from "sonner";
 import { BottomNav } from "~/components/BottomNav";
-import { MiniPlayer } from "~/components/playlist/MiniPlayer";
 import { CookieBanner } from "~/components/CookieBanner";
 
 export const viewport: Viewport = {
@@ -48,7 +47,6 @@ export const metadata: Metadata = {
   },
 };
 
-
 const geist = Geist({ subsets: ["latin"] });
 
 export default function RootLayout({
@@ -59,9 +57,15 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+        />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
         <meta name="apple-mobile-web-app-title" content="Sleepytime" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-TileColor" content="#252525" />
@@ -94,7 +98,6 @@ export default function RootLayout({
           <PlayerProvider>
             <AuroraBackground />
             {children}
-            <MiniPlayer />
             <BottomNav />
             <Toaster richColors position="bottom-center" closeButton />
             <CookieBanner />
@@ -104,5 +107,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-

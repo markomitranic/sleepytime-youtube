@@ -1,13 +1,31 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Shuffle, SkipForward, Moon, GripVertical, Loader2, Trash2, Play, Pause, ArrowUpDown, ListVideo, ChevronRight, ChevronDown, ExternalLink as ExternalLinkIcon } from "lucide-react";
+import {
+  Shuffle,
+  SkipForward,
+  Moon,
+  GripVertical,
+  Loader2,
+  Trash2,
+  Play,
+  Pause,
+  ArrowUpDown,
+  ListVideo,
+  ChevronRight,
+  ChevronDown,
+  ExternalLink as ExternalLinkIcon,
+} from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { usePlayer } from "~/components/playlist/PlayerContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { PlaylistSwitcherDrawer } from "~/components/playlist/PlaylistSwitcherDrawer";
-import { useAuth } from "~/components/auth/useAuth";
-import { deletePlaylistItem, updatePlaylistItemPosition, fetchUserPlaylists } from "~/lib/youtube";
+import { useAuth } from "~/components/auth/AuthContext";
+import {
+  deletePlaylistItem,
+  updatePlaylistItemPosition,
+  fetchUserPlaylists,
+} from "~/lib/youtube";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -66,18 +84,18 @@ function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
-  
+
   if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${hours}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   }
-  return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  return `${minutes}:${secs.toString().padStart(2, "0")}`;
 }
 
 // Helper function to format total duration (human readable)
 function formatTotalDuration(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
-  
+
   if (hours > 0) {
     return `${hours}h ${minutes}m`;
   }
@@ -92,7 +110,13 @@ type SortableItemProps = {
   onDelete: (itemId: string) => Promise<void>;
 };
 
-function SortablePlaylistItem({ item, isCurrent, canEdit, onSelect, onDelete }: SortableItemProps) {
+function SortablePlaylistItem({
+  item,
+  isCurrent,
+  canEdit,
+  onSelect,
+  onDelete,
+}: SortableItemProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const {
@@ -136,7 +160,9 @@ function SortablePlaylistItem({ item, isCurrent, canEdit, onSelect, onDelete }: 
                 label: "Copy error",
                 onClick: () => {
                   try {
-                    navigator.clipboard.writeText("This video is unavailable (private or removed)");
+                    navigator.clipboard.writeText(
+                      "This video is unavailable (private or removed)",
+                    );
                   } catch {}
                 },
               },
@@ -160,12 +186,16 @@ function SortablePlaylistItem({ item, isCurrent, canEdit, onSelect, onDelete }: 
             <GripVertical className="h-5 w-5" />
           </button>
         )}
-        
+
         {/* Thumbnail */}
         {item.thumbnailUrl && (
           <div className="relative h-16 w-28 rounded flex-shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={item.thumbnailUrl} alt="thumbnail" className="h-full w-full rounded object-cover" />
+            <img
+              src={item.thumbnailUrl}
+              alt="thumbnail"
+              className="h-full w-full rounded object-cover"
+            />
             {item.durationSeconds !== undefined && (
               <div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded font-medium">
                 {formatDuration(item.durationSeconds)}
@@ -173,15 +203,21 @@ function SortablePlaylistItem({ item, isCurrent, canEdit, onSelect, onDelete }: 
             )}
           </div>
         )}
-        
+
         {/* Content */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className={`truncate font-medium ${isCurrent ? "opacity-80" : ""}`}>{item.title}</p>
+            <p
+              className={`truncate font-medium ${isCurrent ? "opacity-80" : ""}`}
+            >
+              {item.title}
+            </p>
           </div>
           {item.channelTitle && (
             <div className="flex flex-col gap-1">
-              <p className="text-xs text-muted-foreground">{item.channelTitle}</p>
+              <p className="text-xs text-muted-foreground">
+                {item.channelTitle}
+              </p>
               {isCurrent && (
                 <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground w-fit">
                   <span className="h-1.5 w-1.5 rounded-full bg-green-500 shadow-[0_0_6px_theme(colors.green.500)]" />
@@ -191,9 +227,9 @@ function SortablePlaylistItem({ item, isCurrent, canEdit, onSelect, onDelete }: 
             </div>
           )}
         </div>
-        
+
         {/* Delete button on the right - hidden when cannot edit */}
-        {canEdit && (item.videoId) && (
+        {canEdit && item.videoId && (
           <button
             type="button"
             className="h-8 w-8 inline-flex items-center justify-center rounded self-center flex-shrink-0 transition-colors text-white hover:text-red-500 hover:bg-red-500/10"
@@ -207,7 +243,7 @@ function SortablePlaylistItem({ item, isCurrent, canEdit, onSelect, onDelete }: 
           </button>
         )}
       </li>
-      
+
       {/* Delete confirmation dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent className="p-0 overflow-hidden">
@@ -218,15 +254,24 @@ function SortablePlaylistItem({ item, isCurrent, canEdit, onSelect, onDelete }: 
             <DialogHeader className="p-0">
               <DialogTitle>Delete from playlist?</DialogTitle>
               <DialogDescription>
-                Are you sure you want to remove &quot;{item.title}&quot; from the playlist?
+                Are you sure you want to remove &quot;{item.title}&quot; from
+                the playlist?
               </DialogDescription>
             </DialogHeader>
           </div>
           <DialogFooter className="gap-2 p-4">
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={isDeleting}>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteConfirm(false)}
+              disabled={isDeleting}
+            >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
               {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
@@ -245,7 +290,10 @@ export function Player() {
     queryFn: async () => {
       if (!auth.isAuthenticated || !auth.accessToken) return [];
       try {
-        return await fetchUserPlaylists({ accessToken: auth.accessToken, refreshToken: auth.getTokenSilently });
+        return await fetchUserPlaylists({
+          accessToken: auth.accessToken,
+          refreshToken: auth.getTokenSilently,
+        });
       } catch {
         return [];
       }
@@ -255,8 +303,8 @@ export function Player() {
   });
   const canEdit = Boolean(
     auth.isAuthenticated &&
-    playlist.playlistId &&
-    (userPlaylists?.some(p => p.id === playlist.playlistId) ?? false)
+      playlist.playlistId &&
+      (userPlaylists?.some((p) => p.id === playlist.playlistId) ?? false),
   );
   const currentVideoId = playlist.currentVideoId;
   const playerRef = useRef<any>(null);
@@ -269,7 +317,9 @@ export function Player() {
   const dialogShownForVideoRef = useRef<string | undefined>(undefined);
   const timeCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [sortOrder, setSortOrder] = useState<"first-added" | "last-added">("first-added");
+  const [sortOrder, setSortOrder] = useState<"first-added" | "last-added">(
+    "first-added",
+  );
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
   const sensors = useSensors(
@@ -286,7 +336,7 @@ export function Player() {
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   // Sort items based on sort order
@@ -309,23 +359,30 @@ export function Player() {
     };
   }, [playlist.items]);
 
-  const getNextVideoId = useCallback((fromVideoId: string | undefined): string | undefined => {
-    if (!fromVideoId) return undefined;
-    const availableVideos = playlist.items.filter(item => item.videoId);
-    if (availableVideos.length === 0) return undefined;
+  const getNextVideoId = useCallback(
+    (fromVideoId: string | undefined): string | undefined => {
+      if (!fromVideoId) return undefined;
+      const availableVideos = playlist.items.filter((item) => item.videoId);
+      if (availableVideos.length === 0) return undefined;
 
-    if (shuffleEnabled) {
-      const otherVideos = availableVideos.filter(item => item.videoId !== fromVideoId);
-      if (otherVideos.length === 0) return fromVideoId;
-      const randomIndex = Math.floor(Math.random() * otherVideos.length);
-      return otherVideos[randomIndex]?.videoId;
-    }
+      if (shuffleEnabled) {
+        const otherVideos = availableVideos.filter(
+          (item) => item.videoId !== fromVideoId,
+        );
+        if (otherVideos.length === 0) return fromVideoId;
+        const randomIndex = Math.floor(Math.random() * otherVideos.length);
+        return otherVideos[randomIndex]?.videoId;
+      }
 
-    const currentIndex = availableVideos.findIndex(item => item.videoId === fromVideoId);
-    if (currentIndex === -1) return undefined;
-    const nextIndex = (currentIndex + 1) % availableVideos.length;
-    return availableVideos[nextIndex]?.videoId;
-  }, [playlist.items, shuffleEnabled]);
+      const currentIndex = availableVideos.findIndex(
+        (item) => item.videoId === fromVideoId,
+      );
+      if (currentIndex === -1) return undefined;
+      const nextIndex = (currentIndex + 1) % availableVideos.length;
+      return availableVideos[nextIndex]?.videoId;
+    },
+    [playlist.items, shuffleEnabled],
+  );
 
   const handleNext = useCallback((videoId: string | undefined) => {
     // Open dialog before switching, just like when video ends
@@ -335,7 +392,7 @@ export function Player() {
 
   const handlePlayPause = useCallback(() => {
     if (!playerInstanceRef.current) return;
-    
+
     if (isPlaying) {
       playerInstanceRef.current.pauseVideo();
       setIsPlaying(false);
@@ -364,7 +421,7 @@ export function Player() {
         toast.error("You must be signed in to remove from playlist.");
         return;
       }
-      const currentItem = playlist.items.find(i => i.videoId === videoId);
+      const currentItem = playlist.items.find((i) => i.videoId === videoId);
       if (!currentItem) {
         toast.error("Couldn't find this video in the playlist.");
         return;
@@ -374,7 +431,10 @@ export function Player() {
       setIsReordering(true);
 
       // Trigger background removal on YouTube and then background refresh
-      deletePlaylistItem({ accessToken: auth.accessToken, playlistItemId: currentItem.id })
+      deletePlaylistItem({
+        accessToken: auth.accessToken,
+        playlistItemId: currentItem.id,
+      })
         .then(() => playlist.refreshItemsOnce({ delayMs: 900 }))
         .catch(async () => {
           // Soft reconcile by refreshing once even on failure
@@ -393,7 +453,16 @@ export function Player() {
     } finally {
       setEndedOpen(false);
     }
-  }, [auth.isAuthenticated, auth.accessToken, currentVideoId, playlist.items, playlist.playlistId, playlist.refreshItemsOnce, playlist.setCurrentVideoId, getNextVideoId]);
+  }, [
+    auth.isAuthenticated,
+    auth.accessToken,
+    currentVideoId,
+    playlist.items,
+    playlist.playlistId,
+    playlist.refreshItemsOnce,
+    playlist.setCurrentVideoId,
+    getNextVideoId,
+  ]);
 
   const handleDeleteItem = useCallback(
     async (itemId: string) => {
@@ -419,12 +488,12 @@ export function Player() {
 
       try {
         // Delete from YouTube
-        await deletePlaylistItem({ 
-          accessToken: auth.accessToken, 
+        await deletePlaylistItem({
+          accessToken: auth.accessToken,
           playlistItemId: itemId,
           refreshToken: auth.getTokenSilently,
         });
-        
+
         // If we deleted the currently playing video, play the next one
         if (wasCurrentVideo) {
           const nextId = getNextVideoId(item.videoId!);
@@ -432,7 +501,7 @@ export function Player() {
             playlist.setCurrentVideoId(nextId);
           }
         }
-        
+
         // Background refresh to ensure sync
         await playlist.refreshItemsOnce({ delayMs: 900 });
         toast.success("Video removed from playlist");
@@ -445,7 +514,13 @@ export function Player() {
         setIsReordering(false);
       }
     },
-    [auth.isAuthenticated, auth.accessToken, currentVideoId, playlist, getNextVideoId]
+    [
+      auth.isAuthenticated,
+      auth.accessToken,
+      currentVideoId,
+      playlist,
+      getNextVideoId,
+    ],
   );
 
   const handleDragStart = useCallback(() => {
@@ -496,11 +571,14 @@ export function Player() {
         // Background refresh with longer delay to ensure YouTube has processed the change
         // This happens in the background and won't cause a flicker since our optimistic update is already correct
         setTimeout(() => {
-          playlist.refreshItemsOnce({ delayMs: 2000 }).catch(() => {
-            // Silently fail - optimistic update is already in place
-          }).finally(() => {
-            setIsReordering(false);
-          });
+          playlist
+            .refreshItemsOnce({ delayMs: 2000 })
+            .catch(() => {
+              // Silently fail - optimistic update is already in place
+            })
+            .finally(() => {
+              setIsReordering(false);
+            });
         }, 0);
       } catch (e) {
         console.error(e);
@@ -509,17 +587,24 @@ export function Player() {
         setIsReordering(false);
       }
     },
-    [auth.isAuthenticated, auth.accessToken, playlist.items, playlist.playlistId, playlist.refreshItemsOnce, playlist.reorderItem],
+    [
+      auth.isAuthenticated,
+      auth.accessToken,
+      playlist.items,
+      playlist.playlistId,
+      playlist.refreshItemsOnce,
+      playlist.reorderItem,
+    ],
   );
 
   // Load YouTube IFrame API
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
+    if (typeof window === "undefined") return;
+
     // Load YouTube IFrame API script
     if (!window.YT) {
-      const script = document.createElement('script');
-      script.src = 'https://www.youtube.com/iframe_api';
+      const script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
       script.async = true;
       document.head.appendChild(script);
     }
@@ -532,7 +617,7 @@ export function Player() {
 
   // Initialize player when video changes
   useEffect(() => {
-    if (!currentVideoId || typeof window === 'undefined') return;
+    if (!currentVideoId || typeof window === "undefined") return;
 
     // Reset dialog shown flag for new video
     dialogShownForVideoRef.current = undefined;
@@ -544,10 +629,10 @@ export function Player() {
           try {
             playerInstanceRef.current.destroy();
           } catch (error) {
-            console.warn('Error destroying existing player:', error);
+            console.warn("Error destroying existing player:", error);
           }
         }
-        
+
         playerInstanceRef.current = new window.YT.Player(playerRef.current, {
           videoId: currentVideoId,
           playerVars: {
@@ -566,23 +651,23 @@ export function Player() {
             loop: 0,
             mute: 0,
             showinfo: 0,
-            origin: window.location.origin
+            origin: window.location.origin,
           },
           events: {
             onReady: (event: any) => {
               // Store player instance in PlayerContext
               player.setPlayerInstance(event.target);
-              
+
               // Check if there's saved progress for this video
               const savedProgress = player.getSavedProgress(currentVideoId);
               if (savedProgress && savedProgress > 0) {
                 try {
                   event.target.seekTo(savedProgress, true);
                 } catch (error) {
-                  console.warn('Failed to seek to saved position:', error);
+                  console.warn("Failed to seek to saved position:", error);
                 }
               }
-              
+
               // For iOS PWA, we need to ensure user interaction before autoplay
               const playVideo = () => {
                 try {
@@ -590,7 +675,7 @@ export function Player() {
                   setIsPlaying(true);
                   player.setIsPlaying(true);
                 } catch (error) {
-                  console.log('Autoplay prevented, user interaction required');
+                  console.log("Autoplay prevented, user interaction required");
                   // If autoplay fails, we'll rely on user clicking play
                 }
               };
@@ -602,12 +687,24 @@ export function Player() {
               if (playerRef.current) {
                 const handleUserInteraction = () => {
                   playVideo();
-                  playerRef.current?.removeEventListener('click', handleUserInteraction);
-                  playerRef.current?.removeEventListener('touchstart', handleUserInteraction);
+                  playerRef.current?.removeEventListener(
+                    "click",
+                    handleUserInteraction,
+                  );
+                  playerRef.current?.removeEventListener(
+                    "touchstart",
+                    handleUserInteraction,
+                  );
                 };
-                
-                playerRef.current.addEventListener('click', handleUserInteraction);
-                playerRef.current.addEventListener('touchstart', handleUserInteraction);
+
+                playerRef.current.addEventListener(
+                  "click",
+                  handleUserInteraction,
+                );
+                playerRef.current.addEventListener(
+                  "touchstart",
+                  handleUserInteraction,
+                );
               }
             },
             onStateChange: (event: any) => {
@@ -625,8 +722,8 @@ export function Player() {
                   player.setIsPlaying(false);
                 }
               } catch {}
-            }
-          }
+            },
+          },
         });
       }
     };
@@ -643,7 +740,7 @@ export function Player() {
         try {
           playerInstanceRef.current.destroy();
         } catch (error) {
-          console.warn('Error destroying player on cleanup:', error);
+          console.warn("Error destroying player on cleanup:", error);
         }
         playerInstanceRef.current = null;
       }
@@ -665,7 +762,11 @@ export function Player() {
 
     const trackProgress = () => {
       try {
-        if (!playerInstanceRef.current?.getCurrentTime || !playerInstanceRef.current?.getDuration) return;
+        if (
+          !playerInstanceRef.current?.getCurrentTime ||
+          !playerInstanceRef.current?.getDuration
+        )
+          return;
 
         const currentTime = playerInstanceRef.current.getCurrentTime();
         const duration = playerInstanceRef.current.getDuration();
@@ -700,7 +801,11 @@ export function Player() {
 
     const checkTime = () => {
       try {
-        if (!playerInstanceRef.current?.getCurrentTime || !playerInstanceRef.current?.getDuration) return;
+        if (
+          !playerInstanceRef.current?.getCurrentTime ||
+          !playerInstanceRef.current?.getDuration
+        )
+          return;
 
         const currentTime = playerInstanceRef.current.getCurrentTime();
         const duration = playerInstanceRef.current.getDuration();
@@ -708,7 +813,11 @@ export function Player() {
         // Show dialog if we're within 20 seconds of the end and haven't shown it yet for this video
         if (duration > 0 && currentTime > 0) {
           const timeRemaining = duration - currentTime;
-          if (timeRemaining <= 20 && timeRemaining > 0 && dialogShownForVideoRef.current !== currentVideoId) {
+          if (
+            timeRemaining <= 20 &&
+            timeRemaining > 0 &&
+            dialogShownForVideoRef.current !== currentVideoId
+          ) {
             dialogShownForVideoRef.current = currentVideoId;
             endedVideoIdRef.current = currentVideoId;
             setEndedOpen(true);
@@ -735,18 +844,37 @@ export function Player() {
 
     if (playlist.isPaused) {
       playerInstanceRef.current.pauseVideo();
-    } else if (playerInstanceRef.current.getPlayerState && playerInstanceRef.current.getPlayerState() === 2) {
+    } else if (
+      playerInstanceRef.current.getPlayerState &&
+      playerInstanceRef.current.getPlayerState() === 2
+    ) {
       // Only resume if currently paused (state 2)
       playerInstanceRef.current.playVideo();
     }
   }, [playlist.isPaused]);
 
+  // If no playlist loaded, show a friendly empty state
+  if (!playlist.items.length || !currentVideoId) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-6rem)] gap-6 text-center px-4">
+        <div className="space-y-3">
+          <ListVideo className="h-16 w-16 mx-auto text-muted-foreground" />
+          <h2 className="text-2xl font-semibold">No Playlist Selected</h2>
+          <p className="text-muted-foreground max-w-md">
+            Choose a playlist to start listening. Browse your personal playlists
+            or try one of our curated selections.
+          </p>
+        </div>
+        <PlaylistSwitcherDrawer>
+          <Button size="lg" className="gap-2">
+            <ListVideo className="h-5 w-5" />
+            Select a Playlist
+          </Button>
+        </PlaylistSwitcherDrawer>
+      </div>
+    );
+  }
 
-  // If no playlist items, don't render anything
-  if (!playlist.items.length) return null;
-  
-  if (!currentVideoId) return null;
-  
   const current = playlist.items.find((i) => i.videoId === currentVideoId);
 
   return (
@@ -765,7 +893,7 @@ export function Player() {
               </p>
             </div>
             <div className="flex flex-col gap-2">
-              <Button 
+              <Button
                 onClick={() => {
                   playlist.prolongSleepTimer(15);
                   playlist.setCurrentVideoId(currentVideoId); // Resume video
@@ -774,7 +902,7 @@ export function Player() {
               >
                 Prolong for 15 Minutes
               </Button>
-              <Button 
+              <Button
                 onClick={() => playlist.dismissSleepExpiry()}
                 variant="outline"
                 className="w-full"
@@ -798,34 +926,79 @@ export function Player() {
                     <stop offset="100%" stopColor="#1e293b" />
                   </radialGradient>
                 </defs>
-                <rect x="0" y="0" width="64" height="64" fill="url(#g1)" opacity="0.2" />
+                <rect
+                  x="0"
+                  y="0"
+                  width="64"
+                  height="64"
+                  fill="url(#g1)"
+                  opacity="0.2"
+                />
                 <circle cx="48" cy="16" r="6" fill="#cbd5e1" />
-                <path d="M10 44 C 22 36, 42 36, 56 44" stroke="#64748b" strokeWidth="3" fill="none" />
+                <path
+                  d="M10 44 C 22 36, 42 36, 56 44"
+                  stroke="#64748b"
+                  strokeWidth="3"
+                  fill="none"
+                />
                 <g transform="translate(28,30)">
                   <circle cx="0" cy="0" r="8" fill="#94a3b8" />
                   <circle cx="-3" cy="-1" r="1.2" fill="#0f172a" />
                   <circle cx="3" cy="-1" r="1.2" fill="#0f172a" />
                   <ellipse cx="0" cy="2" rx="2.5" ry="2" fill="#475569" />
-                  <path d="M-4 4 Q 0 6 4 4" stroke="#334155" strokeWidth="1.5" fill="none" />
+                  <path
+                    d="M-4 4 Q 0 6 4 4"
+                    stroke="#334155"
+                    strokeWidth="1.5"
+                    fill="none"
+                  />
                 </g>
-                <path d="M36 26 q 4 -4 8 0" stroke="#94a3b8" strokeWidth="2" fill="none" />
-                <text x="8" y="18" fill="#cbd5e1" fontSize="6" fontFamily="ui-sans-serif">Z</text>
-                <text x="13" y="13" fill="#94a3b8" fontSize="5" fontFamily="ui-sans-serif">Z</text>
+                <path
+                  d="M36 26 q 4 -4 8 0"
+                  stroke="#94a3b8"
+                  strokeWidth="2"
+                  fill="none"
+                />
+                <text
+                  x="8"
+                  y="18"
+                  fill="#cbd5e1"
+                  fontSize="6"
+                  fontFamily="ui-sans-serif"
+                >
+                  Z
+                </text>
+                <text
+                  x="13"
+                  y="13"
+                  fill="#94a3b8"
+                  fontSize="5"
+                  fontFamily="ui-sans-serif"
+                >
+                  Z
+                </text>
               </svg>
             </div>
             <DialogHeader className="p-0">
               <DialogTitle>Sleepy yet?</DialogTitle>
               <DialogDescription>
-                This is a good place to stop watching. Your phone will go to sleep unless you explicitly decide to continue.
+                This is a good place to stop watching. Your phone will go to
+                sleep unless you explicitly decide to continue.
               </DialogDescription>
             </DialogHeader>
           </div>
           <DialogFooter className="gap-2 p-4">
-            <Button variant="outline" onClick={handlePlayNextFromDialog}>Play Next</Button>
+            <Button variant="outline" onClick={handlePlayNextFromDialog}>
+              Play Next
+            </Button>
             {auth.isAuthenticated && (
-              <Button variant="destructive" onClick={handleRemoveAndPlayNext}>Remove &amp; Play Next</Button>
+              <Button variant="destructive" onClick={handleRemoveAndPlayNext}>
+                Remove &amp; Play Next
+              </Button>
             )}
-            <Button variant="ghost" onClick={() => setEndedOpen(false)}>Dismiss</Button>
+            <Button variant="ghost" onClick={() => setEndedOpen(false)}>
+              Dismiss
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -844,23 +1017,34 @@ export function Player() {
                 // @ts-ignore - These are valid CSS properties for iOS
                 WebkitPlaysInline: true,
                 playsInline: true,
-                WebkitMediaControls: 'none',
-                mediaControls: 'none'
+                WebkitMediaControls: "none",
+                mediaControls: "none",
               }}
               playsInline={true}
             />
           </div>
 
           {/* Video title and controls - wrapped with fade effect */}
-          <div className={`flex-1 flex flex-col gap-4 transition-opacity duration-500 ${player.isInactive ? "opacity-30" : ""}`}>
+          <div
+            className={`flex-1 flex flex-col gap-4 transition-opacity duration-500 ${player.isInactive ? "opacity-30" : ""}`}
+          >
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-semibold truncate" title={current?.title}>
+                <h2
+                  className="text-xl font-semibold truncate"
+                  title={current?.title}
+                >
                   {current?.title ?? ""}
                 </h2>
                 {current?.videoId && (
                   <button
-                    onClick={() => window.open(`https://www.youtube.com/watch?v=${current.videoId}`, '_blank', 'noopener,noreferrer')}
+                    onClick={() =>
+                      window.open(
+                        `https://www.youtube.com/watch?v=${current.videoId}`,
+                        "_blank",
+                        "noopener,noreferrer",
+                      )
+                    }
                     className="flex-shrink-0 p-1 text-muted-foreground hover:text-foreground transition-colors"
                     aria-label="Open video in new tab"
                     title="Open video in new tab"
@@ -871,7 +1055,7 @@ export function Player() {
               </div>
               {current?.channelTitle && (
                 <a
-                  href={`https://www.youtube.com/channel/${current.channelId || ''}`}
+                  href={`https://www.youtube.com/channel/${current.channelId || ""}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors truncate inline-flex items-center gap-1 w-fit"
@@ -888,22 +1072,30 @@ export function Player() {
                 type="button"
                 onClick={() => setShuffleEnabled((v) => !v)}
                 className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:ring-[3px] ${
-                  shuffleEnabled ? "text-white border-2 border-white" : "text-muted-foreground"
+                  shuffleEnabled
+                    ? "text-white border-2 border-white"
+                    : "text-muted-foreground"
                 }`}
-                aria-label={shuffleEnabled ? "Disable shuffle" : "Enable shuffle"}
+                aria-label={
+                  shuffleEnabled ? "Disable shuffle" : "Enable shuffle"
+                }
               >
                 <Shuffle className="h-5 w-5" />
               </button>
-              
+
               <button
                 type="button"
                 onClick={handlePlayPause}
                 className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-white text-black hover:bg-white/90 transition focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 aria-label={isPlaying ? "Pause" : "Play"}
               >
-                {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
+                {isPlaying ? (
+                  <Pause className="h-6 w-6" />
+                ) : (
+                  <Play className="h-6 w-6" />
+                )}
               </button>
-              
+
               <button
                 type="button"
                 onClick={() => handleNext(currentVideoId)}
@@ -912,16 +1104,20 @@ export function Player() {
               >
                 <SkipForward className="h-6 w-6" />
               </button>
-              
+
               <SleepTimerDrawer>
                 <button
                   type="button"
                   className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:ring-[3px] ${
-                    playlist.sleepTimer.isActive 
-                      ? "text-white border-2 border-white" 
+                    playlist.sleepTimer.isActive
+                      ? "text-white border-2 border-white"
                       : "text-muted-foreground"
                   }`}
-                  aria-label={playlist.sleepTimer.isActive ? "Sleep timer active - click to modify" : "Set sleep timer"}
+                  aria-label={
+                    playlist.sleepTimer.isActive
+                      ? "Sleep timer active - click to modify"
+                      : "Set sleep timer"
+                  }
                 >
                   <Moon className="h-5 w-5" />
                 </button>
@@ -931,7 +1127,9 @@ export function Player() {
         </div>
 
         {/* Right sidebar: Playlist (1/3) */}
-        <div className={`lg:w-1/3 flex flex-col lg:border-l pl-4 transition-opacity duration-500 ${player.isInactive ? "opacity-30" : ""}`}>
+        <div
+          className={`lg:w-1/3 flex flex-col lg:border-l pl-4 transition-opacity duration-500 ${player.isInactive ? "opacity-30" : ""}`}
+        >
           {/* Loading spinner */}
           {isReordering && (
             <div className="flex items-center gap-2 text-muted-foreground pb-2">
@@ -959,13 +1157,24 @@ export function Player() {
 
               {/* Title and metadata */}
               <div className="flex-1 min-w-0 space-y-1">
-                <h3 className="font-semibold text-sm truncate" title={playlist.snippet?.title}>
+                <h3
+                  className="font-semibold text-sm truncate"
+                  title={playlist.snippet?.title}
+                >
                   {playlist.snippet?.title ?? "Playlist"}
                 </h3>
                 <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-                  <span>{playlistMetadata.videoCount} video{playlistMetadata.videoCount !== 1 ? 's' : ''}</span>
+                  <span>
+                    {playlistMetadata.videoCount} video
+                    {playlistMetadata.videoCount !== 1 ? "s" : ""}
+                  </span>
                   {playlistMetadata.totalDurationSeconds > 0 && (
-                    <span>{formatTotalDuration(playlistMetadata.totalDurationSeconds)} total</span>
+                    <span>
+                      {formatTotalDuration(
+                        playlistMetadata.totalDurationSeconds,
+                      )}{" "}
+                      total
+                    </span>
                   )}
                 </div>
               </div>
@@ -973,7 +1182,9 @@ export function Player() {
 
             {/* Sort dropdown and playlist switcher */}
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Videos</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Videos
+              </span>
               <div className="flex items-center gap-2">
                 <PlaylistSwitcherDrawer>
                   <button className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -985,14 +1196,22 @@ export function Player() {
                   <DropdownMenuTrigger asChild>
                     <button className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
                       <ArrowUpDown className="h-3 w-3" />
-                      <span>{sortOrder === "first-added" ? "First added" : "Last added"}</span>
+                      <span>
+                        {sortOrder === "first-added"
+                          ? "First added"
+                          : "Last added"}
+                      </span>
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setSortOrder("first-added")}>
+                    <DropdownMenuItem
+                      onClick={() => setSortOrder("first-added")}
+                    >
                       First added
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setSortOrder("last-added")}>
+                    <DropdownMenuItem
+                      onClick={() => setSortOrder("last-added")}
+                    >
                       Last added
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -1002,7 +1221,9 @@ export function Player() {
           </div>
 
           {/* Playlist items - scrollable */}
-          <div className={`flex-1 pr-2 -mr-2 pt-2 touch-drag-container ${isDragging ? 'dragging' : 'overflow-y-auto'}`}>
+          <div
+            className={`flex-1 pr-2 -mr-2 pt-2 touch-drag-container ${isDragging ? "dragging" : "overflow-y-auto"}`}
+          >
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -1015,7 +1236,9 @@ export function Player() {
               >
                 <ul className="grid grid-cols-1 gap-1">
                   {sortedItems.map((item) => {
-                    const isCurrent = Boolean(currentVideoId && item.videoId === currentVideoId);
+                    const isCurrent = Boolean(
+                      currentVideoId && item.videoId === currentVideoId,
+                    );
                     return (
                       <SortablePlaylistItem
                         key={item.id}
@@ -1036,5 +1259,3 @@ export function Player() {
     </>
   );
 }
-
-
