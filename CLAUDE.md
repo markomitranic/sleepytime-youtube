@@ -29,6 +29,9 @@ Sleepytime YouTube is a Next.js application that allows users to play YouTube pl
 - **shadcn/ui** — UI components in `src/components/ui`
 - **React Hook Form** — Forms (minimal usage currently)
 - **dnd-kit** — Drag-and-drop for playlist reordering
+- **sonner** — Toast notifications
+- **vaul** — Drawer components
+- **usehooks-ts** — React hook utilities (localStorage, etc.)
 
 ### App Structure
 
@@ -39,17 +42,21 @@ Sleepytime YouTube is a Next.js application that allows users to play YouTube pl
 
 **API Routes:**
 - `/api/auth/[...nextauth]/route.ts` — Auth.js handlers
-- `/api/builtin-playlists/route.ts` — Server-cached built-in playlist metadata (72-hour cache)
+- `/api/builtin-playlists/route.ts` — Server-cached built-in playlist metadata (7-day cache with stale-while-revalidate)
 - `/api/wayback/route.ts` — Wayback Machine API proxy for recovering deleted videos
 
 ### Provider Hierarchy
 
-The app wraps children in this provider order (see `src/app/providers.tsx` and `src/app/layout.tsx`):
+The app wraps children in two layers (see `src/app/providers.tsx` and `src/app/layout.tsx`):
+
+**In `providers.tsx` (AppProviders):**
 1. `QueryClientProvider` — TanStack Query with optimized cache settings
 2. `SessionProvider` — NextAuth session management
 3. `AuthProvider` — Custom auth context (`src/components/auth/AuthContext.tsx`)
 4. `PlaylistProvider` — Playlist state management (`src/components/playlist/PlaylistContext.tsx`)
-5. `PlayerProvider` — Video player state (`src/components/playlist/PlayerContext.tsx`)
+
+**In `layout.tsx` (wrapping AppProviders):**
+5. `PlayerProvider` — Video player state, inactivity detection, progress persistence (`src/components/playlist/PlayerContext.tsx`)
 
 ### Key Contexts
 
@@ -63,11 +70,23 @@ The app wraps children in this provider order (see `src/app/providers.tsx` and `
 - Manages playlist loading, video selection, item reordering/deletion, sleep timer
 - Syncs state to localStorage and URL params (`?list=`, `?v=`)
 - Progressive loading with page count tracking
+- **Key Actions**:
+  - `loadByPlaylistId(id)` — Full playlist load with progress tracking
+  - `setCurrentVideoId(id)` — Select video and clear pause state
+  - `reorderItem(videoId, direction)` — Move video up/down in list
+  - `removeItem(videoId)` — Remove video from local state
+  - `refreshItemsOnce({ delayMs })` — Refetch items after YouTube API changes
+  - `setSleepTimer(minutes)` / `deactivateSleepTimer()` / `prolongSleepTimer(minutes)`
+  - `toggleDarker()` — Toggle aurora background dimming
 
 **PlayerContext** (`src/components/playlist/PlayerContext.tsx`):
 - Provides `usePlayer()` hook
 - Manages YouTube IFrame Player instance and playback state
 - Handles autoplay to next video, repeat modes, sleep timer integration
+- **Inactivity Detection**: 10-second timeout on player page, hides UI when inactive
+- **Video Progress Persistence**: Saves playback position to localStorage (`sleepytime-video-progress`)
+  - Restores position on video reload (unless within last 10 seconds or >7 days old)
+  - Methods: `getSavedProgress(videoId)`, `clearSavedProgress(videoId)`, `updateProgress(time, duration, videoId)`
 
 ### YouTube API Integration
 
@@ -81,6 +100,11 @@ The app wraps children in this provider order (see `src/app/providers.tsx` and `
 - `addVideoToPlaylist()` — Add video to playlist (requires auth)
 - `deletePlaylistItem()` — Remove item from playlist (requires auth)
 - `updatePlaylistItemPosition()` — Reorder playlist items (requires auth)
+- `extractPlaylistIdFromUrl()` — Parse playlist ID from YouTube URL
+
+**Video Replacement Utilities** (`src/lib/videoReplace.ts`):
+- `getOriginalVideoTitle()` — Retrieve deleted video title from Wayback Machine (via `/api/wayback`)
+- `searchYouTube()` — Search YouTube for videos by query (for finding replacement videos)
 
 **Authentication Strategy:**
 - All YouTube functions accept both `apiKey` (public) and `accessToken` (authenticated) parameters
@@ -110,17 +134,27 @@ Validated in `src/env.js` using `@t3-oss/env-nextjs`:
 5. Token refresh handled automatically in `auth.ts` JWT callback
 6. On 401 errors, YouTube functions call `refreshToken` callback and retry
 
+### Library Files
+
+- `src/lib/youtube.ts` — YouTube Data API v3 functions
+- `src/lib/videoReplace.ts` — Wayback Machine + YouTube search for video replacement
+- `src/lib/queries.ts` — Shared React Query hooks (e.g., `useBuiltinPlaylists`)
+- `src/lib/builtinPlaylists.ts` — Built-in playlist configuration
+- `src/lib/utils.ts` — Utility functions (cn for className merging)
+
 ### State Management Patterns
 
 **React Query:**
 - Shared queries via `src/lib/queries.ts` (e.g., `useBuiltinPlaylists`)
 - Aggressive caching for built-in playlists (24h stale time, 7d gc time)
 - Query client configured with reduced refetch intervals (5min stale, 30min gc)
+- Disabled automatic refetching (mount, focus, reconnect, interval)
 
 **localStorage Persistence:**
-- Playlist state persisted to `sleepytime-playlist` key
-- Includes `playlistId`, `currentVideoId`, `url`
-- Auto-restores on player page load
+- `sleepytime-playlist` — Playlist state (playlistId, currentVideoId, url)
+- `sleepytime-video-progress` — Video playback progress per videoId (currentTime, duration, timestamp)
+- Auto-restores playlist on `/player` page load
+- Progress restored if <7 days old and not near video end
 
 **URL Sync:**
 - `?list=` parameter for playlist ID
@@ -148,14 +182,37 @@ Validated in `src/env.js` using `@t3-oss/env-nextjs`:
 - **Tailwind v4** — All configuration in `src/styles/globals.css`
 - No `tailwind.config.js` file
 - Dark mode always enabled via `className="dark"` on root `<html>`
-- CSS Modules only for animations, prefer Tailwind for styling
+- Uses `tw-animate-css` for animation utilities
+- OKLCH color space for color definitions
+
+**Aurora Background** (`src/styles/globals.css`):
+- Animated gradient background with two floating blobs (blue and green)
+- Uses CSS `@keyframes` for smooth orbital animations (36s and 42s cycles)
+- Respects `prefers-reduced-motion` for accessibility
+- Can be dimmed via `darker` state in PlaylistContext
+
+**Custom Utilities**:
+- `.led-green` — Breathing LED animation for built-in playlist badges
+- `.touch-drag-handle` / `.touch-drag-container` — Touch-friendly drag-and-drop styles
 
 ### Built-in Playlists
 
-Hardcoded playlist IDs in `src/app/api/builtin-playlists/route.ts`:
-- Server-side cached for 72 hours
-- Fetched via `useBuiltinPlaylists()` hook from `src/lib/queries.ts`
-- Displayed on homepage in `BuiltinPlaylistGrid` component
+**Configuration** (`src/lib/builtinPlaylists.ts`):
+- Centralized playlist definitions with `BUILTIN_PLAYLISTS` array
+- Each entry has: `id`, `shortLabel`, optional `title`, `thumbnail` (local path), `channel`
+- `BUILTIN_PLAYLIST_IDS` exported as readonly array for API use
+- Local thumbnails stored in `/public/` (e.g., `/slowedreverb.jpg`, `/skyrim.jpg`)
+
+**API Route** (`src/app/api/builtin-playlists/route.ts`):
+- Returns static data immediately from local config (no YouTube API delay)
+- Background refresh attempts to fetch fresh data from YouTube API
+- **Caching**: 7-day server cache (`revalidate: 604800`) with `stale-while-revalidate: 86400`
+- Falls back to static data on error (1-hour cache)
+
+**Client-side** (`src/lib/queries.ts`):
+- `useBuiltinPlaylists()` hook with React Query
+- 24-hour stale time, 7-day gc time
+- No refetch on mount/focus
 
 ### Sleep Timer Feature
 
@@ -188,18 +245,49 @@ Hardcoded playlist IDs in `src/app/api/builtin-playlists/route.ts`:
 ### Error Handling
 
 - 401 errors trigger automatic token refresh + retry
+- 403 errors clear user playlists cache (quota/permission issues)
 - 404/NotFound errors clear playlist state and redirect to homepage
 - Auth errors show toast and sign user out
 - Playlist loading errors display friendly messages with raw error details
 
+### Video Replacement Feature
+
+For deleted/unavailable videos on the `/organize` page:
+1. **Wayback Machine Integration**: Attempts to find original video title from archive
+2. **YouTube Search**: Searches for replacement videos using recovered title
+3. **Preview & Select**: Users can preview videos before selecting replacement
+
+**Components** (`src/components/organize/`):
+- `ReplaceVideoDrawer` — Main drawer for finding/selecting replacement videos
+- `VideoPreviewDialog` — Preview video before accepting replacement
+- `ManualSearchDialog` — Manual search when automatic recovery fails
+- `ManualWatchLaterDialog` — Manual video ID entry
+
 ### Component Organization
 
-- `src/components/ui/` — shadcn/ui base components
+- `src/components/ui/` — shadcn/ui base components (button, dialog, drawer, input, dropdown-menu, badge)
 - `src/components/auth/` — Authentication components (AccountDrawer, AuthContext, SessionProvider)
-- `src/components/playlist/` — Playlist/player components (Player, PlaylistGrid, PlaylistSwitcherDrawer, etc.)
-- `src/components/organize/` — Playlist editing components (PlaylistDetail, ReplaceVideoDrawer, ManualSearchDialog)
-- `src/components/BottomNav.tsx` — Mobile navigation
-- `src/components/CookieBanner.tsx` — Cookie consent
+- `src/components/playlist/` — Playlist/player components:
+  - `Player.tsx` — YouTube IFrame embed and controls
+  - `PlayerContext.tsx` — Player state management
+  - `PlaylistContext.tsx` — Playlist state management
+  - `PlaylistGrid.tsx` — Video grid display
+  - `PlaylistSwitcherDrawer.tsx` — Playlist selection drawer
+  - `SleepTimerDrawer.tsx` — Sleep timer controls
+  - `BuiltinPlaylistGrid.tsx` — Homepage built-in playlists
+  - `SkeletonPlayer.tsx` — Loading skeleton
+- `src/components/organize/` — Playlist editing components:
+  - `PlaylistDetail.tsx` — Main organize page content
+  - `PlaylistSelector.tsx` — Playlist dropdown selector
+  - `SortableVideoList.tsx` — Drag-and-drop video list
+  - `ReplaceVideoDrawer.tsx` — Video replacement UI
+  - `VideoPreviewDialog.tsx` — Video preview modal
+  - `ManualSearchDialog.tsx` — Manual video search
+  - `ManualWatchLaterDialog.tsx` — Manual video ID input
+  - `SkeletonPlaylistDetail.tsx` — Loading skeleton
+- `src/components/BottomNav.tsx` — Mobile bottom navigation
+- `src/components/CookieBanner.tsx` — Cookie consent banner
+- `src/app/AuroraBackground.tsx` — Animated background effect
 
 ### PWA Support
 
