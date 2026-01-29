@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Shuffle,
   SkipForward,
   Moon,
   GripVertical,
@@ -10,11 +9,8 @@ import {
   Trash2,
   Play,
   Pause,
-  ArrowUpDown,
   ListVideo,
-  ChevronRight,
   ChevronDown,
-  ExternalLink as ExternalLinkIcon,
 } from "lucide-react";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { usePlayer } from "~/components/playlist/PlayerContext";
@@ -36,12 +32,6 @@ import {
   DialogFooter,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
 import {
   DndContext,
   closestCenter,
@@ -311,15 +301,11 @@ export function Player() {
   const playerInstanceRef = useRef<any>(null);
   const [endedOpen, setEndedOpen] = useState<boolean>(false);
   const endedVideoIdRef = useRef<string | undefined>(undefined);
-  const [shuffleEnabled, setShuffleEnabled] = useState<boolean>(false);
   const [isReordering, setIsReordering] = useState<boolean>(false);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const dialogShownForVideoRef = useRef<string | undefined>(undefined);
   const timeCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [sortOrder, setSortOrder] = useState<"first-added" | "last-added">(
-    "first-added",
-  );
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
   const sensors = useSensors(
@@ -339,13 +325,6 @@ export function Player() {
     }),
   );
 
-  // Sort items based on sort order
-  const sortedItems = useMemo(() => {
-    if (sortOrder === "last-added") {
-      return [...playlist.items].reverse();
-    }
-    return playlist.items; // first-added (default)
-  }, [playlist.items, sortOrder]);
 
   // Calculate playlist metadata
   const playlistMetadata = useMemo(() => {
@@ -365,15 +344,6 @@ export function Player() {
       const availableVideos = playlist.items.filter((item) => item.videoId);
       if (availableVideos.length === 0) return undefined;
 
-      if (shuffleEnabled) {
-        const otherVideos = availableVideos.filter(
-          (item) => item.videoId !== fromVideoId,
-        );
-        if (otherVideos.length === 0) return fromVideoId;
-        const randomIndex = Math.floor(Math.random() * otherVideos.length);
-        return otherVideos[randomIndex]?.videoId;
-      }
-
       const currentIndex = availableVideos.findIndex(
         (item) => item.videoId === fromVideoId,
       );
@@ -381,7 +351,7 @@ export function Player() {
       const nextIndex = (currentIndex + 1) % availableVideos.length;
       return availableVideos[nextIndex]?.videoId;
     },
-    [playlist.items, shuffleEnabled],
+    [playlist.items],
   );
 
   const handleNext = useCallback((videoId: string | undefined) => {
@@ -1029,82 +999,18 @@ export function Player() {
             className={`flex-1 flex flex-col gap-4 transition-opacity duration-500 ${player.isInactive ? "opacity-30" : ""}`}
           >
             <div>
-              <div className="flex items-center gap-2">
-                <h2
-                  className="text-xl font-semibold truncate"
-                  title={current?.title}
-                >
-                  {current?.title ?? ""}
-                </h2>
-                {current?.videoId && (
-                  <button
-                    onClick={() =>
-                      window.open(
-                        `https://www.youtube.com/watch?v=${current.videoId}`,
-                        "_blank",
-                        "noopener,noreferrer",
-                      )
-                    }
-                    className="flex-shrink-0 p-1 text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label="Open video in new tab"
-                    title="Open video in new tab"
-                  >
-                    <ExternalLinkIcon className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
+              <h2 className="text-xl font-semibold">
+                {current?.title ?? ""}
+              </h2>
               {current?.channelTitle && (
-                <a
-                  href={`https://www.youtube.com/channel/${current.channelId || ""}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors truncate inline-flex items-center gap-1 w-fit"
-                >
+                <p className="text-sm text-muted-foreground">
                   {current.channelTitle}
-                  <ChevronRight className="h-3 w-3 flex-shrink-0" />
-                </a>
+                </p>
               )}
             </div>
 
             {/* Player Controls */}
             <div className="flex items-center justify-center gap-8 py-2">
-              <button
-                type="button"
-                onClick={() => setShuffleEnabled((v) => !v)}
-                className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:ring-[3px] ${
-                  shuffleEnabled
-                    ? "text-white border-2 border-white"
-                    : "text-muted-foreground"
-                }`}
-                aria-label={
-                  shuffleEnabled ? "Disable shuffle" : "Enable shuffle"
-                }
-              >
-                <Shuffle className="h-5 w-5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={handlePlayPause}
-                className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-white text-black hover:bg-white/90 transition focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                aria-label={isPlaying ? "Pause" : "Play"}
-              >
-                {isPlaying ? (
-                  <Pause className="h-6 w-6" />
-                ) : (
-                  <Play className="h-6 w-6" />
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleNext(currentVideoId)}
-                className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-14 w-14 items-center justify-center rounded-full border text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground"
-                aria-label="Next video"
-              >
-                <SkipForward className="h-6 w-6" />
-              </button>
-
               <SleepTimerDrawer>
                 <button
                   type="button"
@@ -1122,13 +1028,35 @@ export function Player() {
                   <Moon className="h-5 w-5" />
                 </button>
               </SleepTimerDrawer>
+
+              <button
+                type="button"
+                onClick={handlePlayPause}
+                className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-white text-black hover:bg-white/90 transition focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                aria-label={isPlaying ? "Pause" : "Play"}
+              >
+                {isPlaying ? (
+                  <Pause className="h-6 w-6" />
+                ) : (
+                  <Play className="h-6 w-6" />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleNext(currentVideoId)}
+                className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full border text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground"
+                aria-label="Next video"
+              >
+                <SkipForward className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </div>
 
         {/* Right sidebar: Playlist (1/3) */}
         <div
-          className={`lg:w-1/3 flex flex-col lg:border-l pl-4 transition-opacity duration-500 ${player.isInactive ? "opacity-30" : ""}`}
+          className={`lg:w-1/3 flex flex-col lg:border-l lg:pl-4 transition-opacity duration-500 ${player.isInactive ? "opacity-30" : ""}`}
         >
           {/* Loading spinner */}
           {isReordering && (
@@ -1180,44 +1108,19 @@ export function Player() {
               </div>
             </div>
 
-            {/* Sort dropdown and playlist switcher */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Videos
-              </span>
-              <div className="flex items-center gap-2">
-                <PlaylistSwitcherDrawer>
-                  <button className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                    <ChevronDown className="h-3 w-3" />
-                    <span>Switch</span>
-                  </button>
-                </PlaylistSwitcherDrawer>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                      <ArrowUpDown className="h-3 w-3" />
-                      <span>
-                        {sortOrder === "first-added"
-                          ? "First added"
-                          : "Last added"}
-                      </span>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => setSortOrder("first-added")}
-                    >
-                      First added
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setSortOrder("last-added")}
-                    >
-                      Last added
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
+            {/* Playlist switcher button - prominent */}
+            <PlaylistSwitcherDrawer>
+              <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-secondary/50 hover:bg-secondary text-sm font-medium transition-colors">
+                <ListVideo className="h-4 w-4" />
+                <span>Switch Playlist</span>
+                <ChevronDown className="h-4 w-4 ml-auto" />
+              </button>
+            </PlaylistSwitcherDrawer>
+
+            {/* Videos label */}
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Videos
+            </span>
           </div>
 
           {/* Playlist items - scrollable */}
@@ -1231,11 +1134,11 @@ export function Player() {
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={sortedItems.map((item) => item.id)}
+                items={playlist.items.map((item) => item.id)}
                 strategy={verticalListSortingStrategy}
               >
                 <ul className="grid grid-cols-1 gap-1">
-                  {sortedItems.map((item) => {
+                  {playlist.items.map((item) => {
                     const isCurrent = Boolean(
                       currentVideoId && item.videoId === currentVideoId,
                     );

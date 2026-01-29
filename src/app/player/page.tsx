@@ -15,7 +15,7 @@ function PlayerPageContent() {
   if (playlist.isLoading || (listParam && !playlist.playlistId)) {
     return (
       <main className="h-screen flex items-center justify-center">
-        <div className="w-full max-w-[1400px] px-4">
+        <div className="w-full max-w-[1400px] px-[10px]">
           <SkeletonPlayer />
         </div>
       </main>
@@ -25,7 +25,7 @@ function PlayerPageContent() {
   // Always show player (it handles its own empty state)
   return (
     <main className="h-screen flex items-center justify-center">
-      <div className="w-full max-w-[1400px] px-4">
+      <div className="w-full max-w-[1400px] px-[10px]">
         <Player />
       </div>
     </main>
@@ -37,7 +37,7 @@ export default function PlayerPage() {
     <Suspense
       fallback={
         <main className="h-screen flex items-center justify-center">
-          <div className="w-full max-w-[1400px] px-4">
+          <div className="w-full max-w-[1400px] px-[10px]">
             <SkeletonPlayer />
           </div>
         </main>
