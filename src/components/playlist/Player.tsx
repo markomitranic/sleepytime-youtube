@@ -1180,43 +1180,44 @@ export function Player() {
               </div>
             </div>
 
-            {/* Sort dropdown and playlist switcher */}
+            {/* Playlist switcher button - prominent */}
+            <PlaylistSwitcherDrawer>
+              <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-secondary/50 hover:bg-secondary text-sm font-medium transition-colors">
+                <ListVideo className="h-4 w-4" />
+                <span>Switch Playlist</span>
+                <ChevronDown className="h-4 w-4 ml-auto" />
+              </button>
+            </PlaylistSwitcherDrawer>
+
+            {/* Sort dropdown */}
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Videos
               </span>
-              <div className="flex items-center gap-2">
-                <PlaylistSwitcherDrawer>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <button className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                    <ChevronDown className="h-3 w-3" />
-                    <span>Switch</span>
+                    <ArrowUpDown className="h-3 w-3" />
+                    <span>
+                      {sortOrder === "first-added"
+                        ? "First added"
+                        : "Last added"}
+                    </span>
                   </button>
-                </PlaylistSwitcherDrawer>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                      <ArrowUpDown className="h-3 w-3" />
-                      <span>
-                        {sortOrder === "first-added"
-                          ? "First added"
-                          : "Last added"}
-                      </span>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => setSortOrder("first-added")}
-                    >
-                      First added
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setSortOrder("last-added")}
-                    >
-                      Last added
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => setSortOrder("first-added")}
+                  >
+                    First added
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSortOrder("last-added")}
+                  >
+                    Last added
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
