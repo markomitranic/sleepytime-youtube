@@ -87,7 +87,7 @@ export function StickyPlayerBar({ playerContainerRef }: StickyPlayerBarProps) {
         >
           <p className="text-sm font-medium truncate">{currentVideo.title}</p>
           {/* Progress bar */}
-          <div className="mt-1 h-1 bg-muted rounded-full overflow-hidden">
+          <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
             <div
               className="h-full bg-white transition-all duration-100"
               style={{ width: `${progress}%` }}
