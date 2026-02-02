@@ -630,6 +630,16 @@ export function Player() {
               // Store player instance in PlayerContext
               player.setPlayerInstance(event.target);
 
+              // Initialize progress tracking immediately when player is ready
+              try {
+                const duration = event.target.getDuration?.();
+                if (duration) {
+                  player.updateProgress(0, duration, currentVideoId);
+                }
+              } catch (e) {
+                // Player might not be fully ready yet
+              }
+
               // Check if there's saved progress for this video
               const savedProgress = player.getSavedProgress(currentVideoId);
               if (savedProgress && savedProgress > 0) {
@@ -732,27 +742,25 @@ export function Player() {
       clearInterval(progressIntervalRef.current);
     }
 
+    // Track progress every 500ms for smoother updates
     const trackProgress = () => {
-      try {
-        if (
-          !playerInstanceRef.current?.getCurrentTime ||
-          !playerInstanceRef.current?.getDuration
-        )
-          return;
+      if (!playerInstanceRef.current) return;
 
+      try {
         const currentTime = playerInstanceRef.current.getCurrentTime();
         const duration = playerInstanceRef.current.getDuration();
 
-        if (duration > 0) {
+        // Only update if we have valid numbers
+        if (typeof currentTime === "number" && typeof duration === "number" && duration > 0) {
           player.updateProgress(currentTime, duration, currentVideoId);
         }
       } catch (e) {
-        // Ignore errors - player might not be ready yet
+        // Silently ignore - player might be destroyed or methods not available
       }
     };
 
-    // Track progress every second
-    progressIntervalRef.current = setInterval(trackProgress, 1000);
+    // Start tracking progress more frequently
+    progressIntervalRef.current = setInterval(trackProgress, 500);
 
     return () => {
       if (progressIntervalRef.current) {
