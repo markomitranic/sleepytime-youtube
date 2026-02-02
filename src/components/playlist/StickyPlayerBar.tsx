@@ -68,16 +68,22 @@ export function StickyPlayerBar({ playerContainerRef }: StickyPlayerBarProps) {
     >
       <div className="flex items-center gap-3 h-16 px-2">
         {/* Thumbnail */}
-        {currentVideo.thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={currentVideo.thumbnailUrl}
-            alt={currentVideo.title}
-            className="h-14 w-24 rounded object-cover flex-shrink-0"
-          />
-        ) : (
-          <div className="h-14 w-24 rounded bg-muted flex-shrink-0" />
-        )}
+        <button
+          onClick={handleScrollToTop}
+          className="flex-shrink-0 hover:opacity-80 transition-opacity"
+          aria-label="Scroll to top"
+        >
+          {currentVideo.thumbnailUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={currentVideo.thumbnailUrl}
+              alt={currentVideo.title}
+              className="h-14 w-24 rounded object-cover"
+            />
+          ) : (
+            <div className="h-14 w-24 rounded bg-muted" />
+          )}
+        </button>
 
         {/* Title and Progress */}
         <button
