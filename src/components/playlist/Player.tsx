@@ -735,7 +735,9 @@ export function Player() {
 
   // Progress tracking for mini player
   useEffect(() => {
-    if (!playerInstanceRef.current || !currentVideoId) return;
+    // Use player.playerInstance from context - it's set when player is ready (onReady callback)
+    // This ensures the effect re-runs when the player becomes available
+    if (!player.playerInstance || !currentVideoId) return;
 
     // Clear any existing progress interval
     if (progressIntervalRef.current) {
@@ -744,11 +746,11 @@ export function Player() {
 
     // Track progress every 500ms for smoother updates
     const trackProgress = () => {
-      if (!playerInstanceRef.current) return;
+      if (!player.playerInstance) return;
 
       try {
-        const currentTime = playerInstanceRef.current.getCurrentTime();
-        const duration = playerInstanceRef.current.getDuration();
+        const currentTime = player.playerInstance.getCurrentTime();
+        const duration = player.playerInstance.getDuration();
 
         // Only update if we have valid numbers
         if (typeof currentTime === "number" && typeof duration === "number" && duration > 0) {
@@ -768,7 +770,7 @@ export function Player() {
         progressIntervalRef.current = null;
       }
     };
-  }, [currentVideoId, player.updateProgress]);
+  }, [currentVideoId, player.playerInstance, player.updateProgress]);
 
   // Check video time and show dialog 20s before end
   useEffect(() => {
