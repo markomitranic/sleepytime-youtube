@@ -140,8 +140,8 @@ function SortablePlaylistItem({
       <li
         ref={setNodeRef}
         style={style}
-        className={`flex cursor-pointer items-start gap-3 rounded-md border py-3 pr-3 hover:bg-secondary select-none ${
-          isCurrent ? "bg-secondary/60" : ""
+        className={`flex cursor-pointer items-start gap-3 rounded-md border py-3 pr-3 select-none transition-all duration-200 hover:shadow-lg hover:bg-secondary/80 ${
+          isCurrent ? "playlist-item-playing bg-secondary/60" : ""
         }`}
         onClick={() => {
           if (!item.videoId) {
@@ -823,6 +823,38 @@ export function Player() {
     }
   }, [playlist.isPaused]);
 
+  // Handle spacebar for play/pause
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle spacebar
+      if (e.code !== 'Space' && e.key !== ' ') return;
+
+      // Don't trigger if user is typing in an input/textarea
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      // Prevent default spacebar behavior (page scroll)
+      e.preventDefault();
+
+      // Toggle play/pause
+      handlePlayPause();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handlePlayPause]);
+
   // If no playlist loaded, show a friendly empty state
   if (!playlist.items.length || !currentVideoId) {
     return (
@@ -974,11 +1006,11 @@ export function Player() {
       </Dialog>
 
       {/* New layout: Left side with video, Right sidebar with playlist */}
-      <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)]">
+      <div className="flex flex-col lg:flex-row gap-2 h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)]">
         {/* Left side: Video player and controls (2/3) */}
         <div className="flex-1 lg:w-2/3 flex flex-col gap-4">
           {/* Video Player */}
-          <div className="aspect-video w-full overflow-hidden rounded-md border bg-black flex-shrink-0">
+          <div className="aspect-video w-full overflow-hidden rounded-xl glass-panel bg-black flex-shrink-0">
             <div
               ref={playerRef}
               id={`youtube-player-${currentVideoId}`}
@@ -1032,7 +1064,7 @@ export function Player() {
               <button
                 type="button"
                 onClick={handlePlayPause}
-                className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-white text-black hover:bg-white/90 transition focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-white text-black glow-button focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 aria-label={isPlaying ? "Pause" : "Play"}
               >
                 {isPlaying ? (
@@ -1056,7 +1088,7 @@ export function Player() {
 
         {/* Right sidebar: Playlist (1/3) */}
         <div
-          className={`lg:w-1/3 flex flex-col lg:border-l lg:pl-4 transition-opacity duration-500 ${player.isInactive ? "opacity-30" : ""}`}
+          className={`lg:w-1/3 flex flex-col lg:glass-panel lg:rounded-xl lg:pl-2 lg:pb-4 transition-opacity duration-500 ${player.isInactive ? "opacity-30" : ""}`}
         >
           {/* Loading spinner */}
           {isReordering && (
@@ -1068,6 +1100,15 @@ export function Player() {
 
           {/* Playlist header with metadata */}
           <div className="pb-4 space-y-3 border-b">
+            {/* Playlist switcher button - prominent */}
+            <PlaylistSwitcherDrawer>
+              <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-secondary/50 hover:bg-secondary text-sm font-medium transition-colors">
+                <ListVideo className="h-4 w-4" />
+                <span>Switch Playlist</span>
+                <ChevronDown className="h-4 w-4 ml-auto" />
+              </button>
+            </PlaylistSwitcherDrawer>
+
             <div className="flex items-start gap-3">
               {/* Thumbnail */}
               {playlist.items[0]?.thumbnailUrl ? (
@@ -1108,15 +1149,6 @@ export function Player() {
               </div>
             </div>
 
-            {/* Playlist switcher button - prominent */}
-            <PlaylistSwitcherDrawer>
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-secondary/50 hover:bg-secondary text-sm font-medium transition-colors">
-                <ListVideo className="h-4 w-4" />
-                <span>Switch Playlist</span>
-                <ChevronDown className="h-4 w-4 ml-auto" />
-              </button>
-            </PlaylistSwitcherDrawer>
-
             {/* Videos label */}
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Videos
@@ -1125,7 +1157,7 @@ export function Player() {
 
           {/* Playlist items - scrollable */}
           <div
-            className={`flex-1 pr-2 -mr-2 pt-2 touch-drag-container ${isDragging ? "dragging" : "overflow-y-auto"}`}
+            className={`flex-1 pr-2 -mr-2 pt-2 pb-24 touch-drag-container ${isDragging ? "dragging" : "overflow-y-auto"}`}
           >
             <DndContext
               sensors={sensors}

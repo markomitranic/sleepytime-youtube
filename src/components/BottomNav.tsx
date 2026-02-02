@@ -54,7 +54,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className={`fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border transition-opacity duration-500 ${isInactive ? "opacity-30" : ""}`}
+      className={`fixed bottom-4 left-4 right-4 z-50 glass-panel-elevated rounded-2xl transition-opacity duration-500 ${isInactive ? "opacity-30" : ""}`}
     >
       <div className="flex items-center justify-center gap-8 h-16 max-w-screen-md mx-auto px-4">
         <NavItem href="/" icon={Home} label="Home" />
@@ -79,10 +79,10 @@ function NavItem({ href, icon: Icon, label }: NavItemProps) {
     <Link
       href={href}
       className={cn(
-        "flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-lg transition-colors min-w-[72px]",
+        "flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-lg transition-all duration-200 min-w-[72px]",
         isActive
-          ? "text-white bg-gray-600"
-          : "text-muted-foreground hover:text-foreground hover:bg-accent",
+          ? "text-white bg-secondary"
+          : "text-muted-foreground hover:text-foreground hover:bg-secondary/50",
       )}
     >
       <Icon className="h-5 w-5" />
