@@ -54,9 +54,9 @@ export function BottomNav() {
 
   return (
     <nav
-      className={`fixed bottom-4 left-4 right-4 z-50 glass-panel-elevated rounded-2xl transition-opacity duration-500 ${isInactive ? "opacity-30" : ""}`}
+      className={`fixed bottom-1 left-1 right-1 z-50 glass-panel-elevated rounded-2xl transition-opacity duration-500 ${isInactive ? "opacity-30" : ""}`}
     >
-      <div className="flex items-center justify-center gap-8 h-16 max-w-screen-md mx-auto px-4">
+      <div className="flex items-center justify-center gap-8 h-16 max-w-screen-md mx-auto px-2">
         <NavItem href="/" icon={Home} label="Home" />
         <NavItem href="/player" icon={Play} label="Player" />
         <AccountNavItem />

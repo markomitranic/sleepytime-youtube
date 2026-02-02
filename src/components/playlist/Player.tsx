@@ -16,6 +16,7 @@ import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { usePlayer } from "~/components/playlist/PlayerContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { PlaylistSwitcherDrawer } from "~/components/playlist/PlaylistSwitcherDrawer";
+import { StickyPlayerBar } from "~/components/playlist/StickyPlayerBar";
 import { useAuth } from "~/components/auth/AuthContext";
 import {
   deletePlaylistItem,
@@ -298,6 +299,7 @@ export function Player() {
   );
   const currentVideoId = playlist.currentVideoId;
   const playerRef = useRef<any>(null);
+  const playerContainerRef = useRef<HTMLDivElement>(null);
   const playerInstanceRef = useRef<any>(null);
   const [endedOpen, setEndedOpen] = useState<boolean>(false);
   const endedVideoIdRef = useRef<string | undefined>(undefined);
@@ -881,6 +883,9 @@ export function Player() {
 
   return (
     <>
+      {/* Sticky Player Bar (mobile only) */}
+      <StickyPlayerBar playerContainerRef={playerContainerRef} />
+
       {/* Sleep Timer Expiry Dialog */}
       {playlist.sleepTimer.expired && (
         <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-6">
@@ -1010,7 +1015,10 @@ export function Player() {
         {/* Left side: Video player and controls (2/3) */}
         <div className="flex-1 lg:w-2/3 flex flex-col gap-4">
           {/* Video Player */}
-          <div className="aspect-video w-full overflow-hidden rounded-xl glass-panel bg-black flex-shrink-0">
+          <div
+            ref={playerContainerRef}
+            className="aspect-video w-full overflow-hidden rounded-xl glass-panel bg-black flex-shrink-0"
+          >
             <div
               ref={playerRef}
               id={`youtube-player-${currentVideoId}`}
