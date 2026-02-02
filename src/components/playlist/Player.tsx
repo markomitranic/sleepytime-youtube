@@ -16,6 +16,7 @@ import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { usePlayer } from "~/components/playlist/PlayerContext";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { PlaylistSwitcherDrawer } from "~/components/playlist/PlaylistSwitcherDrawer";
+import { StickyPlayerBar } from "~/components/playlist/StickyPlayerBar";
 import { useAuth } from "~/components/auth/AuthContext";
 import {
   deletePlaylistItem,
@@ -298,6 +299,7 @@ export function Player() {
   );
   const currentVideoId = playlist.currentVideoId;
   const playerRef = useRef<any>(null);
+  const playerContainerRef = useRef<HTMLDivElement>(null);
   const playerInstanceRef = useRef<any>(null);
   const [endedOpen, setEndedOpen] = useState<boolean>(false);
   const endedVideoIdRef = useRef<string | undefined>(undefined);
@@ -628,6 +630,16 @@ export function Player() {
               // Store player instance in PlayerContext
               player.setPlayerInstance(event.target);
 
+              // Initialize progress tracking immediately when player is ready
+              try {
+                const duration = event.target.getDuration?.();
+                if (duration) {
+                  player.updateProgress(0, duration, currentVideoId);
+                }
+              } catch (e) {
+                // Player might not be fully ready yet
+              }
+
               // Check if there's saved progress for this video
               const savedProgress = player.getSavedProgress(currentVideoId);
               if (savedProgress && savedProgress > 0) {
@@ -723,34 +735,34 @@ export function Player() {
 
   // Progress tracking for mini player
   useEffect(() => {
-    if (!playerInstanceRef.current || !currentVideoId) return;
+    // Use player.playerInstance from context - it's set when player is ready (onReady callback)
+    // This ensures the effect re-runs when the player becomes available
+    if (!player.playerInstance || !currentVideoId) return;
 
     // Clear any existing progress interval
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
     }
 
+    // Track progress every 500ms for smoother updates
     const trackProgress = () => {
+      if (!player.playerInstance) return;
+
       try {
-        if (
-          !playerInstanceRef.current?.getCurrentTime ||
-          !playerInstanceRef.current?.getDuration
-        )
-          return;
+        const currentTime = player.playerInstance.getCurrentTime();
+        const duration = player.playerInstance.getDuration();
 
-        const currentTime = playerInstanceRef.current.getCurrentTime();
-        const duration = playerInstanceRef.current.getDuration();
-
-        if (duration > 0) {
+        // Only update if we have valid numbers
+        if (typeof currentTime === "number" && typeof duration === "number" && duration > 0) {
           player.updateProgress(currentTime, duration, currentVideoId);
         }
       } catch (e) {
-        // Ignore errors - player might not be ready yet
+        // Silently ignore - player might be destroyed or methods not available
       }
     };
 
-    // Track progress every second
-    progressIntervalRef.current = setInterval(trackProgress, 1000);
+    // Start tracking progress more frequently
+    progressIntervalRef.current = setInterval(trackProgress, 500);
 
     return () => {
       if (progressIntervalRef.current) {
@@ -758,7 +770,7 @@ export function Player() {
         progressIntervalRef.current = null;
       }
     };
-  }, [currentVideoId, player.updateProgress]);
+  }, [currentVideoId, player.playerInstance, player.updateProgress]);
 
   // Check video time and show dialog 20s before end
   useEffect(() => {
@@ -881,6 +893,9 @@ export function Player() {
 
   return (
     <>
+      {/* Sticky Player Bar (mobile only) */}
+      <StickyPlayerBar playerContainerRef={playerContainerRef} />
+
       {/* Sleep Timer Expiry Dialog */}
       {playlist.sleepTimer.expired && (
         <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-6">
@@ -1010,7 +1025,10 @@ export function Player() {
         {/* Left side: Video player and controls (2/3) */}
         <div className="flex-1 lg:w-2/3 flex flex-col gap-4">
           {/* Video Player */}
-          <div className="aspect-video w-full overflow-hidden rounded-xl glass-panel bg-black flex-shrink-0">
+          <div
+            ref={playerContainerRef}
+            className="aspect-video w-full overflow-hidden rounded-xl glass-panel bg-black flex-shrink-0"
+          >
             <div
               ref={playerRef}
               id={`youtube-player-${currentVideoId}`}

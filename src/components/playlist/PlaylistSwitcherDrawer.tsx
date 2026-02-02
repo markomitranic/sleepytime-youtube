@@ -96,7 +96,7 @@ export function PlaylistSwitcherDrawer({ children }: PlaylistSwitcherDrawerProps
       <DrawerTrigger asChild>
         {children}
       </DrawerTrigger>
-      <DrawerContent className="max-h-[80vh] w-full lg:w-1/3 lg:ml-auto lg:mr-0 lg:rounded-l-lg lg:rounded-r-none">
+      <DrawerContent className="max-h-[80vh] w-full lg:w-1/3 lg:ml-auto lg:mr-0 lg:rounded-bl-lg lg:rounded-tl-none lg:rounded-tr-none lg:rounded-br-none">
         <DrawerHeader>
           <DrawerTitle>Switch Playlist</DrawerTitle>
         </DrawerHeader>
