@@ -9,14 +9,14 @@ Sleepytime YouTube is a Next.js application that allows users to play YouTube pl
 ## Commands
 
 **Development:**
-- `pnpm dev` — Start development server with Turbo mode
-- `pnpm build` — Production build
-- `pnpm preview` — Build and preview production locally
-- `pnpm start` — Start production server
-- `pnpm typecheck` — Run TypeScript type checking (no `pnpm lint` configured)
+- `bun dev` — Start development server with Turbo mode
+- `bun run build` — Production build
+- `bun run preview` — Build and preview production locally
+- `bun start` — Start production server
+- `bun run typecheck` — Run TypeScript type checking (no `bun lint` configured)
 
 **Package Manager:**
-- Always use `pnpm` (version 10.14.0)
+- Always use `bun` (version 1.3.6)
 - Check for similar packages before installing new ones
 
 ## Architecture
@@ -216,13 +216,13 @@ Hardcoded playlist IDs in `src/app/api/builtin-playlists/route.ts`:
 ### Testing
 
 - No test infrastructure currently configured
-- TypeScript type checking via `pnpm typecheck`
+- TypeScript type checking via `bun run typecheck`
 
 ## Development Workflow
 
-1. Run `pnpm dev` to start development server
+1. Run `bun dev` to start development server
 2. Edit files — hot reload enabled with Turbo mode
-3. Run `pnpm typecheck` before committing
+3. Run `bun run typecheck` before committing
 4. Environment variables must be set in `.env.local` (see `.env.example`)
 
 ## Deployment
