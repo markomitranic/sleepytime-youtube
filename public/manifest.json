@@ -1,6 +1,6 @@
 {
-  "name": "Sleepytime-YouTube",
-  "short_name": "Sleepytime",
+  "name": "SleepyTime",
+  "short_name": "SleepyTime",
   "description": "Play YouTube playlists one by one",
   "start_url": "/",
   "display": "standalone",
@@ -20,6 +20,12 @@
       "src": "/favicon.ico",
       "sizes": "any",
       "type": "image/x-icon"
+    },
+    {
+      "src": "/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icon-192.png",

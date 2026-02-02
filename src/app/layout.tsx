@@ -18,14 +18,14 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Sleepytime-YouTube",
+  title: "SleepyTime",
   description: "Play YouTube playlists one by one",
-  applicationName: "Sleepytime-YouTube",
+  applicationName: "SleepyTime",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Sleepytime-YouTube",
+    title: "SleepyTime",
     startupImage: [
       {
         url: "/icon-512.png",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   other: {
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "black-translucent",
-    "apple-mobile-web-app-title": "Sleepytime",
+    "apple-mobile-web-app-title": "SleepyTime",
     "mobile-web-app-capable": "yes",
     "msapplication-TileColor": "#252525",
     "msapplication-tap-highlight": "no",
@@ -66,12 +66,13 @@ export default function RootLayout({
           name="apple-mobile-web-app-status-bar-style"
           content="black-translucent"
         />
-        <meta name="apple-mobile-web-app-title" content="Sleepytime" />
+        <meta name="apple-mobile-web-app-title" content="SleepyTime" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-TileColor" content="#252525" />
         <meta name="msapplication-tap-highlight" content="no" />
         <meta name="format-detection" content="telephone=no" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="apple-touch-icon" href="/icon-180.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
         <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
         <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
         <link rel="apple-touch-startup-image" href="/icon-512.png" />

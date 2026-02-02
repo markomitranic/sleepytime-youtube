@@ -1,8 +1,9 @@
-// Service Worker for Sleepytime-YouTube PWA
-const CACHE_NAME = 'sleepytime-youtube-v1';
+// Service Worker for SleepyTime PWA
+const CACHE_NAME = 'sleepytime-v2';
 const urlsToCache = [
   '/',
   '/manifest.json',
+  '/icon-180.png',
   '/icon-192.png',
   '/icon-512.png',
   '/favicon.ico'
