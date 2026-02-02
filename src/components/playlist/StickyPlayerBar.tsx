@@ -48,6 +48,10 @@ export function StickyPlayerBar({ playerContainerRef }: StickyPlayerBarProps) {
     }
   };
 
+  const handleScrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   // Don't show if no video is playing
   if (!currentVideo || !currentVideo.videoId || !isVideoHidden) {
     return null;
@@ -76,7 +80,11 @@ export function StickyPlayerBar({ playerContainerRef }: StickyPlayerBarProps) {
         )}
 
         {/* Title and Progress */}
-        <div className="flex-1 min-w-0">
+        <button
+          onClick={handleScrollToTop}
+          className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
+          aria-label="Scroll to top"
+        >
           <p className="text-sm font-medium truncate">{currentVideo.title}</p>
           {/* Progress bar */}
           <div className="mt-1 h-1 bg-muted rounded-full overflow-hidden">
@@ -85,7 +93,7 @@ export function StickyPlayerBar({ playerContainerRef }: StickyPlayerBarProps) {
               style={{ width: `${progress}%` }}
             />
           </div>
-        </div>
+        </button>
 
         {/* Play/Pause Button */}
         <button
