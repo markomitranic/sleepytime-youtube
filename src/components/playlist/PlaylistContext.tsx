@@ -20,6 +20,9 @@ import {
   fetchVideoDurations,
 } from "~/lib/youtube";
 import { toast } from "sonner";
+import { useSleepTimer } from "~/lib/useSleepTimer";
+import { useUrlSync } from "~/lib/useUrlSync";
+import type { SleepTimer } from "~/lib/useSleepTimer";
 
 type PersistedPlaylistState = {
   playlistId?: string;
@@ -27,13 +30,7 @@ type PersistedPlaylistState = {
   url?: string;
 };
 
-export type SleepTimer = {
-  isActive: boolean;
-  durationMinutes: number;
-  startTime?: number;
-  remainingSeconds?: number;
-  expired?: boolean;
-};
+export type { SleepTimer } from "~/lib/useSleepTimer";
 
 export type PlaylistState = {
   url?: string;
@@ -111,10 +108,9 @@ const PlaylistContext = createContext<(PlaylistState & PlaylistActions) | null>(
 export function PlaylistProvider({ children }: { children: React.ReactNode }) {
   const [persistedState, setPersistedState] =
     useLocalStorage<PersistedPlaylistState | null>("sleepytime-playlist", null);
-  const [state, setState] = useState<PlaylistState>({
+  const { sleepTimer, isPaused, sleepTimerActions, resetSleepTimer } = useSleepTimer();
+  const [state, setState] = useState<Omit<PlaylistState, "sleepTimer" | "isPaused">>({
     items: [],
-    sleepTimer: { isActive: false, durationMinutes: 30 },
-    isPaused: false,
     darker: false,
   });
   const loadAbortRef = useRef<AbortController | null>(null);
@@ -154,7 +150,6 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
             isLoading: false,
             error: null,
             errorDetails: null,
-            sleepTimer: prev.sleepTimer, // Preserve existing sleep timer state
             darker: prev.darker, // Preserve existing darker state
           };
         });
@@ -341,7 +336,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
         }
       },
       setCurrentVideoId: (videoId) =>
-        setState((s) => ({ ...s, currentVideoId: videoId, isPaused: false })), // Resume when selecting a video
+        setState((s) => ({ ...s, currentVideoId: videoId })),
       clear: () => {
         if (loadAbortRef.current) {
           try {
@@ -351,10 +346,9 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
         }
         setState({
           items: [],
-          sleepTimer: { isActive: false, durationMinutes: 30 },
-          isPaused: false,
           darker: false,
         });
+        resetSleepTimer();
         setPersistedState(null); // Clear localStorage
         if (typeof window !== "undefined") {
           const urlObj = new URL(window.location.href);
@@ -367,53 +361,11 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           window.history.replaceState(null, "", href);
         }
       },
-      setSleepTimer: (durationMinutes: number) => {
-        setState((s) => ({
-          ...s,
-          sleepTimer: {
-            isActive: true,
-            durationMinutes,
-            startTime: Date.now(),
-            remainingSeconds: durationMinutes * 60,
-          },
-        }));
-      },
-      deactivateSleepTimer: () => {
-        setState((s) => ({
-          ...s,
-          sleepTimer: {
-            isActive: false,
-            durationMinutes: s.sleepTimer.durationMinutes,
-            expired: false,
-          },
-        }));
-      },
-      dismissSleepExpiry: () => {
-        setState((s) => ({
-          ...s,
-          sleepTimer: { ...s.sleepTimer, expired: false, isActive: false },
-        }));
-      },
-      prolongSleepTimer: (additionalMinutes: number) => {
-        setState((s) => ({
-          ...s,
-          sleepTimer: {
-            isActive: true,
-            durationMinutes: additionalMinutes,
-            startTime: Date.now(),
-            remainingSeconds: additionalMinutes * 60,
-            expired: false,
-          },
-        }));
-      },
-      triggerSleep: () => {
-        // Sleep action: pause video playback and show expiry dialog
-        setState((s) => ({
-          ...s,
-          isPaused: true,
-          sleepTimer: { ...s.sleepTimer, isActive: false, expired: true },
-        }));
-      },
+      setSleepTimer: sleepTimerActions.setSleepTimer,
+      deactivateSleepTimer: sleepTimerActions.deactivateSleepTimer,
+      dismissSleepExpiry: sleepTimerActions.dismissSleepExpiry,
+      prolongSleepTimer: sleepTimerActions.prolongSleepTimer,
+      triggerSleep: sleepTimerActions.triggerSleep,
       toggleDarker: () => {
         setState((s) => ({ ...s, darker: !s.darker }));
       },
@@ -485,84 +437,19 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
         }
       },
     }),
-    [auth.isAuthenticated, auth.accessToken],
+    [auth.isAuthenticated, auth.accessToken, sleepTimerActions, resetSleepTimer],
   );
 
-  const value = useMemo(() => ({ ...state, ...actions }), [state, actions]);
+  const value = useMemo(
+    () => ({ ...state, sleepTimer, isPaused, ...actions }),
+    [state, sleepTimer, isPaused, actions],
+  );
 
-  // Sync current video to URL (?v=) once selection exists
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!state.playlistId) return;
-    const nextId = state.currentVideoId;
-    if (!nextId) return;
-    const urlObj = new URL(window.location.href);
-    const currentParam = urlObj.searchParams.get("v");
-    if (currentParam === nextId) return;
-    urlObj.searchParams.set("v", nextId);
-    const newQuery = urlObj.searchParams.toString();
-    const href = newQuery ? `${urlObj.pathname}?${newQuery}` : urlObj.pathname;
-    window.history.replaceState(null, "", href);
-  }, [state.playlistId, state.currentVideoId]);
-
-  // Sync document title to reflect playlist title when a playlist is opened
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    const baseTitle = "Sleepytime-YouTube";
-    const playlistTitle = state.snippet?.title?.trim();
-    if (state.playlistId && playlistTitle) {
-      document.title = `${baseTitle} - ${playlistTitle}`;
-    } else {
-      document.title = baseTitle;
-    }
-  }, [state.playlistId, state.snippet?.title]);
-
-  // Sync playlist id to URL (?list=)
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!state.playlistId) return;
-    const urlObj = new URL(window.location.href);
-    const currentList = urlObj.searchParams.get("list");
-    if (currentList === state.playlistId) return;
-    urlObj.searchParams.set("list", state.playlistId);
-    const newQuery = urlObj.searchParams.toString();
-    const href = newQuery ? `${urlObj.pathname}?${newQuery}` : urlObj.pathname;
-    window.history.replaceState(null, "", href);
-  }, [state.playlistId]);
-
-  // Sleep Timer countdown logic
-  useEffect(() => {
-    if (!state.sleepTimer.isActive || !state.sleepTimer.startTime) return;
-
-    const interval = setInterval(() => {
-      setState((prev) => {
-        if (!prev.sleepTimer.isActive || !prev.sleepTimer.startTime)
-          return prev;
-
-        const elapsed = Math.floor(
-          (Date.now() - prev.sleepTimer.startTime) / 1000,
-        );
-        const totalSeconds = prev.sleepTimer.durationMinutes * 60;
-        const remainingSeconds = Math.max(0, totalSeconds - elapsed);
-
-        if (remainingSeconds <= 0) {
-          // Timer expired - trigger sleep action
-          setTimeout(() => actions.triggerSleep(), 0);
-          return prev;
-        }
-
-        return {
-          ...prev,
-          sleepTimer: {
-            ...prev.sleepTimer,
-            remainingSeconds,
-          },
-        };
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [state.sleepTimer.isActive, state.sleepTimer.startTime]);
+  useUrlSync({
+    playlistId: state.playlistId,
+    currentVideoId: state.currentVideoId,
+    playlistTitle: state.snippet?.title,
+  });
 
   // Persist playlist state to localStorage whenever it changes
   useEffect(() => {
