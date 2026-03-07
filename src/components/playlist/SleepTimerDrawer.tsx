@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerFooter,
@@ -22,6 +21,7 @@ type SleepTimerDrawerProps = {
 
 export function SleepTimerDrawer({ children }: SleepTimerDrawerProps) {
   const playlist = usePlaylist();
+  const [open, setOpen] = useState(false);
   const [tempMinutes, setTempMinutes] = useState(playlist.sleepTimer.durationMinutes);
 
   const handleAdjust = useCallback((adjustment: number) => {
@@ -30,21 +30,23 @@ export function SleepTimerDrawer({ children }: SleepTimerDrawerProps) {
 
   const handleConfirm = useCallback(() => {
     playlist.setSleepTimer(tempMinutes);
+    setOpen(false);
   }, [playlist, tempMinutes]);
 
   const handleDeactivate = useCallback(() => {
     playlist.deactivateSleepTimer();
+    setOpen(false);
   }, [playlist]);
 
-  // Reset temp value when drawer opens
-  const handleOpenChange = useCallback((open: boolean) => {
-    if (open) {
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (nextOpen) {
       setTempMinutes(playlist.sleepTimer.durationMinutes);
     }
   }, [playlist.sleepTimer.durationMinutes]);
 
   return (
-    <Drawer onOpenChange={handleOpenChange}>
+    <Drawer open={open} onOpenChange={handleOpenChange}>
       <DrawerTrigger asChild>
         {children}
       </DrawerTrigger>
@@ -102,18 +104,11 @@ export function SleepTimerDrawer({ children }: SleepTimerDrawerProps) {
             <Button onClick={handleConfirm}>
               {playlist.sleepTimer.isActive ? 'Update Timer' : 'Start Timer'}
             </Button>
-            <div className="flex gap-2">
-              {playlist.sleepTimer.isActive && (
-                <Button variant="outline" onClick={handleDeactivate} className="flex-1">
-                  Stop Timer
-                </Button>
-              )}
-              <DrawerClose asChild>
-                <Button variant="outline" className="flex-1">
-                  Close
-                </Button>
-              </DrawerClose>
-            </div>
+            {playlist.sleepTimer.isActive && (
+              <Button variant="outline" onClick={handleDeactivate}>
+                Stop Timer
+              </Button>
+            )}
           </DrawerFooter>
         </div>
       </DrawerContent>

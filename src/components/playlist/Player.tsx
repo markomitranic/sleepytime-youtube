@@ -347,8 +347,46 @@ export function Player() {
     [playlist.items],
   );
 
+  // Advance to next video (used by sleep mode auto-advance and "Play Next" in dialog)
+  const advanceToNext = useCallback((fromVideoId: string | undefined) => {
+    const nextId = getNextVideoId(fromVideoId);
+    if (nextId) {
+      playlist.setCurrentVideoId(nextId);
+    }
+  }, [getNextVideoId, playlist]);
+
+  // Auto-advance: remove current video + play next (for sleep mode or dialog action)
+  const autoRemoveAndAdvance = useCallback((videoId: string | undefined) => {
+    if (!videoId || !playlist.playlistId) return;
+
+    const nextVideoId = getNextVideoId(videoId);
+
+    if (auth.isAuthenticated && auth.accessToken) {
+      const currentItem = playlist.items.find((i) => i.videoId === videoId);
+      if (currentItem) {
+        playlist.removeItem(videoId);
+        setIsReordering(true);
+
+        deletePlaylistItem({
+          accessToken: auth.accessToken,
+          playlistItemId: currentItem.id,
+        })
+          .then(() => playlist.refreshItemsOnce({ delayMs: 900 }))
+          .catch(async () => {
+            await playlist.refreshItemsOnce({ delayMs: 900 });
+          })
+          .finally(() => {
+            setIsReordering(false);
+          });
+      }
+    }
+
+    if (nextVideoId) {
+      playlist.setCurrentVideoId(nextVideoId);
+    }
+  }, [auth.isAuthenticated, auth.accessToken, playlist, getNextVideoId]);
+
   const handleNext = useCallback((videoId: string | undefined) => {
-    // Open dialog before switching, just like when video ends
     endedVideoIdRef.current = videoId;
     setEndedOpen(true);
   }, []);
@@ -365,67 +403,17 @@ export function Player() {
     }
   }, [isPlaying]);
 
-  const handlePlayNextFromDialog = useCallback(() => {
-    const vid = endedVideoIdRef.current ?? currentVideoId;
-    handleNext(vid);
-    setEndedOpen(false);
-  }, [currentVideoId, handleNext]);
-
-  const handleRemoveAndPlayNext = useCallback(async () => {
+  const handleRemoveAndPlayNext = useCallback(() => {
     const videoId = endedVideoIdRef.current ?? currentVideoId;
-    if (!videoId) return;
-    if (!playlist.playlistId) return;
+    autoRemoveAndAdvance(videoId);
+    setEndedOpen(false);
+  }, [currentVideoId, autoRemoveAndAdvance]);
 
-    // Pre-compute next video before deletion (respect shuffle toggle)
-    const nextVideoId = getNextVideoId(videoId);
-
-    try {
-      if (!auth.isAuthenticated || !auth.accessToken) {
-        toast.error("You must be signed in to remove from playlist.");
-        return;
-      }
-      const currentItem = playlist.items.find((i) => i.videoId === videoId);
-      if (!currentItem) {
-        toast.error("Couldn't find this video in the playlist.");
-        return;
-      }
-      // Optimistic UI removal
-      playlist.removeItem(videoId);
-      setIsReordering(true);
-
-      // Trigger background removal on YouTube and then background refresh
-      deletePlaylistItem({
-        accessToken: auth.accessToken,
-        playlistItemId: currentItem.id,
-      })
-        .then(() => playlist.refreshItemsOnce({ delayMs: 900 }))
-        .catch(async () => {
-          // Soft reconcile by refreshing once even on failure
-          await playlist.refreshItemsOnce({ delayMs: 900 });
-        })
-        .finally(() => {
-          setIsReordering(false);
-        });
-
-      if (nextVideoId) {
-        playlist.setCurrentVideoId(nextVideoId);
-      }
-    } catch (e) {
-      toast.error((e as Error)?.message ?? "Failed to remove video.");
-      setIsReordering(false);
-    } finally {
-      setEndedOpen(false);
-    }
-  }, [
-    auth.isAuthenticated,
-    auth.accessToken,
-    currentVideoId,
-    playlist.items,
-    playlist.playlistId,
-    playlist.refreshItemsOnce,
-    playlist.setCurrentVideoId,
-    getNextVideoId,
-  ]);
+  const handlePlayNext = useCallback(() => {
+    const videoId = endedVideoIdRef.current ?? currentVideoId;
+    advanceToNext(videoId);
+    setEndedOpen(false);
+  }, [currentVideoId, advanceToNext]);
 
   const handleDeleteItem = useCallback(
     async (itemId: string) => {
@@ -682,10 +670,14 @@ export function Player() {
             onStateChange: (event: any) => {
               try {
                 if (event?.data === window?.YT?.PlayerState?.ENDED) {
-                  // Clear saved progress when video ends
                   player.clearSavedProgress(currentVideoId);
-                  endedVideoIdRef.current = currentVideoId;
-                  setEndedOpen(true);
+                  // Sleep mode: auto-remove and advance without interruption
+                  if (playlist.sleepTimer.isActive) {
+                    autoRemoveAndAdvance(currentVideoId);
+                  } else {
+                    endedVideoIdRef.current = currentVideoId;
+                    setEndedOpen(true);
+                  }
                 } else if (event?.data === window?.YT?.PlayerState?.PLAYING) {
                   setIsPlaying(true);
                   player.setIsPlaying(true);
@@ -782,8 +774,9 @@ export function Player() {
         const currentTime = playerInstanceRef.current.getCurrentTime();
         const duration = playerInstanceRef.current.getDuration();
 
-        // Show dialog if we're within 20 seconds of the end and haven't shown it yet for this video
-        if (duration > 0 && currentTime > 0) {
+        // Show dialog if we're within 20 seconds of the end and haven't shown it yet
+        // Skip when sleep timer is active (auto-advance handles it)
+        if (duration > 0 && currentTime > 0 && !playlist.sleepTimer.isActive) {
           const timeRemaining = duration - currentTime;
           if (
             timeRemaining <= 20 &&
@@ -995,12 +988,13 @@ export function Player() {
             </DialogHeader>
           </div>
           <DialogFooter className="gap-2 p-4">
-            <Button variant="outline" onClick={handlePlayNextFromDialog}>
-              Play Next
-            </Button>
-            {auth.isAuthenticated && (
-              <Button variant="destructive" onClick={handleRemoveAndPlayNext}>
+            {auth.isAuthenticated ? (
+              <Button onClick={handleRemoveAndPlayNext}>
                 Remove &amp; Play Next
+              </Button>
+            ) : (
+              <Button onClick={handlePlayNext}>
+                Play Next
               </Button>
             )}
             <Button variant="ghost" onClick={() => setEndedOpen(false)}>
