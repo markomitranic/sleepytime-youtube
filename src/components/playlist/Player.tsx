@@ -295,7 +295,7 @@ export function Player() {
   const [endedOpen, setEndedOpen] = useState<boolean>(false);
   const endedVideoIdRef = useRef<string | undefined>(undefined);
   const [isReordering, setIsReordering] = useState<boolean>(false);
-  const [isPlaying, setIsPlaying] = useState<boolean>(true);
+  // isPlaying state lives in PlayerContext (player.isPlaying)
   const dialogShownForVideoRef = useRef<string | undefined>(undefined);
   const timeCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -394,14 +394,14 @@ export function Player() {
   const handlePlayPause = useCallback(() => {
     if (!playerInstanceRef.current) return;
 
-    if (isPlaying) {
+    if (player.isPlaying) {
       playerInstanceRef.current.pauseVideo();
-      setIsPlaying(false);
+      player.setIsPlaying(false);
     } else {
       playerInstanceRef.current.playVideo();
-      setIsPlaying(true);
+      player.setIsPlaying(true);
     }
-  }, [isPlaying]);
+  }, [player]);
 
   const handleRemoveAndPlayNext = useCallback(() => {
     const videoId = endedVideoIdRef.current ?? currentVideoId;
@@ -633,7 +633,6 @@ export function Player() {
               const playVideo = () => {
                 try {
                   event.target.playVideo();
-                  setIsPlaying(true);
                   player.setIsPlaying(true);
                 } catch {
                   // Autoplay prevented — user interaction required
@@ -679,10 +678,8 @@ export function Player() {
                     setEndedOpen(true);
                   }
                 } else if (event?.data === window?.YT?.PlayerState?.PLAYING) {
-                  setIsPlaying(true);
                   player.setIsPlaying(true);
                 } else if (event?.data === window?.YT?.PlayerState?.PAUSED) {
-                  setIsPlaying(false);
                   player.setIsPlaying(false);
                 }
               } catch {}
@@ -1067,9 +1064,9 @@ export function Player() {
                 type="button"
                 onClick={handlePlayPause}
                 className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-white text-black glow-button focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                aria-label={isPlaying ? "Pause" : "Play"}
+                aria-label={player.isPlaying ? "Pause" : "Play"}
               >
-                {isPlaying ? (
+                {player.isPlaying ? (
                   <Pause className="h-6 w-6" />
                 ) : (
                   <Play className="h-6 w-6" />

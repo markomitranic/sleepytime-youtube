@@ -13,7 +13,6 @@ type PlayerState = {
 
 type PlayerActions = {
   resetInactivity: () => void;
-  togglePlayPause: () => void;
   updateProgress: (time: number, duration: number, videoId?: string) => void;
   setPlayerInstance: (instance: any) => void;
   setIsPlaying: (playing: boolean) => void;
@@ -36,140 +35,86 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const isPlayerPage = pathname === "/player";
 
   const resetInactivity = useCallback(() => {
-    if (!isPlayerPage) return; // Only reset if on player page
+    if (!isPlayerPage) return;
     setIsInactive(false);
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
     inactivityTimerRef.current = setTimeout(() => {
       setIsInactive(true);
-    }, 10000); // 10 seconds
+    }, 10000);
   }, [isPlayerPage]);
 
-  const togglePlayPause = useCallback(() => {
-    if (!playerInstance) return;
-    
-    try {
-      if (isPlaying) {
-        playerInstance.pauseVideo();
-        setIsPlaying(false);
-      } else {
-        playerInstance.playVideo();
-        setIsPlaying(true);
-      }
-    } catch (error) {
-      console.error('Error toggling play/pause:', error);
-    }
-  }, [playerInstance, isPlaying]);
-
-  const updateProgress = useCallback((time: number, duration: number, videoId?: string) => {
+  const updateProgress = useCallback((time: number, dur: number, videoId?: string) => {
     setCurrentTime(time);
-    setDuration(duration);
-    
-    // Persist progress to localStorage if we have a videoId
-    if (videoId && typeof window !== 'undefined' && duration > 0) {
+    setDuration(dur);
+
+    if (videoId && dur > 0) {
       try {
         const progress = JSON.parse(localStorage.getItem(PROGRESS_STORAGE_KEY) || '{}');
-        progress[videoId] = {
-          currentTime: time,
-          duration,
-          timestamp: Date.now(),
-        };
+        progress[videoId] = { currentTime: time, duration: dur, timestamp: Date.now() };
         localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
-      } catch (error) {
-        console.warn('Failed to save video progress:', error);
-      }
+      } catch {}
     }
   }, []);
 
   const getSavedProgress = useCallback((videoId: string): number | null => {
-    if (typeof window === 'undefined') return null;
-    
     try {
       const progress = JSON.parse(localStorage.getItem(PROGRESS_STORAGE_KEY) || '{}');
       const saved = progress[videoId];
-      
-      if (!saved || !saved.currentTime || !saved.duration) return null;
-      
-      // Don't restore if the saved position is within the last 10 seconds (likely finished)
+      if (!saved?.currentTime || !saved?.duration) return null;
       if (saved.duration - saved.currentTime < 10) return null;
-      
-      // Don't restore if saved more than 7 days ago
-      const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
       if (saved.timestamp && saved.timestamp < sevenDaysAgo) return null;
-      
       return saved.currentTime;
-    } catch (error) {
-      console.warn('Failed to retrieve saved progress:', error);
+    } catch {
       return null;
     }
   }, []);
 
   const clearSavedProgress = useCallback((videoId: string) => {
-    if (typeof window === 'undefined') return;
-    
     try {
       const progress = JSON.parse(localStorage.getItem(PROGRESS_STORAGE_KEY) || '{}');
       delete progress[videoId];
       localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
-    } catch (error) {
-      console.warn('Failed to clear saved progress:', error);
-    }
-  }, []);
-
-  const setPlayerInstanceCallback = useCallback((instance: any) => {
-    setPlayerInstance(instance);
-  }, []);
-
-  const setIsPlayingCallback = useCallback((playing: boolean) => {
-    setIsPlaying(playing);
+    } catch {}
   }, []);
 
   // Inactivity timer - only active on player page
   useEffect(() => {
-    if (typeof window === 'undefined') return;
     if (!isPlayerPage) {
-      // Reset inactive state when not on player page
       setIsInactive(false);
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-      }
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
       return;
     }
 
-    // Reset timer on any user interaction
-    const events = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll'];
-    events.forEach(event => {
+    const events = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll'] as const;
+    for (const event of events) {
       window.addEventListener(event, resetInactivity);
-    });
-
-    // Start the timer initially
+    }
     resetInactivity();
 
     return () => {
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-      }
-      events.forEach(event => {
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      for (const event of events) {
         window.removeEventListener(event, resetInactivity);
-      });
+      }
     };
-  }, [isPlayerPage]);
+  }, [isPlayerPage, resetInactivity]);
 
   return (
-    <PlayerContext.Provider value={{ 
-      isInactive, 
-      resetInactivity, 
-      isPlaying, 
-      currentTime, 
-      duration, 
-      playerInstance, 
-      togglePlayPause, 
-      updateProgress, 
-      setPlayerInstance: setPlayerInstanceCallback, 
-      setIsPlaying: setIsPlayingCallback,
+    <PlayerContext.Provider value={{
+      isInactive,
+      resetInactivity,
+      isPlaying,
+      currentTime,
+      duration,
+      playerInstance,
+      updateProgress,
+      setPlayerInstance,
+      setIsPlaying,
       getSavedProgress,
-      clearSavedProgress
+      clearSavedProgress,
     }}>
       {children}
     </PlayerContext.Provider>
