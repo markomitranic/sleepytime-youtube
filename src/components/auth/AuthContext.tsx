@@ -1,8 +1,7 @@
 "use client";
 
-import { createContext, useContext, useMemo } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
 type AuthState = {
   isReady: boolean;
@@ -22,17 +21,17 @@ type AuthActions = {
   getTokenSilently: () => Promise<string | null>;
 };
 
-type AuthContextType = AuthState & AuthActions;
+export type AuthContextType = AuthState & AuthActions;
 
-const AuthContext = createContext<AuthContextType | null>(null);
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function useAuth(): AuthContextType {
   const { data: session, status } = useSession();
 
   const isReady = status !== "loading";
-  const isAuthenticated = status === "authenticated" && Boolean(session?.accessToken);
+  const isAuthenticated =
+    status === "authenticated" && Boolean(session?.accessToken);
   const accessToken = session?.accessToken;
-  const error = session?.error === "RefreshTokenError" ? "Authentication expired" : null;
+  const error =
+    session?.error === "RefreshTokenError" ? "Authentication expired" : null;
   const user = session?.user;
 
   const handleSignIn = useCallback(async () => {
@@ -44,20 +43,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const getTokenSilently = useCallback(async (): Promise<string | null> => {
-    if (!session?.accessToken) {
-      console.log("[Auth] No access token available");
-      return null;
-    }
-
-    if (session.error === "RefreshTokenError") {
-      console.log("[Auth] Token refresh error detected");
-      return null;
-    }
-
+    if (!session?.accessToken) return null;
+    if (session.error === "RefreshTokenError") return null;
     return session.accessToken;
   }, [session]);
 
-  const value = useMemo(
+  return useMemo(
     () => ({
       isReady,
       isAuthenticated,
@@ -68,16 +59,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut: handleSignOut,
       getTokenSilently,
     }),
-    [isReady, isAuthenticated, accessToken, error, user, handleSignIn, handleSignOut, getTokenSilently]
+    [
+      isReady,
+      isAuthenticated,
+      accessToken,
+      error,
+      user,
+      handleSignIn,
+      handleSignOut,
+      getTokenSilently,
+    ],
   );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth(): AuthContextType {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
-  }
-  return context;
 }

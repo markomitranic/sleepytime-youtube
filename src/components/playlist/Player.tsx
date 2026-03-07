@@ -22,6 +22,7 @@ import {
   deletePlaylistItem,
   updatePlaylistItemPosition,
   fetchUserPlaylists,
+  type YouTubePlaylistItem,
 } from "~/lib/youtube";
 import { toast } from "sonner";
 import {
@@ -60,16 +61,6 @@ declare global {
   }
 }
 
-type PlaylistItem = {
-  id: string;
-  videoId?: string;
-  title: string;
-  thumbnailUrl?: string;
-  channelTitle?: string;
-  channelId?: string;
-  durationSeconds?: number;
-};
-
 // Helper function to format duration (video timestamp)
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
@@ -94,7 +85,7 @@ function formatTotalDuration(totalSeconds: number): string {
 }
 
 type SortableItemProps = {
-  item: PlaylistItem;
+  item: YouTubePlaylistItem;
   isCurrent: boolean;
   canEdit: boolean;
   onSelect: (videoId?: string) => void;
@@ -656,9 +647,8 @@ export function Player() {
                   event.target.playVideo();
                   setIsPlaying(true);
                   player.setIsPlaying(true);
-                } catch (error) {
-                  console.log("Autoplay prevented, user interaction required");
-                  // If autoplay fails, we'll rely on user clicking play
+                } catch {
+                  // Autoplay prevented — user interaction required
                 }
               };
 

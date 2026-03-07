@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { fetchPlaylistsByIds } from '~/lib/youtube';
 import { BUILTIN_PLAYLIST_IDS, BUILTIN_PLAYLISTS } from '~/lib/builtinPlaylists';
-import { env } from '~/env';
-
 // Cache for 7 days (604800 seconds) - builtin playlists rarely change
 export const revalidate = 604800;
 
@@ -31,7 +29,7 @@ export async function GET() {
         // In the background, try to fetch fresh data from YouTube API
         // This will update the cache for future requests
         fetchPlaylistsByIds({
-            apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY,
+            apiKey: process.env.NEXT_PUBLIC_YOUTUBE_API_KEY,
             playlistIds: Array.from(BUILTIN_PLAYLIST_IDS),
         })
             .then((apiResults) => {
@@ -47,7 +45,7 @@ export async function GET() {
                     };
                 });
                 // Note: This won't update the current response, but will update the cache
-                console.log('Background refresh of builtin playlists completed');
+                // Background refresh completed
             })
             .catch((error) => {
                 console.warn('Background refresh of builtin playlists failed:', error);

@@ -9,12 +9,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { useLocalStorage } from "usehooks-ts";
 import type {
   YouTubePlaylistItem,
   YouTubePlaylistSnippet,
 } from "~/lib/youtube";
-import { env } from "~/env";
 import { useAuth } from "~/components/auth/AuthContext";
 import {
   fetchPlaylistItems,
@@ -74,11 +72,37 @@ export type PlaylistActions = {
   prolongSleepTimer: (additionalMinutes: number) => void;
   triggerSleep: () => void;
   toggleDarker: () => void;
-  reloadPlaylist: () => Promise<void>;
   reorderItem: (videoId: string, direction: "up" | "down") => void;
   removeItem: (videoId: string) => void;
   refreshItemsOnce: (opts?: { delayMs?: number }) => Promise<void>;
 };
+
+function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T) => void] {
+  const [stored, setStored] = useState<T>(() => {
+    try {
+      const item = localStorage.getItem(key);
+      return item ? (JSON.parse(item) as T) : initialValue;
+    } catch {
+      return initialValue;
+    }
+  });
+
+  const setValue = useCallback(
+    (value: T) => {
+      setStored(value);
+      try {
+        if (value === null || value === undefined) {
+          localStorage.removeItem(key);
+        } else {
+          localStorage.setItem(key, JSON.stringify(value));
+        }
+      } catch {}
+    },
+    [key],
+  );
+
+  return [stored, setValue];
+}
 
 const PlaylistContext = createContext<(PlaylistState & PlaylistActions) | null>(
   null,
@@ -175,7 +199,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           }
           // Fetch snippet early for title and total count
           const snippet = await fetchPlaylistSnippet({
-            apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY,
+            apiKey: process.env.NEXT_PUBLIC_YOUTUBE_API_KEY,
             accessToken: auth.accessToken,
             playlistId,
             signal: loadAbortRef.current?.signal,
@@ -201,7 +225,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           const aggregated: YouTubePlaylistItem[] = [];
           do {
             const res = await fetchPlaylistItems({
-              apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY,
+              apiKey: process.env.NEXT_PUBLIC_YOUTUBE_API_KEY,
               accessToken: auth.accessToken,
               playlistId,
               pageToken: nextPageToken,
@@ -229,7 +253,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           if (videoIds.length > 0) {
             try {
               const durations = await fetchVideoDurations({
-                apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY,
+                apiKey: process.env.NEXT_PUBLIC_YOUTUBE_API_KEY,
                 accessToken: auth.accessToken,
                 videoIds,
                 refreshToken: getTokenSilentlyRef.current,
@@ -393,11 +417,6 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
       toggleDarker: () => {
         setState((s) => ({ ...s, darker: !s.darker }));
       },
-      reloadPlaylist: async () => {
-        if (typeof window !== "undefined") {
-          window.location.reload();
-        }
-      },
       reorderItem: (videoId, direction) => {
         setState((prev) => {
           const items = prev.items.slice();
@@ -451,7 +470,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
           let nextPageToken: string | undefined = undefined;
           do {
             const res = await fetchPlaylistItems({
-              apiKey: env.NEXT_PUBLIC_YOUTUBE_API_KEY,
+              apiKey: process.env.NEXT_PUBLIC_YOUTUBE_API_KEY,
               accessToken: auth.accessToken,
               playlistId,
               pageToken: nextPageToken,
