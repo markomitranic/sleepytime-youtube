@@ -2,46 +2,35 @@
 
 import { Pause, Play } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { usePlayer } from "~/components/playlist/PlayerContext";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 
-type StickyPlayerBarProps = {
-	playerContainerRef: React.RefObject<HTMLDivElement | null>;
-};
-
-export function StickyPlayerBar({ playerContainerRef }: StickyPlayerBarProps) {
+export function StickyPlayerBar() {
 	const playlist = usePlaylist();
 	const player = usePlayer();
-	const [isVideoHidden, setIsVideoHidden] = useState(false);
+	const pathname = usePathname();
+	const router = useRouter();
 
 	const currentVideo = playlist.items.find(
 		(item) => item.videoId === playlist.currentVideoId,
 	);
 
-	// Track video player visibility using Intersection Observer
-	useEffect(() => {
-		if (!playerContainerRef.current) return;
+	if (!currentVideo || !currentVideo.videoId) return null;
 
-		const observer = new IntersectionObserver(
-			(entries) => {
-				const entry = entries[0];
-				if (entry) {
-					// Show sticky bar when video is NOT visible (isIntersecting = false)
-					setIsVideoHidden(!entry.isIntersecting);
-				}
-			},
-			{ threshold: 0.1 },
-		);
+	const progress =
+		player.duration > 0 ? (player.currentTime / player.duration) * 100 : 0;
 
-		observer.observe(playerContainerRef.current);
-
-		return () => observer.disconnect();
-	}, [playerContainerRef]);
+	const handleNavigate = () => {
+		if (pathname === "/player") {
+			window.scrollTo({ top: 0, behavior: "smooth" });
+		} else {
+			router.push("/player");
+		}
+	};
 
 	const handlePlayPause = () => {
 		if (!player.playerInstance) return;
-
 		if (player.isPlaying) {
 			player.playerInstance.pauseVideo();
 		} else {
@@ -49,56 +38,34 @@ export function StickyPlayerBar({ playerContainerRef }: StickyPlayerBarProps) {
 		}
 	};
 
-	const handleScrollToTop = () => {
-		window.scrollTo({ top: 0, behavior: "smooth" });
-	};
-
-	// Don't show if no video is playing
-	if (!currentVideo || !currentVideo.videoId || !isVideoHidden) {
-		return null;
-	}
-
-	const progress =
-		player.duration > 0 ? (player.currentTime / player.duration) * 100 : 0;
-
 	return (
-		<div
-			className={`fixed bottom-[4.5rem] left-1 right-1 lg:hidden z-50 glass-panel-elevated rounded-2xl transition-opacity duration-500 ${
-				player.isInactive ? "opacity-30" : ""
-			}`}
-		>
-			<div className="flex items-center gap-3 h-16 px-2">
-				{/* Thumbnail */}
+		<div className="fixed bottom-16 left-0 right-0 z-50 bg-gradient-to-b from-background/70 to-background/90">
+			<div className="flex items-center gap-3 h-14 px-3 max-w-screen-md mx-auto">
 				<button
 					type="button"
-					onClick={handleScrollToTop}
+					onClick={handleNavigate}
 					className="shrink-0 hover:opacity-80 transition-opacity"
-					aria-label="Scroll to top"
 				>
 					{currentVideo.thumbnailUrl ? (
-						// eslint-disable-next-line @next/next/no-img-element
 						<Image
 							src={currentVideo.thumbnailUrl}
 							alt={currentVideo.title}
-							className="h-14 w-24 rounded object-cover"
-							width={128}
-							height={72}
+							className="h-10 w-18 rounded object-cover"
+							width={72}
+							height={40}
 						/>
 					) : (
-						<div className="h-14 w-24 rounded bg-muted" />
+						<div className="h-10 w-18 rounded bg-muted" />
 					)}
 				</button>
 
-				{/* Title and Progress */}
 				<button
 					type="button"
-					onClick={handleScrollToTop}
+					onClick={handleNavigate}
 					className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
-					aria-label="Scroll to top"
 				>
 					<p className="text-sm font-medium truncate">{currentVideo.title}</p>
-					{/* Progress bar */}
-					<div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
+					<div className="mt-1 h-1 bg-muted rounded-full overflow-hidden">
 						<div
 							className="h-full bg-white transition-all duration-100"
 							style={{ width: `${progress}%` }}
@@ -106,17 +73,16 @@ export function StickyPlayerBar({ playerContainerRef }: StickyPlayerBarProps) {
 					</div>
 				</button>
 
-				{/* Play/Pause Button */}
 				<button
 					type="button"
 					onClick={handlePlayPause}
-					className="h-10 w-10 rounded-full bg-white text-black flex items-center justify-center shrink-0 hover:bg-white/90 transition-colors"
+					className="h-9 w-9 rounded-full bg-white text-black flex items-center justify-center shrink-0 hover:bg-white/90 transition-colors"
 					aria-label={player.isPlaying ? "Pause" : "Play"}
 				>
 					{player.isPlaying ? (
-						<Pause className="h-5 w-5" />
+						<Pause className="h-4 w-4" />
 					) : (
-						<Play className="h-5 w-5 ml-0.5" />
+						<Play className="h-4 w-4 ml-0.5" />
 					)}
 				</button>
 			</div>

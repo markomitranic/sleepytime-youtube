@@ -1,6 +1,6 @@
 "use client";
 
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useCallback, useMemo } from "react";
 
 type AuthState = {
@@ -16,7 +16,6 @@ type AuthState = {
 };
 
 type AuthActions = {
-	signIn: () => Promise<void>;
 	signOut: () => void;
 	getTokenSilently: () => Promise<string | null>;
 };
@@ -33,10 +32,6 @@ export function useAuth(): AuthContextType {
 	const error =
 		session?.error === "RefreshTokenError" ? "Authentication expired" : null;
 	const user = session?.user;
-
-	const handleSignIn = useCallback(async () => {
-		await signIn("google");
-	}, []);
 
 	const handleSignOut = useCallback(() => {
 		signOut();
@@ -55,7 +50,6 @@ export function useAuth(): AuthContextType {
 			accessToken,
 			error,
 			user,
-			signIn: handleSignIn,
 			signOut: handleSignOut,
 			getTokenSilently,
 		}),
@@ -65,7 +59,6 @@ export function useAuth(): AuthContextType {
 			accessToken,
 			error,
 			user,
-			handleSignIn,
 			handleSignOut,
 			getTokenSilently,
 		],

@@ -1,14 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import {
-	createContext,
-	useCallback,
-	useContext,
-	useEffect,
-	useRef,
-	useState,
-} from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 
 export type YTPlayer = {
 	destroy: () => void;
@@ -21,7 +13,6 @@ export type YTPlayer = {
 };
 
 type PlayerState = {
-	isInactive: boolean;
 	isPlaying: boolean;
 	currentTime: number;
 	duration: number;
@@ -29,7 +20,6 @@ type PlayerState = {
 };
 
 type PlayerActions = {
-	resetInactivity: () => void;
 	updateProgress: (time: number, duration: number, videoId?: string) => void;
 	setPlayerInstance: (instance: YTPlayer | null) => void;
 	setIsPlaying: (playing: boolean) => void;
@@ -42,25 +32,10 @@ const PROGRESS_STORAGE_KEY = "sleepytime-video-progress";
 const PlayerContext = createContext<(PlayerState & PlayerActions) | null>(null);
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
-	const [isInactive, setIsInactive] = useState(false);
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [duration, setDuration] = useState(0);
 	const [playerInstance, setPlayerInstance] = useState<YTPlayer | null>(null);
-	const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
-	const pathname = usePathname();
-	const isPlayerPage = pathname === "/player";
-
-	const resetInactivity = useCallback(() => {
-		if (!isPlayerPage) return;
-		setIsInactive(false);
-		if (inactivityTimerRef.current) {
-			clearTimeout(inactivityTimerRef.current);
-		}
-		inactivityTimerRef.current = setTimeout(() => {
-			setIsInactive(true);
-		}, 10000);
-	}, [isPlayerPage]);
 
 	const updateProgress = useCallback(
 		(time: number, dur: number, videoId?: string) => {
@@ -110,39 +85,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 		} catch {}
 	}, []);
 
-	// Inactivity timer - only active on player page
-	useEffect(() => {
-		if (!isPlayerPage) {
-			setIsInactive(false);
-			if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-			return;
-		}
-
-		const events = [
-			"mousedown",
-			"mousemove",
-			"keydown",
-			"touchstart",
-			"scroll",
-		] as const;
-		for (const event of events) {
-			window.addEventListener(event, resetInactivity);
-		}
-		resetInactivity();
-
-		return () => {
-			if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-			for (const event of events) {
-				window.removeEventListener(event, resetInactivity);
-			}
-		};
-	}, [isPlayerPage, resetInactivity]);
-
 	return (
 		<PlayerContext.Provider
 			value={{
-				isInactive,
-				resetInactivity,
 				isPlaying,
 				currentTime,
 				duration,

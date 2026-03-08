@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { BottomNav } from "~/components/BottomNav";
 import { CookieBanner } from "~/components/CookieBanner";
 import { PlayerProvider } from "~/components/playlist/PlayerContext";
+import { StickyPlayerBar } from "~/components/playlist/StickyPlayerBar";
 import { AuroraBackground } from "./AuroraBackground";
 import { AppProviders } from "./providers";
 
@@ -68,6 +69,7 @@ export default function RootLayout({
 					<PlayerProvider>
 						<AuroraBackground />
 						{children}
+						<StickyPlayerBar />
 						<BottomNav />
 						<Toaster richColors position="bottom-center" closeButton />
 						<CookieBanner />

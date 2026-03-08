@@ -3,6 +3,7 @@
 import { ExternalLink, Github, Linkedin } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "~/components/auth/AuthContext";
@@ -198,7 +199,7 @@ export default function HomePage() {
 								</div>
 
 								<Button
-									onClick={() => auth.signIn()}
+									onClick={() => signIn("google")}
 									size="lg"
 									className="px-8 py-3 text-base font-medium"
 								>

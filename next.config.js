@@ -8,6 +8,10 @@ const config = {
 				protocol: "https",
 				hostname: "i.ytimg.com",
 			},
+			{
+				protocol: "https",
+				hostname: "*.googleusercontent.com",
+			},
 		],
 	},
 };

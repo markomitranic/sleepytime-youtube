@@ -35,7 +35,6 @@ import { PlaylistSwitcherDrawer } from "~/components/playlist/PlaylistSwitcherDr
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { SleepTimerExpiryOverlay } from "~/components/playlist/SleepTimerExpiryOverlay";
 import { SortablePlaylistItem } from "~/components/playlist/SortablePlaylistItem";
-import { StickyPlayerBar } from "~/components/playlist/StickyPlayerBar";
 import { Button } from "~/components/ui/button";
 import {
 	Dialog,
@@ -100,7 +99,6 @@ export function Player() {
 	);
 	const currentVideoId = playlist.currentVideoId;
 	const playerRef = useRef<HTMLDivElement>(null);
-	const playerContainerRef = useRef<HTMLDivElement>(null);
 	const playerInstanceRef = useRef<YTPlayer | null>(null);
 	const [endedOpen, setEndedOpen] = useState(false);
 	const endedVideoIdRef = useRef<string | undefined>(undefined);
@@ -516,7 +514,6 @@ export function Player() {
 
 	return (
 		<>
-			<StickyPlayerBar playerContainerRef={playerContainerRef} />
 			<SleepTimerExpiryOverlay currentVideoId={currentVideoId} />
 
 			{/* Video ended / sleepy dialog */}
@@ -556,7 +553,7 @@ export function Player() {
 					<PlaylistSwitcherDrawer>
 						<button
 							type="button"
-							className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-secondary/50 hover:bg-secondary text-sm transition-all duration-500 ${player.isInactive ? "opacity-30" : ""}`}
+							className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-secondary/50 hover:bg-secondary text-sm transition-all duration-500"
 						>
 							{playlist.items[0]?.thumbnailUrl ? (
 								// biome-ignore lint/performance/noImgElement: external YouTube thumbnail URL
@@ -591,10 +588,7 @@ export function Player() {
 						</button>
 					</PlaylistSwitcherDrawer>
 
-					<div
-						ref={playerContainerRef}
-						className="aspect-video w-full overflow-hidden rounded-xl glass-panel bg-black flex-shrink-0"
-					>
+					<div className="aspect-video w-full overflow-hidden rounded-xl glass-panel bg-black flex-shrink-0">
 						<div
 							ref={playerRef}
 							id={`youtube-player-${currentVideoId}`}
@@ -605,9 +599,7 @@ export function Player() {
 						/>
 					</div>
 
-					<div
-						className={`flex-1 flex flex-col gap-4 transition-opacity duration-500 ${player.isInactive ? "opacity-30" : ""}`}
-					>
+					<div className="flex-1 flex flex-col gap-4">
 						<div>
 							<h2 className="text-xl font-semibold">{current?.title ?? ""}</h2>
 							{current?.channelTitle && (
@@ -663,9 +655,7 @@ export function Player() {
 				</div>
 
 				{/* Right: Playlist sidebar */}
-				<div
-					className={`lg:w-1/3 flex flex-col lg:glass-panel lg:rounded-xl lg:pl-2 lg:pb-4 transition-opacity duration-500 ${player.isInactive ? "opacity-30" : ""}`}
-				>
+				<div className="lg:w-1/3 flex flex-col lg:glass-panel lg:rounded-xl lg:pl-2 lg:pb-4">
 					{isReordering && (
 						<div className="flex items-center gap-2 text-muted-foreground pb-2">
 							<Loader2 className="h-5 w-5 animate-spin" />
