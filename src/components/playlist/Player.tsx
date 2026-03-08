@@ -1,75 +1,30 @@
 "use client";
 
 import type { DragEndEvent } from "@dnd-kit/core";
-import {
-	closestCenter,
-	DndContext,
-	KeyboardSensor,
-	PointerSensor,
-	TouchSensor,
-	useSensor,
-	useSensors,
-} from "@dnd-kit/core";
-import {
-	SortableContext,
-	sortableKeyboardCoordinates,
-	verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
 import { useQuery } from "@tanstack/react-query";
-import { Library, Loader2, Moon, Pause, Play, SkipForward } from "lucide-react";
+import { Library } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "~/components/auth/AuthContext";
-import type { YTPlayer } from "~/components/playlist/PlayerContext";
 import { usePlayer } from "~/components/playlist/PlayerContext";
+import { PlayerControls } from "~/components/playlist/PlayerControls";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
-import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
+import { PlaylistSidebar } from "~/components/playlist/PlaylistSidebar";
 import { SleepTimerExpiryOverlay } from "~/components/playlist/SleepTimerExpiryOverlay";
-import { SortablePlaylistItem } from "~/components/playlist/SortablePlaylistItem";
-import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
+import { useYouTubePlayer } from "~/components/playlist/useYouTubePlayer";
+import { VideoEndedDialog } from "~/components/playlist/VideoEndedDialog";
 import { Button } from "~/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "~/components/ui/dialog";
-import { cn } from "~/lib/utils";
 import {
 	deletePlaylistItem,
 	fetchUserPlaylists,
 	updatePlaylistItemPosition,
 } from "~/lib/youtube";
 
-type YTPlayerEvent = {
-	target: YTPlayer;
-	data?: number;
-};
-
-type YTAPI = {
-	Player: new (element: HTMLElement, config: object) => YTPlayer;
-	PlayerState: {
-		ENDED: number;
-		PLAYING: number;
-		PAUSED: number;
-	};
-};
-
-declare global {
-	interface Window {
-		YT: YTAPI;
-		onYouTubeIframeAPIReady: () => void;
-	}
-}
-
 export function Player() {
 	const playlist = usePlaylist();
 	const player = usePlayer();
 	const auth = useAuth();
-	const { isFadedOut } = useSleepyFadeout();
 	const { data: userPlaylists } = useQuery({
 		queryKey: ["userPlaylists", auth.accessToken],
 		queryFn: async () => {
@@ -92,29 +47,9 @@ export function Player() {
 			(userPlaylists?.some((p) => p.id === playlist.playlistId) ?? false),
 	);
 	const currentVideoId = playlist.currentVideoId;
-	const playerRef = useRef<HTMLDivElement>(null);
-	const playerInstanceRef = useRef<YTPlayer | null>(null);
 	const [endedOpen, setEndedOpen] = useState(false);
 	const endedVideoIdRef = useRef<string | undefined>(undefined);
 	const [isReordering, setIsReordering] = useState(false);
-	const dialogShownForVideoRef = useRef<string | undefined>(undefined);
-	const timeCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
-	const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
-	const [isDragging, setIsDragging] = useState(false);
-	const autoRemoveAndAdvanceRef = useRef<(videoId: string | undefined) => void>(
-		() => {},
-	);
-	const sleepTimerIsActiveRef = useRef(false);
-
-	const sensors = useSensors(
-		useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-		useSensor(TouchSensor, {
-			activationConstraint: { delay: 100, tolerance: 8 },
-		}),
-		useSensor(KeyboardSensor, {
-			coordinateGetter: sortableKeyboardCoordinates,
-		}),
-	);
 
 	const getNextVideoId = useCallback(
 		(fromVideoId: string | undefined): string | undefined => {
@@ -163,13 +98,18 @@ export function Player() {
 		[canEdit, auth.accessToken, playlist, getNextVideoId],
 	);
 
-	autoRemoveAndAdvanceRef.current = autoRemoveAndAdvance;
-	sleepTimerIsActiveRef.current = playlist.sleepTimer.isActive;
-
-	const handleNext = useCallback((videoId: string | undefined) => {
+	const onVideoEnded = useCallback((videoId: string) => {
 		endedVideoIdRef.current = videoId;
 		setEndedOpen(true);
 	}, []);
+
+	const { playerRef, playerInstanceRef } = useYouTubePlayer({
+		currentVideoId,
+		sleepTimerIsActive: playlist.sleepTimer.isActive,
+		onVideoEnded,
+		onAutoAdvance: autoRemoveAndAdvance,
+		player,
+	});
 
 	const handlePlayPause = useCallback(() => {
 		if (!playerInstanceRef.current) return;
@@ -180,7 +120,12 @@ export function Player() {
 			playerInstanceRef.current.playVideo();
 			player.setIsPlaying(true);
 		}
-	}, [player]);
+	}, [player, playerInstanceRef]);
+
+	const handleNext = useCallback(() => {
+		endedVideoIdRef.current = currentVideoId;
+		setEndedOpen(true);
+	}, [currentVideoId]);
 
 	const handleRemoveAndPlayNext = useCallback(() => {
 		autoRemoveAndAdvance(endedVideoIdRef.current ?? currentVideoId);
@@ -191,6 +136,11 @@ export function Player() {
 		advanceToNext(endedVideoIdRef.current ?? currentVideoId);
 		setEndedOpen(false);
 	}, [currentVideoId, advanceToNext]);
+
+	const handleShowDialog = useCallback((videoId: string) => {
+		endedVideoIdRef.current = videoId;
+		setEndedOpen(true);
+	}, []);
 
 	const handleDeleteItem = useCallback(
 		async (itemId: string) => {
@@ -243,11 +193,8 @@ export function Player() {
 		],
 	);
 
-	const handleDragStart = useCallback(() => setIsDragging(true), []);
-
 	const handleDragEnd = useCallback(
 		async (event: DragEndEvent) => {
-			setIsDragging(false);
 			const { active, over } = event;
 			if (!over || active.id === over.id) return;
 			if (!auth.isAuthenticated || !auth.accessToken || !playlist.playlistId)
@@ -288,164 +235,6 @@ export function Player() {
 		[auth.isAuthenticated, auth.accessToken, playlist, auth.getTokenSilently],
 	);
 
-	// Load YouTube IFrame API
-	useEffect(() => {
-		if (!window.YT) {
-			const script = document.createElement("script");
-			script.src = "https://www.youtube.com/iframe_api";
-			script.async = true;
-			document.head.appendChild(script);
-		}
-		window.onYouTubeIframeAPIReady = () => {};
-	}, []);
-
-	// Initialize player when video changes
-	useEffect(() => {
-		if (!currentVideoId) return;
-		dialogShownForVideoRef.current = undefined;
-
-		const initPlayer = () => {
-			if (!window.YT || !playerRef.current) return;
-
-			if (playerInstanceRef.current?.destroy) {
-				try {
-					playerInstanceRef.current.destroy();
-				} catch {}
-			}
-
-			const savedStart = player.getSavedProgress(currentVideoId);
-
-			playerInstanceRef.current = new window.YT.Player(playerRef.current, {
-				videoId: currentVideoId,
-				playerVars: {
-					autoplay: 1,
-					enablejsapi: 1,
-					playsinline: 1,
-					rel: 0,
-					modestbranding: 1,
-					controls: 1,
-					fs: 1,
-					cc_load_policy: 0,
-					iv_load_policy: 3,
-					origin: window.location.origin,
-					...(savedStart && savedStart > 0
-						? { start: Math.floor(savedStart) }
-						: {}),
-				},
-				events: {
-					onReady: (event: YTPlayerEvent) => {
-						player.setPlayerInstance(event.target);
-						try {
-							const dur = event.target.getDuration?.();
-							if (dur) player.updateProgress(0, dur, currentVideoId);
-						} catch {}
-
-						try {
-							event.target.playVideo();
-							player.setIsPlaying(true);
-						} catch {}
-					},
-					onStateChange: (event: YTPlayerEvent) => {
-						try {
-							if (event?.data === window?.YT?.PlayerState?.ENDED) {
-								player.clearSavedProgress(currentVideoId);
-								if (sleepTimerIsActiveRef.current) {
-									autoRemoveAndAdvanceRef.current(currentVideoId);
-								} else {
-									endedVideoIdRef.current = currentVideoId;
-									setEndedOpen(true);
-								}
-							} else if (event?.data === window?.YT?.PlayerState?.PLAYING) {
-								player.setIsPlaying(true);
-							} else if (event?.data === window?.YT?.PlayerState?.PAUSED) {
-								player.setIsPlaying(false);
-							}
-						} catch {}
-					},
-				},
-			});
-		};
-
-		if (window.YT) initPlayer();
-		else window.onYouTubeIframeAPIReady = initPlayer;
-
-		return () => {
-			if (playerInstanceRef.current?.destroy) {
-				try {
-					playerInstanceRef.current.destroy();
-				} catch {}
-				playerInstanceRef.current = null;
-			}
-			if (progressIntervalRef.current) {
-				clearInterval(progressIntervalRef.current);
-				progressIntervalRef.current = null;
-			}
-		};
-	}, [
-		currentVideoId,
-		player.clearSavedProgress,
-		player.getSavedProgress,
-		player.setIsPlaying,
-		player.setPlayerInstance,
-		player.updateProgress,
-	]);
-
-	// Progress tracking for mini player
-	useEffect(() => {
-		if (!player.playerInstance || !currentVideoId) return;
-		if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-
-		progressIntervalRef.current = setInterval(() => {
-			if (!player.playerInstance) return;
-			try {
-				const t = player.playerInstance.getCurrentTime();
-				const d = player.playerInstance.getDuration();
-				if (typeof t === "number" && typeof d === "number" && d > 0) {
-					player.updateProgress(t, d, currentVideoId);
-				}
-			} catch {}
-		}, 500);
-
-		return () => {
-			if (progressIntervalRef.current) {
-				clearInterval(progressIntervalRef.current);
-				progressIntervalRef.current = null;
-			}
-		};
-	}, [currentVideoId, player.playerInstance, player.updateProgress]);
-
-	// Show dialog 20s before video end (skip when sleep timer active)
-	useEffect(() => {
-		if (!playerInstanceRef.current || !currentVideoId) return;
-		if (timeCheckIntervalRef.current)
-			clearInterval(timeCheckIntervalRef.current);
-
-		timeCheckIntervalRef.current = setInterval(() => {
-			try {
-				if (!playerInstanceRef.current?.getCurrentTime) return;
-				const t = playerInstanceRef.current.getCurrentTime();
-				const d = playerInstanceRef.current.getDuration();
-				if (d > 0 && t > 0 && !playlist.sleepTimer.isActive) {
-					const remaining = d - t;
-					if (
-						remaining <= 20 &&
-						remaining > 0 &&
-						dialogShownForVideoRef.current !== currentVideoId
-					) {
-						dialogShownForVideoRef.current = currentVideoId;
-						endedVideoIdRef.current = currentVideoId;
-						setEndedOpen(true);
-					}
-				}
-			} catch {}
-		}, 1000);
-
-		return () => {
-			if (timeCheckIntervalRef.current)
-				clearInterval(timeCheckIntervalRef.current);
-		};
-	}, [currentVideoId, playlist.sleepTimer.isActive]);
-
 	// Handle pause/play based on isPaused state (sleep timer expiry)
 	useEffect(() => {
 		if (!playerInstanceRef.current) return;
@@ -454,35 +243,7 @@ export function Player() {
 		} else if (playerInstanceRef.current.getPlayerState?.() === 2) {
 			playerInstanceRef.current.playVideo();
 		}
-	}, [playlist.isPaused]);
-
-	// Spacebar for play/pause
-	useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.code !== "Space" && e.key !== " ") return;
-			const target = e.target as HTMLElement;
-			if (
-				target.tagName === "INPUT" ||
-				target.tagName === "TEXTAREA" ||
-				target.isContentEditable
-			)
-				return;
-			e.preventDefault();
-			handlePlayPause();
-		};
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [handlePlayPause]);
-
-	const [isLoadingMore, setIsLoadingMore] = useState(false);
-	const handleLoadMore = useCallback(async () => {
-		setIsLoadingMore(true);
-		try {
-			await playlist.loadMoreItems();
-		} finally {
-			setIsLoadingMore(false);
-		}
-	}, [playlist.loadMoreItems]);
+	}, [playlist.isPaused, playerInstanceRef]);
 
 	// Empty state
 	if (!playlist.items.length || !currentVideoId) {
@@ -511,67 +272,18 @@ export function Player() {
 		<>
 			<SleepTimerExpiryOverlay currentVideoId={currentVideoId} />
 
-			{/* Video ended / sleepy dialog */}
-			<Dialog open={endedOpen} onOpenChange={setEndedOpen}>
-				<DialogContent className="p-0 overflow-hidden transition-opacity">
-					<div
-						className={cn(
-							"p-6 flex flex-col items-center text-center gap-4 transition-colors duration-1000",
-							isFadedOut && "bg-black",
-						)}
-					>
-						<div className="size-16 rounded-full bg-blue-500/10 flex items-center justify-center">
-							<Moon className="size-8 text-blue-400" />
-						</div>
-						<DialogHeader
-							className={cn(
-								"p-0 transition-colors duration-1000",
-								isFadedOut && "text-gray-500",
-							)}
-						>
-							<DialogTitle>Sleepy yet?</DialogTitle>
-							<DialogDescription
-								className={cn(
-									"transition-colors duration-1000",
-									isFadedOut && "text-gray-700",
-								)}
-							>
-								This is a good place to stop watching. Your phone will go to
-								sleep unless you explicitly decide to continue.
-							</DialogDescription>
-						</DialogHeader>
-					</div>
-					<DialogFooter
-						className={cn(
-							"gap-8 p-4 flex-col transition-colors duration-1000",
-							isFadedOut && "bg-black",
-						)}
-					>
-						<Button
-							className={cn(
-								"border block w-full transition-colors duration-1000",
-								isFadedOut && "bg-gray-900 text-gray-400  border-gray-500",
-							)}
-							onClick={() => {
-								if (canEdit) {
-									handlePlayNext();
-								} else {
-									handleRemoveAndPlayNext();
-								}
-							}}
-						>
-							{canEdit ? "Remove & Play Next" : "Play Next"}
-						</Button>
-						<Button
-							className={"w-full block text-gray-500"}
-							variant="ghost"
-							onClick={() => setEndedOpen(false)}
-						>
-							Dismiss
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+			<VideoEndedDialog
+				open={endedOpen}
+				onOpenChange={setEndedOpen}
+				canEdit={canEdit}
+				onRemoveAndPlayNext={handleRemoveAndPlayNext}
+				onPlayNext={handlePlayNext}
+				onDismiss={() => setEndedOpen(false)}
+				playerInstanceRef={playerInstanceRef}
+				currentVideoId={currentVideoId}
+				sleepTimerIsActive={playlist.sleepTimer.isActive}
+				onShowDialog={handleShowDialog}
+			/>
 
 			{/* Main layout */}
 			<div className="flex flex-col lg:flex-row gap-2 h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)]">
@@ -588,125 +300,26 @@ export function Player() {
 						/>
 					</div>
 
-					<div
-						className={cn(
-							"flex-1 flex flex-col gap-4 transition-opacity duration-1000",
-							isFadedOut && "opacity-25",
-						)}
-					>
-						<div>
-							<h2 className="text-xl font-semibold">{current?.title ?? ""}</h2>
-							{current?.channelTitle && (
-								<p className="text-sm text-muted-foreground">
-									{current.channelTitle}
-								</p>
-							)}
-						</div>
-
-						{/* Player Controls */}
-						<div className="flex items-center justify-center gap-8 py-2">
-							<SleepTimerDrawer>
-								<button
-									type="button"
-									className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:ring-[3px] ${
-										playlist.sleepTimer.isActive
-											? "text-white border-2 border-white"
-											: "text-muted-foreground"
-									}`}
-									aria-label={
-										playlist.sleepTimer.isActive
-											? "Sleep timer active - click to modify"
-											: "Set sleep timer"
-									}
-								>
-									<Moon className="h-5 w-5" />
-								</button>
-							</SleepTimerDrawer>
-
-							<button
-								type="button"
-								onClick={handlePlayPause}
-								className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-white text-black glow-button focus-visible:ring-[3px] focus-visible:ring-ring/50"
-								aria-label={player.isPlaying ? "Pause" : "Play"}
-							>
-								{player.isPlaying ? (
-									<Pause className="h-6 w-6" />
-								) : (
-									<Play className="h-6 w-6" />
-								)}
-							</button>
-
-							<button
-								type="button"
-								onClick={() => handleNext(currentVideoId)}
-								className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full border text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground"
-								aria-label="Next video"
-							>
-								<SkipForward className="h-5 w-5" />
-							</button>
-						</div>
-					</div>
+					<PlayerControls
+						currentVideo={current}
+						isPlaying={player.isPlaying}
+						sleepTimerIsActive={playlist.sleepTimer.isActive}
+						onPlayPause={handlePlayPause}
+						onNext={handleNext}
+					/>
 				</div>
 
-				{/* Right: Playlist sidebar */}
-				<div
-					className={cn(
-						"lg:w-1/3 flex flex-col lg:glass-panel lg:rounded-xl lg:pl-2 lg:pb-4 transition-opacity duration-1000",
-						isFadedOut && "opacity-25",
-					)}
-				>
-					{isReordering && (
-						<div className="flex items-center gap-2 text-muted-foreground pb-2">
-							<Loader2 className="h-5 w-5 animate-spin" />
-							<span className="text-sm">Saving...</span>
-						</div>
-					)}
-
-					<div
-						className={`flex-1 pr-2 -mr-2 pt-2 pb-40 touch-drag-container ${isDragging ? "dragging" : "overflow-y-auto"}`}
-					>
-						<DndContext
-							sensors={sensors}
-							collisionDetection={closestCenter}
-							onDragStart={handleDragStart}
-							onDragEnd={handleDragEnd}
-						>
-							<SortableContext
-								items={playlist.items.map((item) => item.id)}
-								strategy={verticalListSortingStrategy}
-							>
-								<ul className="grid grid-cols-1 gap-1">
-									{playlist.items.map((item) => (
-										<SortablePlaylistItem
-											key={item.id}
-											item={item}
-											isCurrent={Boolean(
-												currentVideoId && item.videoId === currentVideoId,
-											)}
-											canEdit={canEdit}
-											onSelect={playlist.setCurrentVideoId}
-											onDelete={handleDeleteItem}
-										/>
-									))}
-								</ul>
-							</SortableContext>
-						</DndContext>
-						{playlist.hasMore && (
-							<Button
-								type="button"
-								variant={"outline"}
-								onClick={handleLoadMore}
-								disabled={isLoadingMore}
-								className="text-sm mt-1 bg-white py-10 w-full text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-							>
-								{isLoadingMore ? (
-									<Loader2 className="h-4 w-4 animate-spin inline mr-1.5" />
-								) : null}
-								{isLoadingMore ? "Loading..." : "Load more"}
-							</Button>
-						)}
-					</div>
-				</div>
+				<PlaylistSidebar
+					items={playlist.items}
+					currentVideoId={currentVideoId}
+					canEdit={canEdit}
+					hasMore={playlist.hasMore}
+					isReordering={isReordering}
+					onSelectVideo={playlist.setCurrentVideoId}
+					onDeleteItem={handleDeleteItem}
+					onDragEnd={handleDragEnd}
+					onLoadMore={playlist.loadMoreItems}
+				/>
 			</div>
 		</>
 	);
