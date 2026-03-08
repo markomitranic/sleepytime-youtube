@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type SleepTimer = {
 	isActive: boolean;
@@ -99,16 +99,27 @@ export function useSleepTimer(): {
 		return () => clearInterval(interval);
 	}, [sleepTimer.isActive, sleepTimer.startTime]);
 
-	return {
-		sleepTimer,
-		isPaused,
-		sleepTimerActions: {
+	const sleepTimerActions = useMemo(
+		() => ({
 			setSleepTimer,
 			deactivateSleepTimer,
 			dismissSleepExpiry,
 			prolongSleepTimer,
 			triggerSleep,
-		},
+		}),
+		[
+			setSleepTimer,
+			deactivateSleepTimer,
+			dismissSleepExpiry,
+			prolongSleepTimer,
+			triggerSleep,
+		],
+	);
+
+	return {
+		sleepTimer,
+		isPaused,
+		sleepTimerActions,
 		resetSleepTimer,
 	};
 }

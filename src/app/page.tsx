@@ -4,101 +4,15 @@ import { ExternalLink, Github, Linkedin } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { toast } from "sonner";
 import { useAuth } from "~/components/auth/AuthContext";
-import { BuiltinPlaylistGrid } from "~/components/playlist/BuiltinPlaylistGrid";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { Button } from "~/components/ui/button";
-import { BUILTIN_PLAYLISTS } from "~/lib/builtinPlaylists";
 
 export default function HomePage() {
 	const playlist = usePlaylist();
 	const auth = useAuth();
-
-	const [labelText, setLabelText] = useState<string>("slowedReverb");
-	const [hasScrolled, setHasScrolled] = useState<boolean>(false);
-	const typingIndexRef = useRef<number>(0);
-	const labelIndexRef = useRef<number>(0);
-	const deletingRef = useRef<boolean>(false);
-	const timerRef = useRef<number | null>(null);
-	const labelsRef = useRef<string[]>([]);
-
-	useEffect(() => {
-		labelsRef.current = BUILTIN_PLAYLISTS.map((p) => p.shortLabel);
-		if (labelsRef.current.length === 0) return;
-
-		const TYPING_INTERVAL_MS = 60;
-		const DELETING_INTERVAL_MS = 40;
-		const HOLD_FULL_MS = 1500;
-		const BETWEEN_WORDS_MS = 300;
-
-		function schedule(nextInMs: number) {
-			if (timerRef.current) window.clearTimeout(timerRef.current);
-			timerRef.current = window.setTimeout(tick, nextInMs);
-		}
-
-		function tick() {
-			const labels = labelsRef.current;
-			const currentLabel: string =
-				labels.length > 0
-					? (labels[labelIndexRef.current % labels.length] ?? "")
-					: "";
-			const at = typingIndexRef.current;
-			const deleting = deletingRef.current;
-
-			if (!deleting) {
-				// typing forward
-				const next = currentLabel.slice(0, at + 1);
-				setLabelText(next);
-				typingIndexRef.current = at + 1;
-				if (currentLabel.length > 0 && next.length === currentLabel.length) {
-					// hold full word, then start deleting
-					deletingRef.current = true;
-					schedule(HOLD_FULL_MS);
-				} else {
-					schedule(TYPING_INTERVAL_MS);
-				}
-			} else {
-				// deleting
-				const next = currentLabel.slice(0, Math.max(0, at - 1));
-				setLabelText(next);
-				typingIndexRef.current = Math.max(0, at - 1);
-				if (next.length === 0) {
-					// move to next word and start typing
-					deletingRef.current = false;
-					labelIndexRef.current =
-						labels.length > 0 ? (labelIndexRef.current + 1) % labels.length : 0;
-					schedule(BETWEEN_WORDS_MS);
-				} else {
-					schedule(DELETING_INTERVAL_MS);
-				}
-			}
-		}
-
-		// init
-		typingIndexRef.current = 0;
-		labelIndexRef.current = 0;
-		deletingRef.current = false;
-		setLabelText("");
-		schedule(200);
-
-		return () => {
-			if (timerRef.current) window.clearTimeout(timerRef.current);
-			timerRef.current = null;
-		};
-	}, []);
-
-	useEffect(() => {
-		function handleScroll() {
-			const scrollY = window.scrollY;
-			setHasScrolled(scrollY > 10);
-		}
-
-		window.addEventListener("scroll", handleScroll);
-		return () => window.removeEventListener("scroll", handleScroll);
-	}, []);
-
 	useEffect(() => {
 		if (!playlist.error) return;
 		const message = playlist.error;
@@ -121,44 +35,36 @@ export default function HomePage() {
 
 	return (
 		<main className="min-h-screen">
-			{/* Hero Section - Full width with responsive padding */}
+			{/* Hero Section */}
 			<div className="w-full max-w-400 mx-auto px-0 md:px-10 pt-5">
 				<Image
 					src="/sleepytime-underwood.jpg"
 					alt="Sleepytime Celestial Seasonings Bear - by Underwood"
 					width={1200}
 					height={600}
-					className={`w-full h-auto rounded-md transition-opacity duration-300 ${hasScrolled ? "opacity-60" : "opacity-100"}`}
+					className="w-full h-auto rounded-md"
 				/>
 			</div>
 
-			{/* Content Section - Centered container */}
+			{/* Content Section */}
 			<div className="flex justify-center px-2.5 py-6 pb-24">
 				<div className="w-full max-w-180 space-y-6">
 					<h1 className="text-3xl font-bold">Sleepytime-YouTube</h1>
 					<div className="space-y-5">
 						<p className="text-lg text-muted-foreground text-center">
 							Having trouble sleeping? Bothersome having to keep hitting play
-							and skipping ads? Add a sleep timer, auto-removal and darker mode
-							to your playlists.
+							and skipping ads? Add a sleep timer and auto-removal to your
+							playlists.
 						</p>
+
 						<div className="text-center">
 							<Link
-								href="#try-it-out"
-								onClick={(e) => {
-									e.preventDefault();
-									const el = document.getElementById("try-it-out");
-									if (el)
-										el.scrollIntoView({ behavior: "smooth", block: "start" });
-								}}
+								href="/playlists"
 								className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
 							>
-								Try it out with some{" "}
-								<span className="tabular-nums">{labelText}</span> →
+								Browse playlists to get started →
 							</Link>
 						</div>
-						{/* Built-in playlists only */}
-						<BuiltinPlaylistGrid hasScrolled={hasScrolled} />
 
 						{/* CTA Section - Only show if not authenticated */}
 						{!auth.isAuthenticated && (
@@ -177,15 +83,15 @@ export default function HomePage() {
 								<div className="space-y-4">
 									<div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
 										<div className="flex items-center gap-2">
-											<div className="w-2 h-2 rounded-full bg-green-500"></div>
+											<div className="w-2 h-2 rounded-full bg-green-500" />
 											<span>Access your YouTube playlists</span>
 										</div>
 										<div className="flex items-center gap-2">
-											<div className="w-2 h-2 rounded-full bg-green-500"></div>
+											<div className="w-2 h-2 rounded-full bg-green-500" />
 											<span>Reorder and manage videos</span>
 										</div>
 										<div className="flex items-center gap-2">
-											<div className="w-2 h-2 rounded-full bg-green-500"></div>
+											<div className="w-2 h-2 rounded-full bg-green-500" />
 											<span>Set sleep timers</span>
 										</div>
 									</div>
@@ -208,7 +114,7 @@ export default function HomePage() {
 							</div>
 						)}
 
-						{/* Footer with social links */}
+						{/* Footer */}
 						<div className="flex items-center justify-center gap-6 pt-8 mt-12 border-t">
 							<a
 								href="https://github.com/markomitranic/sleepytime-youtube"

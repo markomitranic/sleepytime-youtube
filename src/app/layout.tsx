@@ -6,6 +6,7 @@ import { BottomNav } from "~/components/BottomNav";
 import { CookieBanner } from "~/components/CookieBanner";
 import { PlayerProvider } from "~/components/playlist/PlayerContext";
 import { StickyPlayerBar } from "~/components/playlist/StickyPlayerBar";
+import { SleepyFadeoutProvider } from "~/components/SleepyFadeoutContext";
 import { AuroraBackground } from "./AuroraBackground";
 import { AppProviders } from "./providers";
 
@@ -67,12 +68,14 @@ export default function RootLayout({
 			<body className={geist.className}>
 				<AppProviders>
 					<PlayerProvider>
-						<AuroraBackground />
-						{children}
-						<StickyPlayerBar />
-						<BottomNav />
-						<Toaster richColors position="bottom-center" closeButton />
-						<CookieBanner />
+						<SleepyFadeoutProvider>
+							<AuroraBackground />
+							{children}
+							<StickyPlayerBar />
+							<BottomNav />
+							<Toaster richColors position="bottom-center" closeButton />
+							<CookieBanner />
+						</SleepyFadeoutProvider>
 					</PlayerProvider>
 				</AppProviders>
 			</body>

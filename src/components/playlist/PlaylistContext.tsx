@@ -14,7 +14,6 @@ import { useAuth } from "~/components/auth/AuthContext";
 import { filterNotEmpty } from "~/lib/filterNotEmpty";
 import type { SleepTimer } from "~/lib/useSleepTimer";
 import { useSleepTimer } from "~/lib/useSleepTimer";
-import { useUrlSync } from "~/lib/useUrlSync";
 import type {
 	YouTubePlaylistItem,
 	YouTubePlaylistSnippet,
@@ -28,40 +27,35 @@ import {
 type PersistedPlaylistState = {
 	playlistId?: string;
 	currentVideoId?: string;
-	url?: string;
 };
 
 export type { SleepTimer } from "~/lib/useSleepTimer";
 
 export type PlaylistState = {
-	url?: string;
 	playlistId?: string;
 	snippet?: YouTubePlaylistSnippet | null;
 	items: YouTubePlaylistItem[];
 	currentVideoId?: string;
 	isLoading?: boolean;
-	loading?: {
-		pagesLoaded: number;
-		totalPages?: number;
-		itemsLoaded: number;
-		totalItems?: number;
-	} | null;
+	hasMore?: boolean;
 	error?: string | null;
 	errorDetails?: string | null;
 	sleepTimer: SleepTimer;
-	isPaused?: boolean; // New field to track if video is paused by sleep
-	darker?: boolean; // New field to track if aurora animation should be hidden
+	isPaused?: boolean;
 };
 
 export type PlaylistActions = {
 	loadPlaylist: (params: {
-		url: string;
 		playlistId: string;
 		snippet: YouTubePlaylistSnippet | null;
 		items: YouTubePlaylistItem[];
 		currentVideoId?: string;
 	}) => void;
-	loadByPlaylistId: (playlistId: string) => Promise<void>;
+	loadByPlaylistId: (
+		playlistId: string,
+		opts?: { currentVideoId?: string },
+	) => Promise<void>;
+	loadMoreItems: () => Promise<void>;
 	setCurrentVideoId: (videoId: string | undefined) => void;
 	clear: () => void;
 	setSleepTimer: (durationMinutes: number) => void;
@@ -69,7 +63,6 @@ export type PlaylistActions = {
 	dismissSleepExpiry: () => void;
 	prolongSleepTimer: (additionalMinutes: number) => void;
 	triggerSleep: () => void;
-	toggleDarker: () => void;
 	reorderItem: (videoId: string, direction: "up" | "down") => void;
 	removeItem: (videoId: string) => void;
 	refreshItemsOnce: (opts?: { delayMs?: number }) => Promise<void>;
@@ -109,6 +102,32 @@ const PlaylistContext = createContext<(PlaylistState & PlaylistActions) | null>(
 	null,
 );
 
+async function fetchDurationsForItems(
+	items: YouTubePlaylistItem[],
+	accessToken: string | undefined,
+	getTokenSilently: () => Promise<string | null>,
+) {
+	const videoIds = items.map((i) => i.videoId).filter(filterNotEmpty);
+	if (!videoIds.length) return;
+	try {
+		const durations = await fetchVideoDurations({
+			apiKey: process.env.NEXT_PUBLIC_YOUTUBE_API_KEY,
+			accessToken,
+			videoIds,
+			refreshToken: getTokenSilently,
+		});
+		for (const item of items) {
+			if (item.videoId && durations.has(item.videoId)) {
+				item.durationSeconds = durations.get(item.videoId);
+			}
+		}
+	} catch (e) {
+		console.warn("Failed to fetch video durations", e);
+	}
+}
+
+const PLAYLIST_PAGE_SIZE = 20;
+
 export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 	const [persistedState, setPersistedState] =
 		useLocalStorage<PersistedPlaylistState | null>("sleepytime-playlist", null);
@@ -118,9 +137,11 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 		Omit<PlaylistState, "sleepTimer" | "isPaused">
 	>({
 		items: [],
-		darker: false,
 	});
 	const loadAbortRef = useRef<AbortController | null>(null);
+	const nextPageTokenRef = useRef<string | undefined>(undefined);
+	const isLoadingMoreRef = useRef(false);
+	const pagesLoadedRef = useRef(0);
 	const hasInitializedFromStorage = useRef(false);
 	const auth = useAuth();
 
@@ -132,24 +153,20 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 
 	const actions: PlaylistActions = useMemo(
 		() => ({
-			loadPlaylist: ({ url, playlistId, snippet, items, currentVideoId }) => {
+			loadPlaylist: ({ playlistId, snippet, items, currentVideoId }) => {
 				setState((prev) => {
-					// Prefer provided currentVideoId if valid in new items
 					const provided =
 						currentVideoId && items.some((i) => i.videoId === currentVideoId)
 							? currentVideoId
 							: undefined;
-					// Otherwise, keep previous selection if it still exists in new items
 					const preserved =
 						prev.currentVideoId &&
 						items.some((i) => i.videoId === prev.currentVideoId)
 							? prev.currentVideoId
 							: undefined;
-					// Fallback to first available
 					const fallback = items.find((i) => Boolean(i.videoId))?.videoId;
 					return {
 						...prev,
-						url,
 						playlistId,
 						snippet,
 						items,
@@ -157,13 +174,11 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 						isLoading: false,
 						error: null,
 						errorDetails: null,
-						darker: prev.darker, // Preserve existing darker state
 					};
 				});
 			},
-			loadByPlaylistId: async (playlistId) => {
+			loadByPlaylistId: async (playlistId, opts) => {
 				try {
-					// Abort any existing load
 					if (loadAbortRef.current) {
 						try {
 							loadAbortRef.current.abort();
@@ -172,6 +187,8 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 
 					const controller = new AbortController();
 					loadAbortRef.current = controller;
+					nextPageTokenRef.current = undefined;
+					pagesLoadedRef.current = 0;
 
 					setState((s) => ({
 						...s,
@@ -180,26 +197,18 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 						errorDetails: null,
 						playlistId,
 						items: [],
-						loading: {
-							pagesLoaded: 0,
-							itemsLoaded: 0,
-							totalPages: undefined,
-							totalItems: undefined,
-						},
+						hasMore: false,
 					}));
-					// Snap viewport to top so the player area is visible immediately
 					if (typeof window !== "undefined") {
 						try {
 							window.scrollTo(0, 0);
 						} catch {}
 					}
-					// Ensure we have a fresh token ONLY if already authenticated (avoid prompting on public playlists)
 					if (auth.isAuthenticated && getTokenSilentlyRef.current) {
 						try {
 							await getTokenSilentlyRef.current();
 						} catch {}
 					}
-					// Fetch snippet early for title and total count
 					const snippet = await fetchPlaylistSnippet({
 						apiKey: process.env.NEXT_PUBLIC_YOUTUBE_API_KEY,
 						accessToken: auth.accessToken,
@@ -211,83 +220,37 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 					setState((s) => ({
 						...s,
 						snippet: snippet ?? null,
-						loading: {
-							pagesLoaded: 0,
-							itemsLoaded: 0,
-							totalItems: snippet?.itemCount,
-							totalPages:
-								typeof snippet?.itemCount === "number"
-									? Math.ceil(Math.max(0, snippet.itemCount) / 50)
-									: undefined,
-						},
 					}));
 
-					// Aggregate items across pages, progressively updating state
-					let nextPageToken: string | undefined;
-					const aggregated: YouTubePlaylistItem[] = [];
-					do {
-						const res = await fetchPlaylistItems({
-							apiKey: process.env.NEXT_PUBLIC_YOUTUBE_API_KEY,
-							accessToken: auth.accessToken,
-							playlistId,
-							pageToken: nextPageToken,
-							signal: loadAbortRef.current?.signal,
-							refreshToken: getTokenSilentlyRef.current,
-						});
-						aggregated.push(...res.items);
-						nextPageToken = res.nextPageToken;
-						setState((s) => ({
-							...s,
-							items: aggregated.slice(),
-							loading: {
-								pagesLoaded: (s.loading?.pagesLoaded ?? 0) + 1,
-								itemsLoaded: aggregated.length,
-								totalItems: s.loading?.totalItems,
-								totalPages: s.loading?.totalPages,
-							},
-						}));
-					} while (nextPageToken);
+					// Fetch only the first page of items
+					const res = await fetchPlaylistItems({
+						apiKey: process.env.NEXT_PUBLIC_YOUTUBE_API_KEY,
+						accessToken: auth.accessToken,
+						playlistId,
+						maxResults: PLAYLIST_PAGE_SIZE,
+						signal: loadAbortRef.current?.signal,
+						refreshToken: getTokenSilentlyRef.current,
+					});
 
-					// Fetch video durations
-					const videoIds = aggregated
-						.map((item) => item.videoId)
-						.filter(filterNotEmpty);
+					nextPageTokenRef.current = res.nextPageToken;
+					pagesLoadedRef.current = 1;
 
-					if (videoIds.length > 0) {
-						try {
-							const durations = await fetchVideoDurations({
-								apiKey: process.env.NEXT_PUBLIC_YOUTUBE_API_KEY,
-								accessToken: auth.accessToken,
-								videoIds,
-								refreshToken: getTokenSilentlyRef.current,
-							});
-							// Merge durations into items
-							aggregated.forEach((item) => {
-								if (item.videoId && durations.has(item.videoId)) {
-									item.durationSeconds = durations.get(item.videoId);
-								}
-							});
-						} catch (e) {
-							console.warn("Failed to fetch video durations", e);
-						}
-					}
-
-					// Use ?v from URL if valid as initial selection
-					const v =
-						typeof window !== "undefined"
-							? (new URL(window.location.href).searchParams.get("v") ??
-								undefined)
-							: undefined;
-					const initialFromParam =
-						v && aggregated.some((i) => i.videoId === v) ? v : undefined;
+					await fetchDurationsForItems(
+						res.items,
+						auth.accessToken,
+						getTokenSilentlyRef.current,
+					);
 
 					actions.loadPlaylist({
-						url: `https://www.youtube.com/playlist?list=${playlistId}`,
 						playlistId,
 						snippet: snippet ?? null,
-						items: aggregated,
-						currentVideoId: initialFromParam,
+						items: res.items,
+						currentVideoId: opts?.currentVideoId,
 					});
+					setState((s) => ({
+						...s,
+						hasMore: Boolean(res.nextPageToken),
+					}));
 				} catch (e) {
 					if (e instanceof DOMException && e.name === "AbortError") return;
 					const raw = (e as Error)?.message ?? "Failed to load playlist.";
@@ -304,28 +267,15 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 					setState((s) => ({
 						...s,
 						isLoading: false,
-						loading: null,
+						hasMore: false,
 						error: friendly,
 						errorDetails: raw,
-						// If not found, snap back to homepage state but keep the error so Sonner shows
 						playlistId: isNotFound ? undefined : s.playlistId,
 						items: isNotFound ? [] : s.items,
 					}));
-					if (isNotFound && typeof window !== "undefined") {
-						try {
-							const urlObj = new URL(window.location.href);
-							urlObj.searchParams.delete("list");
-							urlObj.searchParams.delete("v");
-							const newQuery = urlObj.searchParams.toString();
-							const href = newQuery
-								? `${urlObj.pathname}?${newQuery}`
-								: urlObj.pathname;
-							window.history.replaceState(null, "", href);
-						} catch {}
-						// Clear localStorage when playlist is not found to prevent infinite 404 loops
+					if (isNotFound) {
 						setPersistedState(null);
 					}
-					// If 401 or not found and the user appears signed in, sign them out to clear bad/expired token
 					try {
 						if (
 							(isUnauthorized || isNotFound) &&
@@ -333,11 +283,49 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 							auth?.signOut
 						) {
 							try {
-								toast.error("Your session expired. You’ve been signed out.");
+								toast.error("Your session expired. You've been signed out.");
 							} catch {}
 							auth.signOut();
 						}
 					} catch {}
+				}
+			},
+			loadMoreItems: async () => {
+				const playlistId = state.playlistId;
+				if (
+					!playlistId ||
+					!nextPageTokenRef.current ||
+					isLoadingMoreRef.current
+				)
+					return;
+
+				isLoadingMoreRef.current = true;
+				try {
+					const res = await fetchPlaylistItems({
+						apiKey: process.env.NEXT_PUBLIC_YOUTUBE_API_KEY,
+						accessToken: auth.accessToken,
+						playlistId,
+						maxResults: PLAYLIST_PAGE_SIZE,
+						pageToken: nextPageTokenRef.current,
+						refreshToken: getTokenSilentlyRef.current,
+					});
+
+					nextPageTokenRef.current = res.nextPageToken;
+					pagesLoadedRef.current += 1;
+
+					await fetchDurationsForItems(
+						res.items,
+						auth.accessToken,
+						getTokenSilentlyRef.current,
+					);
+
+					setState((s) => ({
+						...s,
+						items: [...s.items, ...res.items],
+						hasMore: Boolean(res.nextPageToken),
+					}));
+				} finally {
+					isLoadingMoreRef.current = false;
 				}
 			},
 			setCurrentVideoId: (videoId) =>
@@ -349,37 +337,25 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 					} catch {}
 					loadAbortRef.current = null;
 				}
+				nextPageTokenRef.current = undefined;
+				pagesLoadedRef.current = 0;
+				isLoadingMoreRef.current = false;
 				setState({
 					items: [],
-					darker: false,
 				});
 				resetSleepTimer();
-				setPersistedState(null); // Clear localStorage
-				if (typeof window !== "undefined") {
-					const urlObj = new URL(window.location.href);
-					urlObj.searchParams.delete("list");
-					urlObj.searchParams.delete("v");
-					const newQuery = urlObj.searchParams.toString();
-					const href = newQuery
-						? `${urlObj.pathname}?${newQuery}`
-						: urlObj.pathname;
-					window.history.replaceState(null, "", href);
-				}
+				setPersistedState(null);
 			},
 			setSleepTimer: sleepTimerActions.setSleepTimer,
 			deactivateSleepTimer: sleepTimerActions.deactivateSleepTimer,
 			dismissSleepExpiry: sleepTimerActions.dismissSleepExpiry,
 			prolongSleepTimer: sleepTimerActions.prolongSleepTimer,
 			triggerSleep: sleepTimerActions.triggerSleep,
-			toggleDarker: () => {
-				setState((s) => ({ ...s, darker: !s.darker }));
-			},
 			reorderItem: (videoId, direction) => {
 				setState((prev) => {
 					const items = prev.items.slice();
 					const currentIndex = items.findIndex((i) => i.videoId === videoId);
 					if (currentIndex === -1) return prev;
-					// Find the nearest neighbor in the requested direction that has a videoId
 					let targetIndex = currentIndex;
 					if (direction === "up") {
 						for (let i = currentIndex - 1; i >= 0; i--) {
@@ -420,25 +396,34 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 			}: {
 				delayMs?: number;
 			} = {}) => {
-				// Re-fetch items once after a small delay to let YouTube apply the reorder
 				const playlistId = state.playlistId;
 				if (!playlistId) return;
 				await new Promise((r) => setTimeout(r, Math.max(0, delayMs)));
 				try {
 					const aggregated: YouTubePlaylistItem[] = [];
-					let nextPageToken: string | undefined;
+					let pageToken: string | undefined;
+					const maxPages = pagesLoadedRef.current || 1;
+					let page = 0;
 					do {
 						const res = await fetchPlaylistItems({
 							apiKey: process.env.NEXT_PUBLIC_YOUTUBE_API_KEY,
 							accessToken: auth.accessToken,
 							playlistId,
-							pageToken: nextPageToken,
+							maxResults: PLAYLIST_PAGE_SIZE,
+							pageToken,
 							refreshToken: getTokenSilentlyRef.current,
 						});
 						aggregated.push(...res.items);
-						nextPageToken = res.nextPageToken;
-					} while (nextPageToken);
-					setState((s) => ({ ...s, items: aggregated }));
+						pageToken = res.nextPageToken;
+						page++;
+					} while (pageToken && page < maxPages);
+
+					nextPageTokenRef.current = pageToken;
+					setState((s) => ({
+						...s,
+						items: aggregated,
+						hasMore: Boolean(pageToken),
+					}));
 				} catch {
 					// ignore
 				}
@@ -460,11 +445,14 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 		[state, sleepTimer, isPaused, actions],
 	);
 
-	useUrlSync({
-		playlistId: state.playlistId,
-		currentVideoId: state.currentVideoId,
-		playlistTitle: state.snippet?.title,
-	});
+	// Sync document title
+	useEffect(() => {
+		if (typeof document === "undefined") return;
+		const baseTitle = "Sleepytime-YouTube";
+		const trimmed = state.snippet?.title?.trim();
+		document.title =
+			state.playlistId && trimmed ? `${baseTitle} - ${trimmed}` : baseTitle;
+	}, [state.playlistId, state.snippet?.title]);
 
 	// Persist playlist state to localStorage whenever it changes
 	useEffect(() => {
@@ -472,34 +460,27 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 			setPersistedState({
 				playlistId: state.playlistId,
 				currentVideoId: state.currentVideoId,
-				url: state.url,
 			});
 		}
-	}, [state.playlistId, state.currentVideoId, state.url, setPersistedState]);
+	}, [state.playlistId, state.currentVideoId, setPersistedState]);
 
-	// Initialize from URL if ?list= is present on the player page
-	// Only auto-load when on /player page
+	// Hydrate from localStorage on mount
 	useEffect(() => {
-		if (typeof window === "undefined") return;
-		if (!auth.isReady) return;
 		if (hasInitializedFromStorage.current) return;
-
+		if (!auth.isReady) return;
 		hasInitializedFromStorage.current = true;
 
-		const urlObj = new URL(window.location.href);
-		const listFromUrl = urlObj.searchParams.get("list");
-		const isPlayerPage = urlObj.pathname === "/player";
-
-		// Only auto-load playlists when on the player page
-		if (!isPlayerPage) return;
-
-		// Priority: URL parameter, then localStorage
-		if (listFromUrl) {
-			actions.loadByPlaylistId(listFromUrl);
-		} else if (persistedState?.playlistId) {
-			actions.loadByPlaylistId(persistedState.playlistId);
+		if (persistedState?.playlistId) {
+			actions.loadByPlaylistId(persistedState.playlistId, {
+				currentVideoId: persistedState.currentVideoId,
+			});
 		}
-	}, [auth.isReady, persistedState?.playlistId, actions]);
+	}, [
+		auth.isReady,
+		persistedState?.playlistId,
+		persistedState?.currentVideoId,
+		actions,
+	]);
 
 	return (
 		<PlaylistContext.Provider value={value}>

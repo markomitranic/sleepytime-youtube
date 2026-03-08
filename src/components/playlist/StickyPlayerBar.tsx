@@ -5,12 +5,15 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { usePlayer } from "~/components/playlist/PlayerContext";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
+import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
+import { cn } from "~/lib/utils";
 
 export function StickyPlayerBar() {
 	const playlist = usePlaylist();
 	const player = usePlayer();
 	const pathname = usePathname();
 	const router = useRouter();
+	const { isFadedOut } = useSleepyFadeout();
 
 	const currentVideo = playlist.items.find(
 		(item) => item.videoId === playlist.currentVideoId,
@@ -39,8 +42,13 @@ export function StickyPlayerBar() {
 	};
 
 	return (
-		<div className="fixed bottom-16 left-0 right-0 z-50 bg-gradient-to-b from-background/70 to-background/90">
-			<div className="flex items-center gap-3 h-14 px-3 max-w-screen-md mx-auto">
+		<div
+			className={cn(
+				"fixed bottom-16 left-0 right-0 z-50 bg-linear-to-b from-background/70 to-background/90 transition-opacity duration-1000",
+				isFadedOut && "opacity-0",
+			)}
+		>
+			<div className="flex items-center gap-3 h-14 px-3 max-w-3xl mx-auto">
 				<button
 					type="button"
 					onClick={handleNavigate}

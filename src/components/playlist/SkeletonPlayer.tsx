@@ -1,17 +1,8 @@
 "use client";
 
 import { ListVideo, Loader2 } from "lucide-react";
-import { usePlaylist } from "~/components/playlist/PlaylistContext";
 
 export function SkeletonPlayer() {
-	const playlist = usePlaylist();
-	const loading = playlist.loading;
-
-	const totalItems = loading?.totalItems;
-	const loaded = loading?.itemsLoaded ?? 0;
-	const totalPages = loading?.totalPages;
-	const loadedPages = loading?.pagesLoaded ?? 0;
-
 	return (
 		<div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-6rem)] max-h-[calc(100vh-6rem)]">
 			{/* Left side: Video player and controls (2/3) */}
@@ -26,18 +17,6 @@ export function SkeletonPlayer() {
 						<div className="flex items-center gap-2">
 							<Loader2 className="h-4 w-4 animate-spin" />
 							<span className="text-sm">Loading playlist...</span>
-						</div>
-						<div className="text-xs">
-							{typeof totalItems === "number" ? (
-								<span>
-									{loaded} out of {totalItems}
-								</span>
-							) : (
-								<span>
-									Page {loadedPages + 1}
-									{typeof totalPages === "number" ? ` of ${totalPages}` : ""}
-								</span>
-							)}
 						</div>
 					</div>
 				</div>

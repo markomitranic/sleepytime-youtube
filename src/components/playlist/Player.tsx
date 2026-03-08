@@ -16,25 +16,18 @@ import {
 	verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useQuery } from "@tanstack/react-query";
-import {
-	ChevronDown,
-	ListVideo,
-	Loader2,
-	Moon,
-	Pause,
-	Play,
-	SkipForward,
-} from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Library, Loader2, Moon, Pause, Play, SkipForward } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "~/components/auth/AuthContext";
 import type { YTPlayer } from "~/components/playlist/PlayerContext";
 import { usePlayer } from "~/components/playlist/PlayerContext";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
-import { PlaylistSwitcherDrawer } from "~/components/playlist/PlaylistSwitcherDrawer";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { SleepTimerExpiryOverlay } from "~/components/playlist/SleepTimerExpiryOverlay";
 import { SortablePlaylistItem } from "~/components/playlist/SortablePlaylistItem";
+import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
 import { Button } from "~/components/ui/button";
 import {
 	Dialog,
@@ -44,7 +37,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "~/components/ui/dialog";
-import { formatTotalDuration } from "~/lib/formatTime";
+import { cn } from "~/lib/utils";
 import {
 	deletePlaylistItem,
 	fetchUserPlaylists,
@@ -76,6 +69,7 @@ export function Player() {
 	const playlist = usePlaylist();
 	const player = usePlayer();
 	const auth = useAuth();
+	const { isFadedOut } = useSleepyFadeout();
 	const { data: userPlaylists } = useQuery({
 		queryKey: ["userPlaylists", auth.accessToken],
 		queryFn: async () => {
@@ -107,6 +101,10 @@ export function Player() {
 	const timeCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 	const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 	const [isDragging, setIsDragging] = useState(false);
+	const autoRemoveAndAdvanceRef = useRef<(videoId: string | undefined) => void>(
+		() => {},
+	);
+	const sleepTimerIsActiveRef = useRef(false);
 
 	const sensors = useSensors(
 		useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -117,17 +115,6 @@ export function Player() {
 			coordinateGetter: sortableKeyboardCoordinates,
 		}),
 	);
-
-	const playlistMetadata = useMemo(() => {
-		const totalDuration = playlist.items.reduce(
-			(sum, item) => sum + (item.durationSeconds ?? 0),
-			0,
-		);
-		return {
-			totalDurationSeconds: totalDuration,
-			videoCount: playlist.items.length,
-		};
-	}, [playlist.items]);
 
 	const getNextVideoId = useCallback(
 		(fromVideoId: string | undefined): string | undefined => {
@@ -175,6 +162,9 @@ export function Player() {
 		},
 		[canEdit, auth.accessToken, playlist, getNextVideoId],
 	);
+
+	autoRemoveAndAdvanceRef.current = autoRemoveAndAdvance;
+	sleepTimerIsActiveRef.current = playlist.sleepTimer.isActive;
 
 	const handleNext = useCallback((videoId: string | undefined) => {
 		endedVideoIdRef.current = videoId;
@@ -323,6 +313,8 @@ export function Player() {
 				} catch {}
 			}
 
+			const savedStart = player.getSavedProgress(currentVideoId);
+
 			playerInstanceRef.current = new window.YT.Player(playerRef.current, {
 				videoId: currentVideoId,
 				playerVars: {
@@ -336,6 +328,9 @@ export function Player() {
 					cc_load_policy: 0,
 					iv_load_policy: 3,
 					origin: window.location.origin,
+					...(savedStart && savedStart > 0
+						? { start: Math.floor(savedStart) }
+						: {}),
 				},
 				events: {
 					onReady: (event: YTPlayerEvent) => {
@@ -344,13 +339,6 @@ export function Player() {
 							const dur = event.target.getDuration?.();
 							if (dur) player.updateProgress(0, dur, currentVideoId);
 						} catch {}
-
-						const saved = player.getSavedProgress(currentVideoId);
-						if (saved && saved > 0) {
-							try {
-								event.target.seekTo(saved, true);
-							} catch {}
-						}
 
 						try {
 							event.target.playVideo();
@@ -361,8 +349,8 @@ export function Player() {
 						try {
 							if (event?.data === window?.YT?.PlayerState?.ENDED) {
 								player.clearSavedProgress(currentVideoId);
-								if (playlist.sleepTimer.isActive) {
-									autoRemoveAndAdvance(currentVideoId);
+								if (sleepTimerIsActiveRef.current) {
+									autoRemoveAndAdvanceRef.current(currentVideoId);
 								} else {
 									endedVideoIdRef.current = currentVideoId;
 									setEndedOpen(true);
@@ -395,13 +383,11 @@ export function Player() {
 		};
 	}, [
 		currentVideoId,
-		autoRemoveAndAdvance,
 		player.clearSavedProgress,
 		player.getSavedProgress,
 		player.setIsPlaying,
 		player.setPlayerInstance,
 		player.updateProgress,
-		playlist.sleepTimer.isActive,
 	]);
 
 	// Progress tracking for mini player
@@ -488,24 +474,33 @@ export function Player() {
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [handlePlayPause]);
 
+	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const handleLoadMore = useCallback(async () => {
+		setIsLoadingMore(true);
+		try {
+			await playlist.loadMoreItems();
+		} finally {
+			setIsLoadingMore(false);
+		}
+	}, [playlist.loadMoreItems]);
+
 	// Empty state
 	if (!playlist.items.length || !currentVideoId) {
 		return (
 			<div className="flex flex-col items-center justify-center h-[calc(100vh-6rem)] gap-6 text-center px-4">
 				<div className="space-y-3">
-					<ListVideo className="h-16 w-16 mx-auto text-muted-foreground" />
+					<Library className="h-16 w-16 mx-auto text-muted-foreground" />
 					<h2 className="text-2xl font-semibold">No Playlist Selected</h2>
 					<p className="text-muted-foreground max-w-md">
-						Choose a playlist to start listening. Browse your personal playlists
-						or try one of our curated selections.
+						Pick a playlist from the library to start listening.
 					</p>
 				</div>
-				<PlaylistSwitcherDrawer>
+				<Link href="/playlists">
 					<Button size="lg" className="gap-2">
-						<ListVideo className="h-5 w-5" />
-						Select a Playlist
+						<Library className="h-5 w-5" />
+						Browse Playlists
 					</Button>
-				</PlaylistSwitcherDrawer>
+				</Link>
 			</div>
 		);
 	}
@@ -518,28 +513,60 @@ export function Player() {
 
 			{/* Video ended / sleepy dialog */}
 			<Dialog open={endedOpen} onOpenChange={setEndedOpen}>
-				<DialogContent className="p-0 overflow-hidden">
-					<div className="p-6 flex flex-col items-center text-center gap-4">
+				<DialogContent className="p-0 overflow-hidden transition-opacity">
+					<div
+						className={cn(
+							"p-6 flex flex-col items-center text-center gap-4 transition-colors duration-1000",
+							isFadedOut && "bg-black",
+						)}
+					>
 						<div className="size-16 rounded-full bg-blue-500/10 flex items-center justify-center">
 							<Moon className="size-8 text-blue-400" />
 						</div>
-						<DialogHeader className="p-0">
+						<DialogHeader
+							className={cn(
+								"p-0 transition-colors duration-1000",
+								isFadedOut && "text-gray-500",
+							)}
+						>
 							<DialogTitle>Sleepy yet?</DialogTitle>
-							<DialogDescription>
+							<DialogDescription
+								className={cn(
+									"transition-colors duration-1000",
+									isFadedOut && "text-gray-700",
+								)}
+							>
 								This is a good place to stop watching. Your phone will go to
 								sleep unless you explicitly decide to continue.
 							</DialogDescription>
 						</DialogHeader>
 					</div>
-					<DialogFooter className="gap-2 p-4">
-						{canEdit ? (
-							<Button onClick={handleRemoveAndPlayNext}>
-								Remove &amp; Play Next
-							</Button>
-						) : (
-							<Button onClick={handlePlayNext}>Play Next</Button>
+					<DialogFooter
+						className={cn(
+							"gap-8 p-4 flex-col transition-colors duration-1000",
+							isFadedOut && "bg-black",
 						)}
-						<Button variant="ghost" onClick={() => setEndedOpen(false)}>
+					>
+						<Button
+							className={cn(
+								"border block w-full transition-colors duration-1000",
+								isFadedOut && "bg-gray-900 text-gray-400  border-gray-500",
+							)}
+							onClick={() => {
+								if (canEdit) {
+									handlePlayNext();
+								} else {
+									handleRemoveAndPlayNext();
+								}
+							}}
+						>
+							{canEdit ? "Remove & Play Next" : "Play Next"}
+						</Button>
+						<Button
+							className={"w-full block text-gray-500"}
+							variant="ghost"
+							onClick={() => setEndedOpen(false)}
+						>
 							Dismiss
 						</Button>
 					</DialogFooter>
@@ -550,45 +577,7 @@ export function Player() {
 			<div className="flex flex-col lg:flex-row gap-2 h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)]">
 				{/* Left: Video player + controls */}
 				<div className="flex-1 lg:w-2/3 flex flex-col gap-4">
-					<PlaylistSwitcherDrawer>
-						<button
-							type="button"
-							className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-secondary/50 hover:bg-secondary text-sm transition-all duration-500"
-						>
-							{playlist.items[0]?.thumbnailUrl ? (
-								// biome-ignore lint/performance/noImgElement: external YouTube thumbnail URL
-								<img
-									src={playlist.items[0].thumbnailUrl}
-									alt={playlist.snippet?.title ?? "Playlist"}
-									className="w-10 h-[23px] rounded object-cover flex-shrink-0"
-								/>
-							) : (
-								<div className="w-10 h-[23px] rounded bg-muted flex items-center justify-center flex-shrink-0">
-									<ListVideo className="h-3 w-3 text-muted-foreground" />
-								</div>
-							)}
-							<div className="flex-1 min-w-0 text-left">
-								<p className="font-medium truncate text-sm">
-									{playlist.snippet?.title ?? "Playlist"}
-								</p>
-								<p className="text-xs text-muted-foreground">
-									{playlistMetadata.videoCount} video
-									{playlistMetadata.videoCount !== 1 ? "s" : ""}
-									{playlistMetadata.totalDurationSeconds > 0 && (
-										<>
-											{" · "}
-											{formatTotalDuration(
-												playlistMetadata.totalDurationSeconds,
-											)}
-										</>
-									)}
-								</p>
-							</div>
-							<ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-						</button>
-					</PlaylistSwitcherDrawer>
-
-					<div className="aspect-video w-full overflow-hidden rounded-xl glass-panel bg-black flex-shrink-0">
+					<div className="aspect-video w-full overflow-hidden rounded-xl glass-panel bg-black shrink-0">
 						<div
 							ref={playerRef}
 							id={`youtube-player-${currentVideoId}`}
@@ -599,7 +588,12 @@ export function Player() {
 						/>
 					</div>
 
-					<div className="flex-1 flex flex-col gap-4">
+					<div
+						className={cn(
+							"flex-1 flex flex-col gap-4 transition-opacity duration-1000",
+							isFadedOut && "opacity-25",
+						)}
+					>
 						<div>
 							<h2 className="text-xl font-semibold">{current?.title ?? ""}</h2>
 							{current?.channelTitle && (
@@ -655,7 +649,12 @@ export function Player() {
 				</div>
 
 				{/* Right: Playlist sidebar */}
-				<div className="lg:w-1/3 flex flex-col lg:glass-panel lg:rounded-xl lg:pl-2 lg:pb-4">
+				<div
+					className={cn(
+						"lg:w-1/3 flex flex-col lg:glass-panel lg:rounded-xl lg:pl-2 lg:pb-4 transition-opacity duration-1000",
+						isFadedOut && "opacity-25",
+					)}
+				>
 					{isReordering && (
 						<div className="flex items-center gap-2 text-muted-foreground pb-2">
 							<Loader2 className="h-5 w-5 animate-spin" />
@@ -664,7 +663,7 @@ export function Player() {
 					)}
 
 					<div
-						className={`flex-1 pr-2 -mr-2 pt-2 pb-24 touch-drag-container ${isDragging ? "dragging" : "overflow-y-auto"}`}
+						className={`flex-1 pr-2 -mr-2 pt-2 pb-40 touch-drag-container ${isDragging ? "dragging" : "overflow-y-auto"}`}
 					>
 						<DndContext
 							sensors={sensors}
@@ -692,6 +691,20 @@ export function Player() {
 								</ul>
 							</SortableContext>
 						</DndContext>
+						{playlist.hasMore && (
+							<Button
+								type="button"
+								variant={"outline"}
+								onClick={handleLoadMore}
+								disabled={isLoadingMore}
+								className="text-sm mt-1 bg-white py-10 w-full text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+							>
+								{isLoadingMore ? (
+									<Loader2 className="h-4 w-4 animate-spin inline mr-1.5" />
+								) : null}
+								{isLoadingMore ? "Loading..." : "Load more"}
+							</Button>
+						)}
 					</div>
 				</div>
 			</div>

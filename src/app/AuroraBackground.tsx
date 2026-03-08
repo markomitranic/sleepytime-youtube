@@ -1,14 +1,10 @@
 "use client";
 
-import { usePlaylist } from "~/components/playlist/PlaylistContext";
+import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
 
 export function AuroraBackground() {
-	const playlist = usePlaylist();
+	const { isFadedOut } = useSleepyFadeout();
 
-	// Don't show aurora if darker is true
-	if (playlist.darker) {
-		return null;
-	}
-
+	if (isFadedOut) return null;
 	return <div className="aurora-background" aria-hidden="true" />;
 }
