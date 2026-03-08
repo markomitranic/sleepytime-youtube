@@ -17,6 +17,7 @@ export const viewport: Viewport = {
 	userScalable: false,
 	viewportFit: "cover",
 	minimumScale: 1,
+	themeColor: "#252525",
 };
 
 export const metadata: Metadata = {
@@ -38,7 +39,6 @@ export const metadata: Metadata = {
 	formatDetection: {
 		telephone: false,
 	},
-	themeColor: "#252525",
 	other: {
 		"apple-mobile-web-app-capable": "yes",
 		"apple-mobile-web-app-status-bar-style": "black-translucent",
