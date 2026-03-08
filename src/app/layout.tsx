@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Geist, Lora } from "next/font/google";
 import "~/styles/globals.css";
 import { Toaster } from "sonner";
 import { BottomNav } from "~/components/BottomNav";
@@ -22,7 +22,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
 	title: "SleepyTime",
-	description: "Play YouTube playlists one by one",
+	description:
+		"Fall asleep to YouTube playlists — with a sleep timer, no ads, and a screen that dims with you.",
 	applicationName: "SleepyTime",
 	manifest: "/manifest.json",
 	appleWebApp: {
@@ -50,6 +51,7 @@ export const metadata: Metadata = {
 };
 
 const geist = Geist({ subsets: ["latin"] });
+const lora = Lora({ subsets: ["latin"], variable: "--font-lora" });
 
 export default function RootLayout({
 	children,
@@ -65,7 +67,7 @@ export default function RootLayout({
 				<link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
 				<link rel="apple-touch-startup-image" href="/icon-512.png" />
 			</head>
-			<body className={geist.className}>
+			<body className={`${geist.className} ${lora.variable}`}>
 				<AppProviders>
 					<PlayerProvider>
 						<SleepyFadeoutProvider>
