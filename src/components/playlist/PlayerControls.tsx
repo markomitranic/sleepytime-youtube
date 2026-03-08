@@ -61,11 +61,16 @@ export function PlayerControls({
 				<SleepTimerDrawer>
 					<button
 						type="button"
-						className={`hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:ring-[3px] ${
-							sleepTimerIsActive
-								? "text-white border-2 border-white"
-								: "text-muted-foreground"
-						}`}
+						className={cn(
+							"inline-flex h-12 w-12 items-center justify-center rounded-full transition-all duration-150 active:scale-95 focus-visible:ring-[3px] focus-visible:ring-ring/50",
+							sleepTimerIsActive ? "text-white" : "text-muted-foreground",
+						)}
+						style={{
+							background: "#221f1b",
+							boxShadow: sleepTimerIsActive
+								? "3px 3px 6px rgba(0,0,0,0.5), -2px -2px 5px rgba(255,255,255,0.025), inset 0 0 0 1.5px rgba(255,255,255,0.25)"
+								: "3px 3px 6px rgba(0,0,0,0.5), -2px -2px 5px rgba(255,255,255,0.025)",
+						}}
 						aria-label={
 							sleepTimerIsActive
 								? "Sleep timer active - click to modify"
@@ -85,7 +90,12 @@ export function PlayerControls({
 				<button
 					type="button"
 					onClick={onNext}
-					className="hover:bg-secondary/60 focus-visible:ring-ring/50 inline-flex h-12 w-12 items-center justify-center rounded-full border text-muted-foreground transition focus-visible:ring-[3px] hover:text-foreground"
+					className="inline-flex h-12 w-12 items-center justify-center rounded-full text-muted-foreground transition-all duration-150 active:scale-95 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+					style={{
+						background: "#221f1b",
+						boxShadow:
+							"3px 3px 6px rgba(0,0,0,0.5), -2px -2px 5px rgba(255,255,255,0.025)",
+					}}
 					aria-label="Next video"
 				>
 					<SkipForward className="h-5 w-5" />
