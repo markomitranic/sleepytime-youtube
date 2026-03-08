@@ -173,7 +173,7 @@ export default function HomePage() {
 							<Button
 								onClick={() => signIn("google")}
 								variant="outline"
-								className="px-8 py-3 text-sm font-normal tracking-wide border-foreground/15 text-foreground/60 hover:text-foreground/80 hover:border-foreground/25 hover:shadow-[0_0_20px_oklch(0.35_0.06_55_/_0.15)] transition-all duration-500"
+								className="px-8 py-3 text-sm font-normal tracking-wide border-foreground/15 text-foreground/60 hover:text-foreground/80 hover:border-foreground/25 hover:shadow-[0_0_20px_oklch(0.35_0.06_55/0.15)] transition-all duration-500"
 							>
 								Sign in with Google
 							</Button>
