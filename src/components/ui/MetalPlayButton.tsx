@@ -36,15 +36,17 @@ export function MetalPlayButton({
 				].join(", "),
 			}}
 		>
-			{/* Inner metallic face */}
+			{/* Inner metallic face with concentric ribs */}
 			<span
 				className={cn(
 					"absolute rounded-full",
 					isLg ? "inset-[3px]" : "inset-[2px]",
 				)}
 				style={{
-					background:
+					background: [
+						`repeating-radial-gradient(circle at 50% 50%, rgba(0,0,0,0.12) 0px, transparent 1px, transparent ${isLg ? "3px" : "2.5px"}, rgba(0,0,0,0.12) ${isLg ? "3px" : "2.5px"})`,
 						"linear-gradient(155deg, #cdc3b8 0%, #a89888 30%, #8a7a6e 50%, #a09080 70%, #c0b6aa 100%)",
+					].join(", "),
 					boxShadow:
 						"inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.25)",
 				}}
