@@ -32,7 +32,7 @@ export function BottomNav() {
 				isFadedOut && "opacity-0",
 			)}
 		>
-			<div className="flex items-center justify-center gap-8 h-16 max-w-3xl mx-auto px-2">
+			<div className="flex items-center justify-center gap-8 h-16 max-w-3xl mx-auto px-2 pb-[env(safe-area-inset-bottom)]">
 				<Link
 					href="/"
 					className={cn(

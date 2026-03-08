@@ -44,7 +44,7 @@ export function StickyPlayerBar() {
 	return (
 		<div
 			className={cn(
-				"fixed bottom-16 left-0 right-0 z-50 bg-linear-to-b from-background/70 to-background/90 transition-opacity duration-1000",
+				"fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] left-3 right-3 z-50 rounded-lg bg-[#1e1816] transition-opacity duration-1000",
 				isFadedOut && "opacity-0",
 			)}
 		>

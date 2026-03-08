@@ -103,7 +103,7 @@ export default function HomePage() {
 			: fallbackPlaylists;
 
 	return (
-		<main className="min-h-screen">
+		<main className="min-h-screen pt-[env(safe-area-inset-top)]">
 			{/* Hero: Vignetted Sleepytime painting with firelight glow */}
 			<div className="hero-glow w-full max-w-5xl mx-auto pt-6 md:pt-10">
 				<div className="vignette-mask overflow-hidden">
