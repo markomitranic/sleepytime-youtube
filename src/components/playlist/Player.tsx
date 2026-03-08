@@ -553,6 +553,44 @@ export function Player() {
 			<div className="flex flex-col lg:flex-row gap-2 h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)]">
 				{/* Left: Video player + controls */}
 				<div className="flex-1 lg:w-2/3 flex flex-col gap-4">
+					<PlaylistSwitcherDrawer>
+						<button
+							type="button"
+							className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border bg-secondary/50 hover:bg-secondary text-sm transition-colors"
+						>
+							{playlist.items[0]?.thumbnailUrl ? (
+								// biome-ignore lint/performance/noImgElement: external YouTube thumbnail URL
+								<img
+									src={playlist.items[0].thumbnailUrl}
+									alt={playlist.snippet?.title ?? "Playlist"}
+									className="w-10 h-[23px] rounded object-cover flex-shrink-0"
+								/>
+							) : (
+								<div className="w-10 h-[23px] rounded bg-muted flex items-center justify-center flex-shrink-0">
+									<ListVideo className="h-3 w-3 text-muted-foreground" />
+								</div>
+							)}
+							<div className="flex-1 min-w-0 text-left">
+								<p className="font-medium truncate text-sm">
+									{playlist.snippet?.title ?? "Playlist"}
+								</p>
+								<p className="text-xs text-muted-foreground">
+									{playlistMetadata.videoCount} video
+									{playlistMetadata.videoCount !== 1 ? "s" : ""}
+									{playlistMetadata.totalDurationSeconds > 0 && (
+										<>
+											{" · "}
+											{formatTotalDuration(
+												playlistMetadata.totalDurationSeconds,
+											)}
+										</>
+									)}
+								</p>
+							</div>
+							<ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+						</button>
+					</PlaylistSwitcherDrawer>
+
 					<div
 						ref={playerContainerRef}
 						className="aspect-video w-full overflow-hidden rounded-xl glass-panel bg-black flex-shrink-0"
@@ -634,60 +672,6 @@ export function Player() {
 							<span className="text-sm">Saving...</span>
 						</div>
 					)}
-
-					<div className="pb-4 space-y-3 border-b">
-						<PlaylistSwitcherDrawer>
-							<button
-								type="button"
-								className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-secondary/50 hover:bg-secondary text-sm font-medium transition-colors"
-							>
-								<ListVideo className="h-4 w-4" />
-								<span>Switch Playlist</span>
-								<ChevronDown className="h-4 w-4 ml-auto" />
-							</button>
-						</PlaylistSwitcherDrawer>
-
-						<div className="flex items-start gap-3">
-							{playlist.items[0]?.thumbnailUrl ? (
-								// biome-ignore lint/performance/noImgElement: external YouTube thumbnail URL
-								<img
-									src={playlist.items[0].thumbnailUrl}
-									alt={playlist.snippet?.title ?? "Playlist"}
-									className="w-20 h-[45px] rounded object-cover flex-shrink-0"
-								/>
-							) : (
-								<div className="w-20 h-[45px] rounded bg-muted flex items-center justify-center flex-shrink-0">
-									<ListVideo className="h-5 w-5 text-muted-foreground" />
-								</div>
-							)}
-							<div className="flex-1 min-w-0 space-y-1">
-								<h3
-									className="font-semibold text-sm truncate"
-									title={playlist.snippet?.title}
-								>
-									{playlist.snippet?.title ?? "Playlist"}
-								</h3>
-								<div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-									<span>
-										{playlistMetadata.videoCount} video
-										{playlistMetadata.videoCount !== 1 ? "s" : ""}
-									</span>
-									{playlistMetadata.totalDurationSeconds > 0 && (
-										<span>
-											{formatTotalDuration(
-												playlistMetadata.totalDurationSeconds,
-											)}{" "}
-											total
-										</span>
-									)}
-								</div>
-							</div>
-						</div>
-
-						<span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-							Videos
-						</span>
-					</div>
 
 					<div
 						className={`flex-1 pr-2 -mr-2 pt-2 pb-24 touch-drag-container ${isDragging ? "dragging" : "overflow-y-auto"}`}

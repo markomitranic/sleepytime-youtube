@@ -63,7 +63,7 @@ export function StickyPlayerBar({ playerContainerRef }: StickyPlayerBarProps) {
 
 	return (
 		<div
-			className={`fixed top-1 left-1 right-1 lg:hidden z-50 glass-panel-elevated rounded-2xl transition-opacity duration-500 ${
+			className={`fixed bottom-[4.5rem] left-1 right-1 lg:hidden z-50 glass-panel-elevated rounded-2xl transition-opacity duration-500 ${
 				player.isInactive ? "opacity-30" : ""
 			}`}
 		>

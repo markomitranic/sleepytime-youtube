@@ -16,6 +16,9 @@ export function SkeletonPlayer() {
 		<div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-6rem)] max-h-[calc(100vh-6rem)]">
 			{/* Left side: Video player and controls (2/3) */}
 			<div className="flex-1 lg:w-2/3 flex flex-col gap-4">
+				{/* Switch playlist skeleton */}
+				<div className="w-full h-[42px] rounded-lg bg-muted/40" />
+
 				{/* Video area skeleton with icon and message */}
 				<div className="aspect-video w-full overflow-hidden rounded-md border bg-muted/50 flex items-center justify-center flex-shrink-0">
 					<div className="flex flex-col items-center gap-3 text-muted-foreground">
