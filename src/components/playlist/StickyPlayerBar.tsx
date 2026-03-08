@@ -44,11 +44,11 @@ export function StickyPlayerBar() {
 	return (
 		<div
 			className={cn(
-				"fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] left-3 right-3 z-50 rounded-lg bg-[#1e1816] transition-opacity duration-1000",
+				"fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] left-3 right-3 z-50 rounded-lg bg-[#1e1816] overflow-hidden transition-opacity duration-1000",
 				isFadedOut && "opacity-0",
 			)}
 		>
-			<div className="flex items-center gap-3 h-14 px-3 max-w-3xl mx-auto">
+			<div className="flex items-center gap-3 h-16 px-3 max-w-3xl mx-auto">
 				<button
 					type="button"
 					onClick={handleNavigate}
@@ -58,12 +58,12 @@ export function StickyPlayerBar() {
 						<Image
 							src={currentVideo.thumbnailUrl}
 							alt={currentVideo.title}
-							className="h-10 w-18 rounded object-cover"
-							width={72}
-							height={40}
+							className="h-12 w-12 rounded object-cover"
+							width={48}
+							height={48}
 						/>
 					) : (
-						<div className="h-10 w-18 rounded bg-muted" />
+						<div className="h-12 w-12 rounded bg-muted" />
 					)}
 				</button>
 
@@ -73,12 +73,11 @@ export function StickyPlayerBar() {
 					className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
 				>
 					<p className="text-sm font-medium truncate">{currentVideo.title}</p>
-					<div className="mt-1 h-1 bg-muted rounded-full overflow-hidden">
-						<div
-							className="h-full bg-white transition-all duration-100"
-							style={{ width: `${progress}%` }}
-						/>
-					</div>
+					{currentVideo.channelTitle && (
+						<p className="text-xs text-muted-foreground truncate">
+							{currentVideo.channelTitle}
+						</p>
+					)}
 				</button>
 
 				<button
@@ -93,6 +92,13 @@ export function StickyPlayerBar() {
 						<Play className="h-4 w-4 ml-0.5" />
 					)}
 				</button>
+			</div>
+
+			<div className="mx-[10px] h-[3px] bg-muted/50 rounded-full overflow-hidden">
+				<div
+					className="h-full bg-white rounded-full transition-all duration-100"
+					style={{ width: `${progress}%` }}
+				/>
 			</div>
 		</div>
 	);
