@@ -45,6 +45,7 @@ export const BUILTIN_PLAYLISTS: BuiltinPlaylist[] = [
 		id: "PLsPUh22kYmNCHG8KwkgA6-R824qt10UJP",
 		shortLabel: "Spacetime",
 		title: "Explore the outer reaches of space",
+		thumbnail: "/spacetime.jpg",
 	},
 ];
 

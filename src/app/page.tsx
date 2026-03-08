@@ -142,6 +142,10 @@ export default function HomePage() {
 
 					{/* Curated playlist grid */}
 					<div className="space-y-4">
+						<p className="text-sm text-muted-foreground/70 leading-relaxed max-w-md mx-auto">
+							This app was made for my wife, who recommends falling asleep with
+							some "SkyrimPlus Homes" or "Antonio Off-grid".
+						</p>
 						<div className="grid grid-cols-2 gap-3">
 							{displayPlaylists.map((p) => (
 								<PlaylistCard
@@ -152,12 +156,6 @@ export default function HomePage() {
 								/>
 							))}
 						</div>
-						<Link
-							href="/playlists"
-							className="inline-block text-sm text-muted-foreground/50 hover:text-muted-foreground/80 transition-colors duration-500 border-b border-transparent hover:border-muted-foreground/20"
-						>
-							See curated playlists
-						</Link>
 					</div>
 
 					{/* Sign-in block — unauthenticated only */}
