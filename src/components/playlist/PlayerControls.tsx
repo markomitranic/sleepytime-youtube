@@ -1,9 +1,10 @@
 "use client";
 
-import { Moon, Pause, Play, SkipForward } from "lucide-react";
+import { Moon, SkipForward } from "lucide-react";
 import { useEffect } from "react";
 import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
+import { MetalPlayButton } from "~/components/ui/MetalPlayButton";
 import { cn } from "~/lib/utils";
 import type { YouTubePlaylistItem } from "~/lib/youtube";
 
@@ -75,18 +76,11 @@ export function PlayerControls({
 					</button>
 				</SleepTimerDrawer>
 
-				<button
-					type="button"
+				<MetalPlayButton
+					isPlaying={isPlaying}
 					onClick={onPlayPause}
-					className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-white text-black glow-button focus-visible:ring-[3px] focus-visible:ring-ring/50"
-					aria-label={isPlaying ? "Pause" : "Play"}
-				>
-					{isPlaying ? (
-						<Pause className="h-6 w-6" />
-					) : (
-						<Play className="h-6 w-6" />
-					)}
-				</button>
+					size="lg"
+				/>
 
 				<button
 					type="button"

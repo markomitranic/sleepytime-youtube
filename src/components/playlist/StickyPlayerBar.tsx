@@ -1,11 +1,11 @@
 "use client";
 
-import { Pause, Play } from "lucide-react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { usePlayer } from "~/components/playlist/PlayerContext";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
+import { MetalPlayButton } from "~/components/ui/MetalPlayButton";
 import { cn } from "~/lib/utils";
 
 export function StickyPlayerBar() {
@@ -80,18 +80,11 @@ export function StickyPlayerBar() {
 					)}
 				</button>
 
-				<button
-					type="button"
+				<MetalPlayButton
+					isPlaying={player.isPlaying}
 					onClick={handlePlayPause}
-					className="h-9 w-9 rounded-full bg-white text-black flex items-center justify-center shrink-0 hover:bg-white/90 transition-colors"
-					aria-label={player.isPlaying ? "Pause" : "Play"}
-				>
-					{player.isPlaying ? (
-						<Pause className="h-4 w-4" />
-					) : (
-						<Play className="h-4 w-4 ml-0.5" />
-					)}
-				</button>
+					size="sm"
+				/>
 			</div>
 
 			<div className="mx-[10px] h-[3px] bg-muted/50 rounded-full overflow-hidden">
