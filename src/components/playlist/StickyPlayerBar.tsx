@@ -18,8 +18,9 @@ export function StickyPlayerBar() {
 	const currentVideo = playlist.items.find(
 		(item) => item.videoId === playlist.currentVideoId,
 	);
+	const videoMeta = currentVideo ?? playlist.currentVideoMeta;
 
-	if (!currentVideo || !currentVideo.videoId) return null;
+	if (!playlist.currentVideoId || !videoMeta) return null;
 
 	const progress =
 		player.duration > 0 ? (player.currentTime / player.duration) * 100 : 0;
@@ -54,10 +55,10 @@ export function StickyPlayerBar() {
 					onClick={handleNavigate}
 					className="shrink-0 hover:opacity-80 transition-opacity"
 				>
-					{currentVideo.thumbnailUrl ? (
+					{videoMeta.thumbnailUrl ? (
 						<Image
-							src={currentVideo.thumbnailUrl}
-							alt={currentVideo.title}
+							src={videoMeta.thumbnailUrl}
+							alt={videoMeta.title ?? ""}
 							className="h-12 w-12 rounded object-cover"
 							width={48}
 							height={48}
@@ -72,10 +73,10 @@ export function StickyPlayerBar() {
 					onClick={handleNavigate}
 					className="flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
 				>
-					<p className="text-sm font-medium truncate">{currentVideo.title}</p>
-					{currentVideo.channelTitle && (
+					<p className="text-sm font-medium truncate">{videoMeta.title}</p>
+					{videoMeta.channelTitle && (
 						<p className="text-xs text-muted-foreground truncate">
-							{currentVideo.channelTitle}
+							{videoMeta.channelTitle}
 						</p>
 					)}
 				</button>

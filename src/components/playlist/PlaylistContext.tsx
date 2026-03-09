@@ -27,6 +27,9 @@ import {
 type PersistedPlaylistState = {
 	playlistId?: string;
 	currentVideoId?: string;
+	currentVideoTitle?: string;
+	currentVideoThumbnail?: string;
+	currentVideoChannel?: string;
 };
 
 export type { SleepTimer } from "~/lib/useSleepTimer";
@@ -36,6 +39,11 @@ export type PlaylistState = {
 	snippet?: YouTubePlaylistSnippet | null;
 	items: YouTubePlaylistItem[];
 	currentVideoId?: string;
+	currentVideoMeta?: {
+		title?: string;
+		thumbnailUrl?: string;
+		channelTitle?: string;
+	};
 	isLoading?: boolean;
 	hasMore?: boolean;
 	error?: string | null;
@@ -155,15 +163,8 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 		() => ({
 			loadPlaylist: ({ playlistId, snippet, items, currentVideoId }) => {
 				setState((prev) => {
-					const provided =
-						currentVideoId && items.some((i) => i.videoId === currentVideoId)
-							? currentVideoId
-							: undefined;
-					const preserved =
-						prev.currentVideoId &&
-						items.some((i) => i.videoId === prev.currentVideoId)
-							? prev.currentVideoId
-							: undefined;
+					const provided = currentVideoId ?? undefined;
+					const preserved = prev.currentVideoId ?? undefined;
 					const fallback = items.find((i) => Boolean(i.videoId))?.videoId;
 					return {
 						...prev,
@@ -440,9 +441,30 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 		],
 	);
 
+	const currentVideoMeta = useMemo(() => {
+		const fromItems = state.items.find(
+			(i) => i.videoId === state.currentVideoId,
+		);
+		if (fromItems) {
+			return {
+				title: fromItems.title,
+				thumbnailUrl: fromItems.thumbnailUrl,
+				channelTitle: fromItems.channelTitle,
+			};
+		}
+		if (persistedState?.currentVideoId === state.currentVideoId) {
+			return {
+				title: persistedState.currentVideoTitle,
+				thumbnailUrl: persistedState.currentVideoThumbnail,
+				channelTitle: persistedState.currentVideoChannel,
+			};
+		}
+		return undefined;
+	}, [state.items, state.currentVideoId, persistedState]);
+
 	const value = useMemo(
-		() => ({ ...state, sleepTimer, isPaused, ...actions }),
-		[state, sleepTimer, isPaused, actions],
+		() => ({ ...state, currentVideoMeta, sleepTimer, isPaused, ...actions }),
+		[state, currentVideoMeta, sleepTimer, isPaused, actions],
 	);
 
 	// Sync document title
@@ -455,14 +477,25 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 	}, [state.playlistId, state.snippet?.title]);
 
 	// Persist playlist state to localStorage whenever it changes
+	const persistedMetaRef = useRef(persistedState);
+	persistedMetaRef.current = persistedState;
 	useEffect(() => {
 		if (state.playlistId) {
+			const currentItem = state.items.find(
+				(i) => i.videoId === state.currentVideoId,
+			);
+			const prev = persistedMetaRef.current;
 			setPersistedState({
 				playlistId: state.playlistId,
 				currentVideoId: state.currentVideoId,
+				currentVideoTitle: currentItem?.title ?? prev?.currentVideoTitle,
+				currentVideoThumbnail:
+					currentItem?.thumbnailUrl ?? prev?.currentVideoThumbnail,
+				currentVideoChannel:
+					currentItem?.channelTitle ?? prev?.currentVideoChannel,
 			});
 		}
-	}, [state.playlistId, state.currentVideoId, setPersistedState]);
+	}, [state.playlistId, state.currentVideoId, state.items, setPersistedState]);
 
 	// Hydrate from localStorage on mount
 	useEffect(() => {
