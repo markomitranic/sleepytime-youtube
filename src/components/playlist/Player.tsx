@@ -292,7 +292,7 @@ export function Player() {
 					<div className="aspect-video w-full overflow-hidden rounded-xl glass-panel bg-black shrink-0">
 						<div
 							ref={playerRef}
-							id={`youtube-player-${currentVideoId}`}
+							id="youtube-player"
 							className="h-full w-full"
 							// @ts-expect-error - iOS PWA properties
 							style={{ WebkitPlaysInline: true, playsInline: true }}
