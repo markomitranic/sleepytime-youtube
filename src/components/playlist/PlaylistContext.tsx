@@ -452,7 +452,10 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 				channelTitle: fromItems.channelTitle,
 			};
 		}
-		if (persistedState?.currentVideoId === state.currentVideoId) {
+		if (
+			persistedState &&
+			persistedState.currentVideoId === state.currentVideoId
+		) {
 			return {
 				title: persistedState.currentVideoTitle,
 				thumbnailUrl: persistedState.currentVideoThumbnail,
