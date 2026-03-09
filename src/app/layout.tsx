@@ -6,6 +6,7 @@ import { BottomNav } from "~/components/BottomNav";
 import { CookieBanner } from "~/components/CookieBanner";
 import { PlayerProvider } from "~/components/playlist/PlayerContext";
 import { StickyPlayerBar } from "~/components/playlist/StickyPlayerBar";
+import { ServiceWorkerKillSwitch } from "~/components/ServiceWorkerKillSwitch";
 import { SleepyFadeoutProvider } from "~/components/SleepyFadeoutContext";
 import { AuroraBackground } from "./AuroraBackground";
 import { AppProviders } from "./providers";
@@ -77,6 +78,7 @@ export default function RootLayout({
 							<BottomNav />
 							<Toaster richColors position="bottom-center" closeButton />
 							<CookieBanner />
+							<ServiceWorkerKillSwitch />
 						</SleepyFadeoutProvider>
 					</PlayerProvider>
 				</AppProviders>
