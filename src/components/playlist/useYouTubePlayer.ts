@@ -74,10 +74,10 @@ export function useYouTubePlayer({
 		if (!currentVideoId) return;
 
 		const p = playerFnsRef.current;
+		currentVideoIdRef.current = currentVideoId;
 
 		// Reuse existing player for video changes (preserves autoplay privileges)
-		if (playerInstanceRef.current?.loadVideoById && currentVideoIdRef.current) {
-			currentVideoIdRef.current = currentVideoId;
+		if (playerInstanceRef.current?.loadVideoById) {
 			const savedStart = p.getSavedProgress(currentVideoId);
 			playerInstanceRef.current.loadVideoById({
 				videoId: currentVideoId,
@@ -86,8 +86,6 @@ export function useYouTubePlayer({
 			p.setIsPlaying(true);
 			return;
 		}
-
-		currentVideoIdRef.current = currentVideoId;
 
 		const initPlayer = () => {
 			if (!window.YT || !playerRef.current) return;
@@ -159,7 +157,10 @@ export function useYouTubePlayer({
 
 		if (window.YT) initPlayer();
 		else window.onYouTubeIframeAPIReady = initPlayer;
+	}, [currentVideoId]);
 
+	// Destroy player only on unmount
+	useEffect(() => {
 		return () => {
 			if (playerInstanceRef.current?.destroy) {
 				try {
@@ -172,7 +173,7 @@ export function useYouTubePlayer({
 				progressIntervalRef.current = null;
 			}
 		};
-	}, [currentVideoId]);
+	}, []);
 
 	// Progress tracking for mini player
 	useEffect(() => {

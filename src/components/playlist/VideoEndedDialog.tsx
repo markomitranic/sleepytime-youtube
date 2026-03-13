@@ -118,9 +118,9 @@ export function VideoEndedDialog({
 						)}
 						onClick={() => {
 							if (canEdit) {
-								onPlayNext();
-							} else {
 								onRemoveAndPlayNext();
+							} else {
+								onPlayNext();
 							}
 						}}
 					>
