@@ -47,13 +47,16 @@ export function useYouTubePlayer({
 	const playerRef = useRef<HTMLDivElement>(null);
 	const playerInstanceRef = useRef<YTPlayer | null>(null);
 	const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+	const currentVideoIdRef = useRef<string | undefined>(undefined);
 	const sleepTimerIsActiveRef = useRef(false);
 	const autoAdvanceRef = useRef<(videoId: string) => void>(() => {});
 	const videoEndedRef = useRef<(videoId: string) => void>(() => {});
+	const playerFnsRef = useRef(player);
 
 	sleepTimerIsActiveRef.current = sleepTimerIsActive;
 	autoAdvanceRef.current = onAutoAdvance;
 	videoEndedRef.current = onVideoEnded;
+	playerFnsRef.current = player;
 
 	// Load YouTube IFrame API
 	useEffect(() => {
@@ -66,9 +69,25 @@ export function useYouTubePlayer({
 		window.onYouTubeIframeAPIReady = () => {};
 	}, []);
 
-	// Initialize player when video changes
+	// Create player once, reuse via loadVideoById for subsequent videos
 	useEffect(() => {
 		if (!currentVideoId) return;
+
+		const p = playerFnsRef.current;
+
+		// Reuse existing player for video changes (preserves autoplay privileges)
+		if (playerInstanceRef.current?.loadVideoById && currentVideoIdRef.current) {
+			currentVideoIdRef.current = currentVideoId;
+			const savedStart = p.getSavedProgress(currentVideoId);
+			playerInstanceRef.current.loadVideoById({
+				videoId: currentVideoId,
+				startSeconds: savedStart && savedStart > 0 ? Math.floor(savedStart) : 0,
+			});
+			p.setIsPlaying(true);
+			return;
+		}
+
+		currentVideoIdRef.current = currentVideoId;
 
 		const initPlayer = () => {
 			if (!window.YT || !playerRef.current) return;
@@ -79,7 +98,7 @@ export function useYouTubePlayer({
 				} catch {}
 			}
 
-			const savedStart = player.getSavedProgress(currentVideoId);
+			const savedStart = p.getSavedProgress(currentVideoId);
 
 			playerInstanceRef.current = new window.YT.Player(playerRef.current, {
 				videoId: currentVideoId,
@@ -100,30 +119,37 @@ export function useYouTubePlayer({
 				},
 				events: {
 					onReady: (event: YTPlayerEvent) => {
-						player.setPlayerInstance(event.target);
+						playerFnsRef.current.setPlayerInstance(event.target);
 						try {
 							const dur = event.target.getDuration?.();
-							if (dur) player.updateProgress(0, dur, currentVideoId);
+							if (dur)
+								playerFnsRef.current.updateProgress(
+									0,
+									dur,
+									currentVideoIdRef.current,
+								);
 						} catch {}
 
 						try {
 							event.target.playVideo();
-							player.setIsPlaying(true);
+							playerFnsRef.current.setIsPlaying(true);
 						} catch {}
 					},
 					onStateChange: (event: YTPlayerEvent) => {
 						try {
 							if (event?.data === window?.YT?.PlayerState?.ENDED) {
-								player.clearSavedProgress(currentVideoId);
+								const endedId = currentVideoIdRef.current;
+								if (!endedId) return;
+								playerFnsRef.current.clearSavedProgress(endedId);
 								if (sleepTimerIsActiveRef.current) {
-									autoAdvanceRef.current(currentVideoId);
+									autoAdvanceRef.current(endedId);
 								} else {
-									videoEndedRef.current(currentVideoId);
+									videoEndedRef.current(endedId);
 								}
 							} else if (event?.data === window?.YT?.PlayerState?.PLAYING) {
-								player.setIsPlaying(true);
+								playerFnsRef.current.setIsPlaying(true);
 							} else if (event?.data === window?.YT?.PlayerState?.PAUSED) {
-								player.setIsPlaying(false);
+								playerFnsRef.current.setIsPlaying(false);
 							}
 						} catch {}
 					},
@@ -146,14 +172,7 @@ export function useYouTubePlayer({
 				progressIntervalRef.current = null;
 			}
 		};
-	}, [
-		currentVideoId,
-		player.clearSavedProgress,
-		player.getSavedProgress,
-		player.setIsPlaying,
-		player.setPlayerInstance,
-		player.updateProgress,
-	]);
+	}, [currentVideoId]);
 
 	// Progress tracking for mini player
 	useEffect(() => {

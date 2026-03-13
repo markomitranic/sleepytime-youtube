@@ -10,6 +10,7 @@ export type YTPlayer = {
 	getDuration: () => number;
 	seekTo: (seconds: number, allowSeekAhead: boolean) => void;
 	getPlayerState: () => number;
+	loadVideoById: (args: { videoId: string; startSeconds?: number }) => void;
 };
 
 type PlayerState = {
