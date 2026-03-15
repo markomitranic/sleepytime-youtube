@@ -20,17 +20,14 @@ export function StickyPlayerBar() {
 	);
 	const videoMeta = currentVideo ?? playlist.currentVideoMeta;
 
+	if (pathname === "/player") return null;
 	if (!playlist.currentVideoId || !videoMeta) return null;
 
 	const progress =
 		player.duration > 0 ? (player.currentTime / player.duration) * 100 : 0;
 
 	const handleNavigate = () => {
-		if (pathname === "/player") {
-			window.scrollTo({ top: 0, behavior: "smooth" });
-		} else {
-			router.push("/player");
-		}
+		router.push("/player");
 	};
 
 	const handlePlayPause = () => {

@@ -4,14 +4,11 @@ import { ListVideo, Loader2 } from "lucide-react";
 
 export function SkeletonPlayer() {
 	return (
-		<div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-6rem)] max-h-[calc(100vh-6rem)]">
-			{/* Left side: Video player and controls (2/3) */}
-			<div className="flex-1 lg:w-2/3 flex flex-col gap-4">
-				{/* Switch playlist skeleton */}
-				<div className="w-full h-[42px] rounded-lg bg-muted/40" />
-
-				{/* Video area skeleton with icon and message */}
-				<div className="aspect-video w-full overflow-hidden rounded-md border bg-muted/50 flex items-center justify-center flex-shrink-0">
+		<div className="flex flex-col lg:flex-row gap-2 h-[calc(100vh-6rem)] max-h-[calc(100vh-6rem)]">
+			{/* Left: Video + controls */}
+			<div className="flex flex-col lg:w-2/3 shrink-0 lg:shrink lg:min-h-0">
+				{/* Video area skeleton */}
+				<div className="shrink-0 aspect-video max-h-[50vh] lg:max-h-none w-full overflow-hidden rounded-md border bg-muted/50 flex items-center justify-center">
 					<div className="flex flex-col items-center gap-3 text-muted-foreground">
 						<ListVideo className="h-8 w-8" />
 						<div className="flex items-center gap-2">
@@ -22,7 +19,7 @@ export function SkeletonPlayer() {
 				</div>
 
 				{/* Video title and controls */}
-				<div className="flex flex-col gap-4">
+				<div className="flex flex-col gap-4 mt-2">
 					<div>
 						<div className="h-6 w-2/3 rounded bg-muted/50 mb-2" />
 						<div className="h-4 w-1/3 rounded bg-muted/40" />
@@ -38,33 +35,9 @@ export function SkeletonPlayer() {
 				</div>
 			</div>
 
-			{/* Right sidebar: Playlist (1/3) */}
-			<div className="lg:w-1/3 flex flex-col border-l pl-4">
-				{/* Playlist header with metadata */}
-				<div className="pb-4 space-y-3 border-b">
-					<div className="flex items-start gap-3">
-						{/* Thumbnail skeleton */}
-						<div className="w-20 h-11.25 rounded bg-muted/50 shrink-0" />
-
-						{/* Title and metadata skeleton */}
-						<div className="flex-1 min-w-0 space-y-2">
-							<div className="h-4 w-3/4 rounded bg-muted/50" />
-							<div className="space-y-1">
-								<div className="h-3 w-1/2 rounded bg-muted/40" />
-								<div className="h-3 w-2/3 rounded bg-muted/40" />
-							</div>
-						</div>
-					</div>
-
-					{/* Sort dropdown skeleton */}
-					<div className="flex items-center justify-between">
-						<div className="h-3 w-12 rounded bg-muted/40" />
-						<div className="h-3 w-16 rounded bg-muted/40" />
-					</div>
-				</div>
-
-				{/* Skeleton list items */}
-				<div className="flex-1 overflow-y-auto pr-2 -mr-2 pt-2">
+			{/* Right sidebar: Playlist */}
+			<div className="flex-1 overflow-y-auto min-h-0 lg:w-1/3 lg:flex-none">
+				<div className="pr-2 -mr-2 pt-2">
 					<ul className="grid grid-cols-1 gap-1">
 						{Array.from({ length: 10 }).map((x, i) => (
 							<li

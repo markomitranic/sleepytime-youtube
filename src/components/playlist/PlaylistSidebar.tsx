@@ -80,7 +80,7 @@ export function PlaylistSidebar({
 	return (
 		<div
 			className={cn(
-				"lg:w-1/3 flex flex-col lg:glass-panel lg:rounded-xl lg:pl-2 lg:pb-4 transition-opacity duration-1000",
+				"flex flex-col lg:glass-panel lg:rounded-xl lg:pl-2 lg:pb-4 transition-opacity duration-1000 mt-2 lg:mt-0",
 				isFadedOut && "opacity-25",
 			)}
 		>
@@ -92,7 +92,7 @@ export function PlaylistSidebar({
 			)}
 
 			<div
-				className={`flex-1 pr-2 -mr-2 pt-2 pb-40 touch-drag-container ${isDragging ? "dragging" : "overflow-y-auto"}`}
+				className={`pr-2 -mr-2 pt-2 pb-40 touch-drag-container ${isDragging ? "dragging" : ""}`}
 			>
 				<DndContext
 					sensors={sensors}

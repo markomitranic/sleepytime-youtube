@@ -285,11 +285,12 @@ export function Player() {
 				onShowDialog={handleShowDialog}
 			/>
 
-			{/* Main layout */}
+			{/* Mobile: video pinned on top, rest scrolls below */}
+			{/* Desktop: side-by-side with video+controls left, playlist right */}
 			<div className="flex flex-col lg:flex-row gap-2 h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)]">
-				{/* Left: Video player + controls */}
-				<div className="flex-1 lg:w-2/3 flex flex-col gap-4">
-					<div className="aspect-video w-full overflow-hidden rounded-xl glass-panel bg-black shrink-0">
+				{/* Video - pinned on mobile, part of left column on desktop */}
+				<div className="flex flex-col lg:w-2/3 shrink-0 lg:shrink lg:min-h-0">
+					<div className="shrink-0 aspect-video max-h-[50vh] lg:max-h-none w-full overflow-hidden rounded-xl glass-panel bg-black">
 						<div
 							ref={playerRef}
 							id="youtube-player"
@@ -300,26 +301,43 @@ export function Player() {
 						/>
 					</div>
 
-					<PlayerControls
-						currentVideo={current}
-						isPlaying={player.isPlaying}
-						sleepTimerIsActive={playlist.sleepTimer.isActive}
-						onPlayPause={handlePlayPause}
-						onNext={handleNext}
-					/>
+					{/* Controls - desktop only (below video in left column) */}
+					<div className="hidden lg:block lg:flex-1 lg:overflow-y-auto lg:min-h-0 mt-2">
+						<PlayerControls
+							currentVideo={current}
+							isPlaying={player.isPlaying}
+							sleepTimerIsActive={playlist.sleepTimer.isActive}
+							onPlayPause={handlePlayPause}
+							onNext={handleNext}
+						/>
+					</div>
 				</div>
 
-				<PlaylistSidebar
-					items={playlist.items}
-					currentVideoId={currentVideoId}
-					canEdit={canEdit}
-					hasMore={playlist.hasMore}
-					isReordering={isReordering}
-					onSelectVideo={playlist.setCurrentVideoId}
-					onDeleteItem={handleDeleteItem}
-					onDragEnd={handleDragEnd}
-					onLoadMore={playlist.loadMoreItems}
-				/>
+				{/* Mobile: scrollable controls+playlist. Desktop: scrollable playlist sidebar */}
+				<div className="flex-1 overflow-y-auto min-h-0 lg:w-1/3 lg:flex-none">
+					{/* Controls - mobile only (scrolls with playlist) */}
+					<div className="lg:hidden">
+						<PlayerControls
+							currentVideo={current}
+							isPlaying={player.isPlaying}
+							sleepTimerIsActive={playlist.sleepTimer.isActive}
+							onPlayPause={handlePlayPause}
+							onNext={handleNext}
+						/>
+					</div>
+
+					<PlaylistSidebar
+						items={playlist.items}
+						currentVideoId={currentVideoId}
+						canEdit={canEdit}
+						hasMore={playlist.hasMore}
+						isReordering={isReordering}
+						onSelectVideo={playlist.setCurrentVideoId}
+						onDeleteItem={handleDeleteItem}
+						onDragEnd={handleDragEnd}
+						onLoadMore={playlist.loadMoreItems}
+					/>
+				</div>
 			</div>
 		</>
 	);
