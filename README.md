@@ -2,7 +2,7 @@
 
 Play a YouTube playlist one video at a time. Pure client-side Next.js app deployed on Vercel.
 
-https://sleepytime-youtube.vercel.app/?list=PLPX6lu9kG1JXEdTsF1GSWzZ8qQA_3aUMs
+https://sleepytime-youtube.net/
 
 ## Tech Stack
 
@@ -68,7 +68,7 @@ The app reads it via `src/env.js`. Because this is a pure client app, the key is
 3. Restrict the key
    - Application restrictions: choose “HTTP referrers (web sites)”. Add:
      - `http://localhost:3000/*`
-     - `https://your-vercel-domain.vercel.app/*`
+     - `https://sleepytime-youtube.net/*`
    - API restrictions: “Restrict key” → select “YouTube Data API v3”.
 
 4. Add to the app
