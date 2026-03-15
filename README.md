@@ -4,6 +4,20 @@ Play a YouTube playlist one video at a time. Pure client-side Next.js app deploy
 
 https://sleepytime-youtube.net/
 
+## Data Handling
+
+No server-side database. No tracking. All user data stays in the browser.
+
+| Data | Stored where | Sent to | Retention |
+|------|-------------|---------|-----------|
+| Name, email, avatar | Encrypted session cookie (browser) | Nobody | Until sign-out |
+| YouTube access token | Encrypted session cookie | YouTube API only | Until expiry or sign-out |
+| Current playlist & video | localStorage (browser) | Nobody | Until cleared |
+| Video playback progress | localStorage (browser) | Nobody | Auto-deleted after 7 days |
+| Analytics / tracking | *Not collected* | Nobody | N/A |
+
+Full details: [Privacy Policy](https://sleepytime-youtube.net/privacy)
+
 ## Tech Stack
 
 - Next.js (App Router, TypeScript) — `src/app`

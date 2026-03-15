@@ -144,7 +144,7 @@ export default function HomePage() {
 					<div className="space-y-4">
 						<p className="text-sm text-muted-foreground/70 leading-relaxed max-w-md mx-auto">
 							This app was made for my wife, who recommends falling asleep with
-							some "SkyrimPlus Homes" or "Antonio Off-grid".
+							some "SkyrimPlus Homes" or "Baumgartner Restoration".
 						</p>
 						<div className="grid grid-cols-2 gap-3">
 							{displayPlaylists.map((p) => (
@@ -212,6 +212,22 @@ export default function HomePage() {
 							<ExternalLink className="h-4 w-4" />
 							<span className="text-xs">Medium</span>
 						</a>
+					</div>
+
+					<div className="flex items-center justify-center gap-4 pt-3">
+						<Link
+							href="/privacy"
+							className="text-xs text-muted-foreground/40 hover:text-muted-foreground/60 transition-colors duration-500"
+						>
+							Privacy
+						</Link>
+						<span className="text-muted-foreground/20">&middot;</span>
+						<Link
+							href="/terms"
+							className="text-xs text-muted-foreground/40 hover:text-muted-foreground/60 transition-colors duration-500"
+						>
+							Terms
+						</Link>
 					</div>
 				</div>
 			</div>
