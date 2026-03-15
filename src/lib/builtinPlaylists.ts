@@ -10,11 +10,11 @@ export type BuiltinPlaylist = {
 
 export const BUILTIN_PLAYLISTS: BuiltinPlaylist[] = [
 	{
-		id: "PLPX6lu9kG1JXEdTsF1GSWzZ8qQA_3aUMs",
-		shortLabel: "slowedReverb",
-		title: "Slowed + Reverb",
-		channel: "MrManafon",
-		thumbnail: "/slowedreverb.jpg",
+		id: "PLbRxQtYzom4NZnuTE7G22nByvhUJNnT2i",
+		shortLabel: "Painting Restoration",
+		title: "Painting Restoration",
+		channel: "Baumgartner Restoration",
+		thumbnail: "/restoration.jpg",
 	},
 	{
 		id: "PLdvzE2TS0UFKSqqogxzoA7miRHATFMXZH",
@@ -22,6 +22,13 @@ export const BUILTIN_PLAYLISTS: BuiltinPlaylist[] = [
 		title: "Skyrim Homes",
 		channel: "SkyrimPlus",
 		thumbnail: "/skyrim.jpg",
+	},
+	{
+		id: "PLPX6lu9kG1JXEdTsF1GSWzZ8qQA_3aUMs",
+		shortLabel: "slowedReverb",
+		title: "Slowed + Reverb",
+		channel: "MrManafon",
+		thumbnail: "/slowedreverb.jpg",
 	},
 	{
 		id: "PLXZYfNCCCIGZNcKJYLDf9hi7MSWSKjag9",
@@ -40,12 +47,6 @@ export const BUILTIN_PLAYLISTS: BuiltinPlaylist[] = [
 		shortLabel: "Cabin DIY",
 		title: "Cabin Life",
 		thumbnail: "/rosie.avif",
-	},
-	{
-		id: "PLsPUh22kYmNCHG8KwkgA6-R824qt10UJP",
-		shortLabel: "Spacetime",
-		title: "Explore the outer reaches of space",
-		thumbnail: "/spacetime.jpg",
 	},
 ];
 
