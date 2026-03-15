@@ -166,12 +166,16 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 					const provided = currentVideoId ?? undefined;
 					const preserved = prev.currentVideoId ?? undefined;
 					const fallback = items.find((i) => Boolean(i.videoId))?.videoId;
+					const validPreserved =
+						preserved && items.some((i) => i.videoId === preserved)
+							? preserved
+							: undefined;
 					return {
 						...prev,
 						playlistId,
 						snippet,
 						items,
-						currentVideoId: provided ?? preserved ?? fallback,
+						currentVideoId: provided ?? validPreserved ?? fallback,
 						isLoading: false,
 						error: null,
 						errorDetails: null,
