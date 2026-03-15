@@ -44,7 +44,7 @@ export function PlayerControls({
 	return (
 		<div
 			className={cn(
-				"flex-1 flex flex-col gap-4 transition-opacity duration-1000",
+				"flex-1 flex flex-col gap-4 pt-2 lg:pt-0 transition-opacity duration-1000",
 				isFadedOut && "opacity-25",
 			)}
 		>

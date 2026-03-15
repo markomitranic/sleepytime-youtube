@@ -79,12 +79,12 @@ export function PlaylistSidebar({
 	return (
 		<div
 			className={cn(
-				"flex flex-col lg:glass-panel lg:rounded-xl lg:pl-2 lg:pb-4 transition-opacity duration-1000 mt-2 lg:mt-0",
+				"flex flex-col lg:glass-panel lg:rounded-xl lg:pl-2 lg:pb-4 transition-opacity duration-1000",
 				isFadedOut && "opacity-25",
 			)}
 		>
 			<div
-				className={`pr-2 -mr-2 pt-2 pb-40 touch-drag-container ${isDragging ? "dragging" : ""}`}
+				className={`pr-2 -mr-2 lg:pt-2 pb-40 touch-drag-container ${isDragging ? "dragging" : ""}`}
 			>
 				<DndContext
 					sensors={sensors}

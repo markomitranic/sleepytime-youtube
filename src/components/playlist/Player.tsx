@@ -298,7 +298,7 @@ export function Player() {
 
 			{/* Mobile: video pinned on top, rest scrolls below */}
 			{/* Desktop: side-by-side with video+controls left, playlist right */}
-			<div className="flex flex-col lg:flex-row gap-2 h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)]">
+			<div className="flex flex-col lg:flex-row lg:gap-2 h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)]">
 				{/* Video - pinned on mobile, part of left column on desktop */}
 				<div className="flex flex-col lg:w-2/3 shrink-0 lg:shrink lg:min-h-0">
 					<div className="shrink-0 aspect-video max-h-[50vh] lg:max-h-none w-full overflow-hidden rounded-xl glass-panel bg-black">
