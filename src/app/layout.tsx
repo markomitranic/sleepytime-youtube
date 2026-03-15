@@ -4,6 +4,8 @@ import "~/styles/globals.css";
 import { Toaster } from "sonner";
 import { BottomNav } from "~/components/BottomNav";
 import { CookieBanner } from "~/components/CookieBanner";
+import { GlobalLoadingProvider } from "~/components/GlobalLoadingContext";
+import { GlobalLoadingIndicator } from "~/components/GlobalLoadingIndicator";
 import { PlayerProvider } from "~/components/playlist/PlayerContext";
 import { StickyPlayerBar } from "~/components/playlist/StickyPlayerBar";
 import { ServiceWorkerKillSwitch } from "~/components/ServiceWorkerKillSwitch";
@@ -71,15 +73,18 @@ export default function RootLayout({
 			<body className={`${geist.className} ${lora.variable}`}>
 				<AppProviders>
 					<PlayerProvider>
-						<SleepyFadeoutProvider>
-							<AuroraBackground />
-							{children}
-							<StickyPlayerBar />
-							<BottomNav />
-							<Toaster richColors position="bottom-center" closeButton />
-							<CookieBanner />
-							<ServiceWorkerKillSwitch />
-						</SleepyFadeoutProvider>
+						<GlobalLoadingProvider>
+							<SleepyFadeoutProvider>
+								<GlobalLoadingIndicator />
+								<AuroraBackground />
+								{children}
+								<StickyPlayerBar />
+								<BottomNav />
+								<Toaster richColors position="bottom-center" closeButton />
+								<CookieBanner />
+								<ServiceWorkerKillSwitch />
+							</SleepyFadeoutProvider>
+						</GlobalLoadingProvider>
 					</PlayerProvider>
 				</AppProviders>
 			</body>

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "~/components/auth/AuthContext";
+import { useGlobalLoadingApi } from "~/components/GlobalLoadingContext";
 import { usePlayer } from "~/components/playlist/PlayerContext";
 import { PlayerControls } from "~/components/playlist/PlayerControls";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
@@ -49,7 +50,7 @@ export function Player() {
 	const currentVideoId = playlist.currentVideoId;
 	const [endedOpen, setEndedOpen] = useState(false);
 	const endedVideoIdRef = useRef<string | undefined>(undefined);
-	const [isReordering, setIsReordering] = useState(false);
+	const { setLoading } = useGlobalLoadingApi();
 
 	const getNextVideoId = useCallback(
 		(fromVideoId: string | undefined): string | undefined => {
@@ -80,7 +81,8 @@ export function Player() {
 				const currentItem = playlist.items.find((i) => i.videoId === videoId);
 				if (currentItem) {
 					playlist.removeItem(videoId);
-					setIsReordering(true);
+					const key = `remove-${currentItem.id}`;
+					setLoading(key, true);
 					deletePlaylistItem({
 						accessToken: auth.accessToken,
 						playlistItemId: currentItem.id,
@@ -89,13 +91,13 @@ export function Player() {
 						.catch(
 							async () => await playlist.refreshItemsOnce({ delayMs: 900 }),
 						)
-						.finally(() => setIsReordering(false));
+						.finally(() => setLoading(key, false));
 				}
 			}
 
 			if (nextVideoId) playlist.setCurrentVideoId(nextVideoId);
 		},
-		[canEdit, auth.accessToken, playlist, getNextVideoId],
+		[canEdit, auth.accessToken, playlist, getNextVideoId, setLoading],
 	);
 
 	const onVideoEnded = useCallback((videoId: string) => {
@@ -161,7 +163,8 @@ export function Player() {
 
 			const wasCurrentVideo = item.videoId === currentVideoId;
 			if (item.videoId) playlist.removeItem(item.videoId);
-			setIsReordering(true);
+			const key = `delete-${itemId}`;
+			setLoading(key, true);
 
 			try {
 				await deletePlaylistItem({
@@ -180,7 +183,7 @@ export function Player() {
 				await playlist.refreshItemsOnce({ delayMs: 900 });
 				throw e;
 			} finally {
-				setIsReordering(false);
+				setLoading(key, false);
 			}
 		},
 		[
@@ -190,6 +193,7 @@ export function Player() {
 			playlist,
 			getNextVideoId,
 			auth.getTokenSilently,
+			setLoading,
 		],
 	);
 
@@ -213,7 +217,8 @@ export function Player() {
 				playlist.reorderItem(movedItem.videoId, direction);
 			}
 
-			setIsReordering(true);
+			const key = `reorder-${movedItem.id}`;
+			setLoading(key, true);
 			try {
 				await updatePlaylistItemPosition({
 					accessToken: auth.accessToken,
@@ -226,13 +231,19 @@ export function Player() {
 				playlist
 					.refreshItemsOnce({ delayMs: 2000 })
 					.catch(() => {})
-					.finally(() => setIsReordering(false));
+					.finally(() => setLoading(key, false));
 			} catch {
 				await playlist.refreshItemsOnce({ delayMs: 500 });
-				setIsReordering(false);
+				setLoading(key, false);
 			}
 		},
-		[auth.isAuthenticated, auth.accessToken, playlist, auth.getTokenSilently],
+		[
+			auth.isAuthenticated,
+			auth.accessToken,
+			playlist,
+			auth.getTokenSilently,
+			setLoading,
+		],
 	);
 
 	// Handle pause/play based on isPaused state (sleep timer expiry)
@@ -331,7 +342,6 @@ export function Player() {
 						currentVideoId={currentVideoId}
 						canEdit={canEdit}
 						hasMore={playlist.hasMore}
-						isReordering={isReordering}
 						onSelectVideo={playlist.setCurrentVideoId}
 						onDeleteItem={handleDeleteItem}
 						onDragEnd={handleDragEnd}

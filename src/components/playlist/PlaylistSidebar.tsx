@@ -17,6 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { Loader2 } from "lucide-react";
 import { useCallback, useState } from "react";
+
 import { SortablePlaylistItem } from "~/components/playlist/SortablePlaylistItem";
 import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
 import { Button } from "~/components/ui/button";
@@ -28,7 +29,6 @@ export function PlaylistSidebar({
 	currentVideoId,
 	canEdit,
 	hasMore,
-	isReordering,
 	onSelectVideo,
 	onDeleteItem,
 	onDragEnd,
@@ -38,7 +38,6 @@ export function PlaylistSidebar({
 	currentVideoId: string | undefined;
 	canEdit: boolean;
 	hasMore: boolean | undefined;
-	isReordering: boolean;
 	onSelectVideo: (videoId?: string) => void;
 	onDeleteItem: (itemId: string) => Promise<void>;
 	onDragEnd: (event: DragEndEvent) => Promise<void>;
@@ -84,13 +83,6 @@ export function PlaylistSidebar({
 				isFadedOut && "opacity-25",
 			)}
 		>
-			{isReordering && (
-				<div className="flex items-center gap-2 text-muted-foreground pb-2">
-					<Loader2 className="h-5 w-5 animate-spin" />
-					<span className="text-sm">Saving...</span>
-				</div>
-			)}
-
 			<div
 				className={`pr-2 -mr-2 pt-2 pb-40 touch-drag-container ${isDragging ? "dragging" : ""}`}
 			>
