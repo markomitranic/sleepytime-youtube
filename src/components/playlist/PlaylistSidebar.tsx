@@ -1,9 +1,10 @@
 "use client";
 
-import type { DragEndEvent } from "@dnd-kit/core";
+import type { DragEndEvent, DragStartEvent, Modifier } from "@dnd-kit/core";
 import {
 	closestCenter,
 	DndContext,
+	DragOverlay,
 	KeyboardSensor,
 	PointerSensor,
 	TouchSensor,
@@ -15,16 +16,22 @@ import {
 	sortableKeyboardCoordinates,
 	verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Loader2 } from "lucide-react";
+import { GripVertical, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { SortablePlaylistItem } from "~/components/playlist/SortablePlaylistItem";
 import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
+import { formatDuration } from "~/lib/formatTime";
 import { cn } from "~/lib/utils";
 import type {
 	YouTubePlaylistItem,
 	YouTubePlaylistSnippet,
 } from "~/lib/youtube";
+
+const restrictToVerticalAxis: Modifier = ({ transform }) => ({
+	...transform,
+	x: 0,
+});
 
 export function PlaylistSidebar({
 	items,
@@ -48,7 +55,9 @@ export function PlaylistSidebar({
 	onLoadMore: () => Promise<void>;
 }) {
 	const { isFadedOut } = useSleepyFadeout();
-	const [isDragging, setIsDragging] = useState(false);
+	const [activeItem, setActiveItem] = useState<YouTubePlaylistItem | null>(
+		null,
+	);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
 	const listRef = useRef<HTMLDivElement>(null);
 	const hasScrolledRef = useRef(false);
@@ -75,15 +84,23 @@ export function PlaylistSidebar({
 		}),
 	);
 
-	const handleDragStart = useCallback(() => setIsDragging(true), []);
+	const handleDragStart = useCallback(
+		(event: DragStartEvent) => {
+			const item = items.find((i) => i.id === event.active.id);
+			setActiveItem(item ?? null);
+		},
+		[items],
+	);
 
 	const handleDragEnd = useCallback(
 		async (event: DragEndEvent) => {
-			setIsDragging(false);
+			setActiveItem(null);
 			await onDragEnd(event);
 		},
 		[onDragEnd],
 	);
+
+	const handleDragCancel = useCallback(() => setActiveItem(null), []);
 
 	const handleLoadMore = useCallback(async () => {
 		setIsLoadingMore(true);
@@ -138,13 +155,15 @@ export function PlaylistSidebar({
 				</div>
 			)}
 			<div
-				className={`pr-2 -mr-2 touch-drag-container ${isDragging ? "dragging" : ""}`}
+				className={`pr-2 -mr-2 touch-drag-container ${activeItem ? "dragging" : ""}`}
 			>
 				<DndContext
 					sensors={sensors}
 					collisionDetection={closestCenter}
+					modifiers={[restrictToVerticalAxis]}
 					onDragStart={handleDragStart}
 					onDragEnd={handleDragEnd}
+					onDragCancel={handleDragCancel}
 				>
 					<SortableContext
 						items={items.map((item) => item.id)}
@@ -165,6 +184,9 @@ export function PlaylistSidebar({
 							))}
 						</ul>
 					</SortableContext>
+					<DragOverlay dropAnimation={null}>
+						{activeItem && <DragOverlayItem item={activeItem} />}
+					</DragOverlay>
 				</DndContext>
 				{hasMore && (
 					<button
@@ -181,5 +203,36 @@ export function PlaylistSidebar({
 				)}
 			</div>
 		</div>
+	);
+}
+
+function DragOverlayItem({ item }: { item: YouTubePlaylistItem }) {
+	return (
+		<li className="flex items-start gap-3 border-y border-white/[0.06] py-3 pr-3 bg-secondary/80 rounded-lg shadow-xl list-none cursor-grabbing">
+			<div className="w-8 inline-flex items-center justify-center self-stretch flex-shrink-0 text-white">
+				<GripVertical className="h-5 w-5" />
+			</div>
+			{item.thumbnailUrl && (
+				<div className="relative h-16 w-28 rounded flex-shrink-0">
+					{/* biome-ignore lint/performance/noImgElement: external URL */}
+					<img
+						src={item.thumbnailUrl}
+						alt="thumbnail"
+						className="h-full w-full rounded object-cover"
+					/>
+					{item.durationSeconds !== undefined && (
+						<div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded font-medium">
+							{formatDuration(item.durationSeconds)}
+						</div>
+					)}
+				</div>
+			)}
+			<div className="min-w-0 flex-1">
+				<p className="truncate font-medium">{item.title}</p>
+				{item.channelTitle && (
+					<p className="text-xs text-muted-foreground">{item.channelTitle}</p>
+				)}
+			</div>
+		</li>
 	);
 }

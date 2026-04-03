@@ -1,6 +1,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2 } from "lucide-react";
+import type { CSSProperties } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { usePlayer } from "~/components/playlist/PlayerContext";
@@ -49,10 +50,10 @@ export function SortablePlaylistItem({
 		isDragging,
 	} = useSortable({ id: item.id, disabled: !canEdit });
 
-	const style = {
-		transform: CSS.Transform.toString(transform),
+	const style: CSSProperties = {
+		transform: CSS.Translate.toString(transform),
 		transition,
-		opacity: isDragging ? 0.5 : 1,
+		...(isDragging && { opacity: 0, pointerEvents: "none" }),
 	};
 
 	const handleDelete = async () => {
