@@ -1,15 +1,15 @@
 import { type QueryClient } from "@tanstack/react-query";
 
-interface BeforeInstallPromptEvent extends Event {
-	readonly platforms: string[];
-	readonly userChoice: Promise<{
-		outcome: "accepted" | "dismissed";
-		platform: string;
-	}>;
-	prompt(): Promise<void>;
-}
-
 declare global {
+	interface BeforeInstallPromptEvent extends Event {
+		readonly platforms: string[];
+		readonly userChoice: Promise<{
+			outcome: "accepted" | "dismissed";
+			platform: string;
+		}>;
+		prompt(): Promise<void>;
+	}
+
 	interface Window {
 		/**
 		 * Allows the Chrome devtools extension to work
