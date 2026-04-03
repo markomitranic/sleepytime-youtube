@@ -378,7 +378,7 @@
 
 	/* Currently playing playlist item accent */
 	.playlist-item-playing {
-		border-left: 2px solid oklch(0.75 0.15 195);
-		box-shadow: inset 0 0 20px rgba(34, 211, 238, 0.1);
+		border-left: 2px solid rgba(74, 222, 128, 0.8);
+		box-shadow: inset 0 0 20px rgba(74, 222, 128, 0.1);
 	}
 }

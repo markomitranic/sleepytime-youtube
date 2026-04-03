@@ -26,13 +26,13 @@ export function BottomNav() {
 	const hasPlaylist = Boolean(playlist.playlistId && playlist.items.length > 0);
 
 	return (
-		<nav
-			className={cn(
-				"fixed inset-x-0 bottom-[0px] z-50 bg-linear-to-b from-black/80 to-black transition-opacity duration-1000",
-				isFadedOut && "opacity-0",
-			)}
-		>
-			<div className="flex items-center justify-center gap-8 h-16 max-w-3xl mx-auto px-2 pb-[env(safe-area-inset-bottom)]">
+		<nav className="fixed inset-x-0 bottom-[0px] z-50 bg-[linear-gradient(to_bottom,transparent_0%,black_30%)]">
+			<div
+				className={cn(
+					"flex items-center justify-center gap-8 h-16 max-w-3xl mx-auto px-2 pb-[env(safe-area-inset-bottom)] transition-opacity duration-1000",
+					isFadedOut && "opacity-25",
+				)}
+			>
 				<Link
 					href="/"
 					className={cn(

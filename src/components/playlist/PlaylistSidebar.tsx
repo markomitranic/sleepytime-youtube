@@ -20,7 +20,6 @@ import { useCallback, useState } from "react";
 
 import { SortablePlaylistItem } from "~/components/playlist/SortablePlaylistItem";
 import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
-import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 import type { YouTubePlaylistItem } from "~/lib/youtube";
 
@@ -79,12 +78,12 @@ export function PlaylistSidebar({
 	return (
 		<div
 			className={cn(
-				"flex flex-col lg:glass-panel lg:rounded-xl lg:pl-2 lg:pb-4 transition-opacity duration-1000",
+				"flex flex-col lg:glass-panel lg:rounded-xl transition-opacity duration-1000",
 				isFadedOut && "opacity-25",
 			)}
 		>
 			<div
-				className={`pr-2 -mr-2 lg:pt-2 pb-40 touch-drag-container ${isDragging ? "dragging" : ""}`}
+				className={`pr-2 -mr-2 touch-drag-container ${isDragging ? "dragging" : ""}`}
 			>
 				<DndContext
 					sensors={sensors}
@@ -96,7 +95,7 @@ export function PlaylistSidebar({
 						items={items.map((item) => item.id)}
 						strategy={verticalListSortingStrategy}
 					>
-						<ul className="grid grid-cols-1 gap-1">
+						<ul className="grid grid-cols-1 gap-px">
 							{items.map((item) => (
 								<SortablePlaylistItem
 									key={item.id}
@@ -113,18 +112,17 @@ export function PlaylistSidebar({
 					</SortableContext>
 				</DndContext>
 				{hasMore && (
-					<Button
+					<button
 						type="button"
-						variant={"outline"}
 						onClick={handleLoadMore}
 						disabled={isLoadingMore}
-						className="text-sm mt-1 bg-white py-10 w-full text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+						className="text-sm mt-px border-t border-white/[0.06] h-[128px] w-full text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors disabled:opacity-50"
 					>
 						{isLoadingMore ? (
 							<Loader2 className="h-4 w-4 animate-spin inline mr-1.5" />
 						) : null}
 						{isLoadingMore ? "Loading..." : "Load more"}
-					</Button>
+					</button>
 				)}
 			</div>
 		</div>

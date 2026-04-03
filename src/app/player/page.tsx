@@ -9,8 +9,8 @@ export default function PlayerPage() {
 
 	if (playlist.isLoading) {
 		return (
-			<main className="h-screen flex lg:items-center justify-center pt-[env(safe-area-inset-top)]">
-				<div className="w-full max-w-350 px-2.5">
+			<main className="h-dvh flex lg:items-center justify-center pt-[env(safe-area-inset-top)] overflow-hidden">
+				<div className="w-full max-w-350 h-full">
 					<SkeletonPlayer />
 				</div>
 			</main>
@@ -18,8 +18,8 @@ export default function PlayerPage() {
 	}
 
 	return (
-		<main className="h-screen flex lg:items-center justify-center pt-[env(safe-area-inset-top)]">
-			<div className="w-full max-w-350 px-2.5">
+		<main className="h-dvh flex lg:items-center justify-center pt-[env(safe-area-inset-top)] overflow-hidden">
+			<div className="w-full max-w-350 h-full">
 				<Player />
 			</div>
 		</main>

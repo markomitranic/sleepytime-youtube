@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "~/components/auth/AuthContext";
 import { useGlobalLoadingApi } from "~/components/GlobalLoadingContext";
+import { PlayerButtons } from "~/components/playlist/PlayerButtons";
 import { usePlayer } from "~/components/playlist/PlayerContext";
 import { PlayerControls } from "~/components/playlist/PlayerControls";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
@@ -15,7 +16,9 @@ import { PlaylistSidebar } from "~/components/playlist/PlaylistSidebar";
 import { SleepTimerExpiryOverlay } from "~/components/playlist/SleepTimerExpiryOverlay";
 import { useYouTubePlayer } from "~/components/playlist/useYouTubePlayer";
 import { VideoEndedDialog } from "~/components/playlist/VideoEndedDialog";
+import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
 import { Button } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
 import {
 	deletePlaylistItem,
 	fetchUserPlaylists,
@@ -47,6 +50,7 @@ export function Player() {
 			playlist.playlistId &&
 			(userPlaylists?.some((p) => p.id === playlist.playlistId) ?? false),
 	);
+	const { isFadedOut } = useSleepyFadeout();
 	const currentVideoId = playlist.currentVideoId;
 	const [endedOpen, setEndedOpen] = useState(false);
 	const endedVideoIdRef = useRef<string | undefined>(undefined);
@@ -298,9 +302,9 @@ export function Player() {
 
 			{/* Mobile: video pinned on top, rest scrolls below */}
 			{/* Desktop: side-by-side with video+controls left, playlist right */}
-			<div className="flex flex-col lg:flex-row lg:gap-2 h-[calc(100vh-2rem)] max-h-[calc(100vh-2rem)]">
+			<div className="flex flex-col lg:flex-row lg:gap-2 h-full">
 				{/* Video - pinned on mobile, part of left column on desktop */}
-				<div className="flex flex-col lg:w-2/3 shrink-0 lg:shrink lg:min-h-0">
+				<div className="flex flex-col lg:w-2/3 shrink-0 lg:shrink lg:min-h-0 px-2.5">
 					<div className="shrink-0 aspect-video max-h-[50vh] lg:max-h-none w-full overflow-hidden rounded-xl glass-panel bg-black">
 						<div
 							ref={playerRef}
@@ -324,19 +328,23 @@ export function Player() {
 					</div>
 				</div>
 
-				{/* Mobile: scrollable controls+playlist. Desktop: scrollable playlist sidebar */}
-				<div className="flex-1 overflow-y-auto min-h-0 lg:w-1/3 lg:flex-none">
-					{/* Controls - mobile only (scrolls with playlist) */}
-					<div className="lg:hidden">
-						<PlayerControls
-							currentVideo={current}
-							isPlaying={player.isPlaying}
-							sleepTimerIsActive={playlist.sleepTimer.isActive}
-							onPlayPause={handlePlayPause}
-							onNext={handleNext}
-						/>
-					</div>
+				{/* Mobile: control buttons (static, transparent) */}
+				<div
+					className={cn(
+						"lg:hidden transition-opacity duration-1000",
+						isFadedOut && "opacity-25",
+					)}
+				>
+					<PlayerButtons
+						sleepTimerIsActive={playlist.sleepTimer.isActive}
+						isPlaying={player.isPlaying}
+						onPlayPause={handlePlayPause}
+						onNext={handleNext}
+					/>
+				</div>
 
+				{/* Playlist: self-contained scrollable block */}
+				<div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 lg:w-1/3 lg:flex-none rounded-[15px] mx-2.5 mb-[calc(4rem+env(safe-area-inset-bottom))] border border-white/10 shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]">
 					<PlaylistSidebar
 						items={playlist.items}
 						currentVideoId={currentVideoId}

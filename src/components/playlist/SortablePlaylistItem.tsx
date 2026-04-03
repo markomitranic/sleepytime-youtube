@@ -63,7 +63,7 @@ export function SortablePlaylistItem({
 			<li
 				ref={setNodeRef}
 				style={style}
-				className={`flex cursor-pointer items-start gap-3 rounded-md border py-3 pr-3 select-none transition-all duration-200 hover:shadow-lg hover:bg-secondary/80 ${
+				className={`flex cursor-pointer items-start gap-3 border-y white/[0.06] py-3 pr-3 select-none transition-all duration-200 hover:shadow-lg hover:bg-secondary/80 ${
 					isCurrent ? "playlist-item-playing bg-secondary/60" : ""
 				}`}
 				onClick={() => {
@@ -83,11 +83,11 @@ export function SortablePlaylistItem({
 					onSelect(item.videoId);
 				}}
 			>
-				{canEdit && item.videoId && (
+				{canEdit && item.videoId ? (
 					<button
 						type="button"
 						ref={setActivatorNodeRef}
-						className="w-8 inline-flex items-center justify-center rounded transition-colors self-stretch flex-shrink-0 ml-1 text-white hover:text-white/80 hover:bg-secondary/50 cursor-grab active:cursor-grabbing touch-manipulation select-none touch-drag-handle"
+						className="w-8 inline-flex items-center justify-center rounded transition-colors self-stretch flex-shrink-0 text-white hover:text-white/80 hover:bg-secondary/50 cursor-grab active:cursor-grabbing touch-manipulation select-none touch-drag-handle"
 						aria-label="Drag to reorder"
 						onClick={(e) => e.stopPropagation()}
 						{...attributes}
@@ -95,6 +95,8 @@ export function SortablePlaylistItem({
 					>
 						<GripVertical className="h-5 w-5" />
 					</button>
+				) : (
+					<div className="w-8 shrink-0" />
 				)}
 
 				{item.thumbnailUrl && (
