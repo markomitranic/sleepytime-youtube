@@ -63,6 +63,7 @@ export function SortablePlaylistItem({
 			<li
 				ref={setNodeRef}
 				style={style}
+				data-video-id={item.videoId}
 				className={`flex cursor-pointer items-start gap-3 border-y white/[0.06] py-3 pr-3 select-none transition-all duration-200 hover:shadow-lg hover:bg-secondary/80 ${
 					isCurrent ? "playlist-item-playing bg-secondary/60" : ""
 				}`}

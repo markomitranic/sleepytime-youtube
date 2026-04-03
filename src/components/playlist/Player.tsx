@@ -350,6 +350,7 @@ export function Player() {
 						currentVideoId={currentVideoId}
 						canEdit={canEdit}
 						hasMore={playlist.hasMore}
+						snippet={playlist.snippet}
 						onSelectVideo={playlist.setCurrentVideoId}
 						onDeleteItem={handleDeleteItem}
 						onDragEnd={handleDragEnd}

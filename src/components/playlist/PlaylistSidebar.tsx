@@ -16,18 +16,22 @@ import {
 	verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Loader2 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { SortablePlaylistItem } from "~/components/playlist/SortablePlaylistItem";
 import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
 import { cn } from "~/lib/utils";
-import type { YouTubePlaylistItem } from "~/lib/youtube";
+import type {
+	YouTubePlaylistItem,
+	YouTubePlaylistSnippet,
+} from "~/lib/youtube";
 
 export function PlaylistSidebar({
 	items,
 	currentVideoId,
 	canEdit,
 	hasMore,
+	snippet,
 	onSelectVideo,
 	onDeleteItem,
 	onDragEnd,
@@ -37,6 +41,7 @@ export function PlaylistSidebar({
 	currentVideoId: string | undefined;
 	canEdit: boolean;
 	hasMore: boolean | undefined;
+	snippet?: YouTubePlaylistSnippet | null;
 	onSelectVideo: (videoId?: string) => void;
 	onDeleteItem: (itemId: string) => Promise<void>;
 	onDragEnd: (event: DragEndEvent) => Promise<void>;
@@ -45,6 +50,20 @@ export function PlaylistSidebar({
 	const { isFadedOut } = useSleepyFadeout();
 	const [isDragging, setIsDragging] = useState(false);
 	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const listRef = useRef<HTMLDivElement>(null);
+	const hasScrolledRef = useRef(false);
+
+	// Auto-scroll to the currently playing item
+	useEffect(() => {
+		if (!currentVideoId || !listRef.current) return;
+		const el = listRef.current.querySelector(
+			`[data-video-id="${currentVideoId}"]`,
+		);
+		if (el) {
+			el.scrollIntoView({ block: "start" });
+			hasScrolledRef.current = true;
+		}
+	}, [currentVideoId]);
 
 	const sensors = useSensors(
 		useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -77,11 +96,22 @@ export function PlaylistSidebar({
 
 	return (
 		<div
+			ref={listRef}
 			className={cn(
 				"flex flex-col lg:glass-panel lg:rounded-xl transition-opacity duration-1000",
 				isFadedOut && "opacity-25",
 			)}
 		>
+			{snippet && (
+				<div className="px-4 py-4 border-b border-white/[0.06]">
+					<h3 className="font-semibold text-sm truncate">{snippet.title}</h3>
+					{snippet.itemCount != null && (
+						<p className="text-xs text-muted-foreground mt-0.5">
+							{snippet.itemCount} video{snippet.itemCount !== 1 ? "s" : ""}
+						</p>
+					)}
+				</div>
+			)}
 			<div
 				className={`pr-2 -mr-2 touch-drag-container ${isDragging ? "dragging" : ""}`}
 			>
