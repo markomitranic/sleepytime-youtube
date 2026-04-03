@@ -6,6 +6,7 @@ import { BottomNav } from "~/components/BottomNav";
 import { CookieBanner } from "~/components/CookieBanner";
 import { GlobalLoadingProvider } from "~/components/GlobalLoadingContext";
 import { GlobalLoadingIndicator } from "~/components/GlobalLoadingIndicator";
+import { InstallPrompt } from "~/components/InstallPrompt";
 import { PlayerProvider } from "~/components/playlist/PlayerContext";
 import { StickyPlayerBar } from "~/components/playlist/StickyPlayerBar";
 import { ServiceWorkerKillSwitch } from "~/components/ServiceWorkerKillSwitch";
@@ -94,6 +95,7 @@ export default function RootLayout({
 								<BottomNav />
 								<Toaster richColors position="bottom-center" closeButton />
 								<CookieBanner />
+								<InstallPrompt />
 								<ServiceWorkerKillSwitch />
 							</SleepyFadeoutProvider>
 						</GlobalLoadingProvider>
