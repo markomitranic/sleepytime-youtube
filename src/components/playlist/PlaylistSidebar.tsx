@@ -103,13 +103,38 @@ export function PlaylistSidebar({
 			)}
 		>
 			{snippet && (
-				<div className="px-4 py-4 border-b border-white/[0.06]">
-					<h3 className="font-semibold text-sm truncate">{snippet.title}</h3>
-					{snippet.itemCount != null && (
-						<p className="text-xs text-muted-foreground mt-0.5">
-							{snippet.itemCount} video{snippet.itemCount !== 1 ? "s" : ""}
-						</p>
+				<div className="flex gap-3 px-4 py-4 border-b border-white/[0.06]">
+					{snippet.thumbnailUrl && (
+						/* biome-ignore lint/performance/noImgElement: external URL */
+						<img
+							src={snippet.thumbnailUrl}
+							alt=""
+							className="w-16 h-16 rounded-lg object-cover shrink-0"
+						/>
 					)}
+					<div className="min-w-0 flex-1">
+						<h3 className="font-semibold text-sm truncate">{snippet.title}</h3>
+						{snippet.channelTitle && (
+							<a
+								href={`https://www.youtube.com/channel/${snippet.channelId}`}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+							>
+								{snippet.channelTitle}
+							</a>
+						)}
+						{snippet.itemCount != null && (
+							<p className="text-xs text-muted-foreground mt-0.5">
+								{snippet.itemCount} video{snippet.itemCount !== 1 ? "s" : ""}
+							</p>
+						)}
+						{snippet.description && (
+							<p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+								{snippet.description}
+							</p>
+						)}
+					</div>
 				</div>
 			)}
 			<div

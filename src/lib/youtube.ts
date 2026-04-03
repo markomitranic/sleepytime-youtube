@@ -15,6 +15,9 @@ export type YouTubePlaylistSnippet = {
 	description?: string;
 	itemCount?: number;
 	publishedAt?: string;
+	thumbnailUrl?: string;
+	channelTitle?: string;
+	channelId?: string;
 };
 
 export type YouTubeUserPlaylist = {
@@ -240,6 +243,9 @@ export async function fetchPlaylistSnippet({
 		description: first.snippet?.description,
 		itemCount: first.contentDetails?.itemCount,
 		publishedAt: first.snippet?.publishedAt,
+		thumbnailUrl: pickThumbnail(first.snippet?.thumbnails),
+		channelTitle: first.snippet?.channelTitle,
+		channelId: first.snippet?.channelId,
 	};
 }
 
