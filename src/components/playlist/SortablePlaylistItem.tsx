@@ -3,6 +3,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { usePlayer } from "~/components/playlist/PlayerContext";
 import { Button } from "~/components/ui/button";
 import {
 	Dialog,
@@ -30,8 +31,14 @@ export function SortablePlaylistItem({
 	onSelect,
 	onDelete,
 }: SortableItemProps) {
+	const { getSavedProgress } = usePlayer();
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
+	const savedTime = item.videoId ? getSavedProgress(item.videoId) : null;
+	const watchProgress =
+		savedTime && item.durationSeconds
+			? Math.min(savedTime / item.durationSeconds, 1)
+			: 0;
 	const {
 		attributes,
 		listeners,
@@ -111,6 +118,14 @@ export function SortablePlaylistItem({
 						{item.durationSeconds !== undefined && (
 							<div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded font-medium">
 								{formatDuration(item.durationSeconds)}
+							</div>
+						)}
+						{watchProgress > 0 && (
+							<div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/30 rounded-b">
+								<div
+									className="h-full bg-red-600 rounded-bl"
+									style={{ width: `${watchProgress * 100}%` }}
+								/>
 							</div>
 						)}
 					</div>
