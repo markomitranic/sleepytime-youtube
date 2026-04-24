@@ -1,7 +1,6 @@
 "use client";
 
 import type { DragEndEvent } from "@dnd-kit/core";
-import { useQuery } from "@tanstack/react-query";
 import { Library } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -18,29 +17,14 @@ import { useYouTubePlayer } from "~/components/playlist/useYouTubePlayer";
 import { VideoEndedDialog } from "~/components/playlist/VideoEndedDialog";
 import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
 import { Button } from "~/components/ui/button";
+import { useUserPlaylists } from "~/lib/queries";
 import { cn } from "~/lib/utils";
-import { fetchUserPlaylists } from "~/lib/youtube";
 
 export function Player() {
 	const playlist = usePlaylist();
 	const player = usePlayer();
 	const auth = useAuth();
-	const { data: userPlaylists } = useQuery({
-		queryKey: ["userPlaylists", auth.accessToken],
-		queryFn: async () => {
-			if (!auth.isAuthenticated || !auth.accessToken) return [];
-			try {
-				return await fetchUserPlaylists({
-					accessToken: auth.accessToken,
-					refreshToken: auth.getTokenSilently,
-				});
-			} catch {
-				return [];
-			}
-		},
-		enabled: Boolean(auth.isAuthenticated && auth.accessToken),
-		staleTime: 1000 * 60,
-	});
+	const { data: userPlaylists } = useUserPlaylists();
 	const canEdit = Boolean(
 		auth.isAuthenticated &&
 			playlist.playlistId &&

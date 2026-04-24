@@ -8,9 +8,11 @@ import { useAuth } from "~/components/auth/AuthContext";
 import { filterNotEmpty } from "~/lib/filterNotEmpty";
 import type { YouTubePlaylistItem, YouTubeUserPlaylist } from "~/lib/youtube";
 import {
+	addVideoToPlaylist,
 	deletePlaylistItem,
 	fetchPlaylistItems,
 	fetchPlaylistSnippet,
+	fetchUserPlaylists,
 	fetchVideoDurations,
 	updatePlaylistItemPosition,
 } from "~/lib/youtube";
@@ -167,6 +169,30 @@ export function useDeletePlaylistItem(playlistId: string | undefined) {
 	});
 }
 
+/**
+ * Shared query for the signed-in user's own playlists.
+ * Previously duplicated inline in AccountDrawer, Player, and the playlists page.
+ */
+export function useUserPlaylists() {
+	const auth = useAuth();
+	return useQuery<YouTubeUserPlaylist[]>({
+		queryKey: ["userPlaylists", auth.accessToken ?? ""],
+		queryFn: async () => {
+			if (!auth.isAuthenticated || !auth.accessToken) return [];
+			try {
+				return await fetchUserPlaylists({
+					accessToken: auth.accessToken,
+					refreshToken: auth.getTokenSilently,
+				});
+			} catch {
+				return [];
+			}
+		},
+		enabled: Boolean(auth.isAuthenticated && auth.accessToken),
+		staleTime: 1000 * 60,
+	});
+}
+
 export function useReorderPlaylistItem(playlistId: string | undefined) {
 	const auth = useAuth();
 	const queryClient = useQueryClient();
@@ -242,6 +268,158 @@ export function useReorderPlaylistItem(playlistId: string | undefined) {
 			setTimeout(() => {
 				queryClient.invalidateQueries({
 					queryKey: ["playlistItems", playlistId ?? ""],
+				});
+			}, 2000);
+		},
+	});
+}
+
+type MoveVars = {
+	sourcePlaylistId: string;
+	destPlaylistId: string;
+	item: YouTubePlaylistItem;
+	position?: number;
+};
+
+type MoveContext = {
+	sourcePlaylistId: string;
+	destPlaylistId: string;
+	prevSource?: {
+		pages: PlaylistItemsPage[];
+		pageParams: (string | undefined)[];
+	};
+	prevDest?: {
+		pages: PlaylistItemsPage[];
+		pageParams: (string | undefined)[];
+	};
+};
+
+/**
+ * Moves a playlist item from one playlist to another.
+ * Uses addVideoToPlaylist + deletePlaylistItem since YouTube has no atomic move.
+ * Optimistically updates both caches and invalidates after propagation delay.
+ * Source and destination playlist IDs are passed at mutate() time so the same
+ * hook instance can target any destination (important on mobile where each
+ * item can be moved to any other playlist).
+ */
+export function useMovePlaylistItem() {
+	const auth = useAuth();
+	const queryClient = useQueryClient();
+
+	return useMutation<void, Error, MoveVars, MoveContext>({
+		mutationFn: async ({
+			sourcePlaylistId,
+			destPlaylistId,
+			item,
+			position,
+		}) => {
+			if (!auth.accessToken) throw new Error("Not authenticated");
+			if (!sourcePlaylistId || !destPlaylistId)
+				throw new Error("Source and destination playlists required");
+			if (!item.videoId) throw new Error("Item has no videoId");
+			if (sourcePlaylistId === destPlaylistId)
+				throw new Error("Source and destination are the same playlist");
+
+			// 1. Add to destination first — if this fails we haven't lost anything.
+			await addVideoToPlaylist({
+				accessToken: auth.accessToken,
+				playlistId: destPlaylistId,
+				videoId: item.videoId,
+				position,
+				refreshToken: auth.getTokenSilently,
+			});
+
+			// 2. Delete from source
+			await deletePlaylistItem({
+				accessToken: auth.accessToken,
+				playlistItemId: item.id,
+				refreshToken: auth.getTokenSilently,
+			});
+		},
+		onMutate: async ({ sourcePlaylistId, destPlaylistId, item, position }) => {
+			const sourceKey = ["playlistItems", sourcePlaylistId];
+			const destKey = ["playlistItems", destPlaylistId];
+
+			await queryClient.cancelQueries({ queryKey: sourceKey });
+			await queryClient.cancelQueries({ queryKey: destKey });
+
+			const prevSource = queryClient.getQueryData<{
+				pages: PlaylistItemsPage[];
+				pageParams: (string | undefined)[];
+			}>(sourceKey);
+			const prevDest = queryClient.getQueryData<{
+				pages: PlaylistItemsPage[];
+				pageParams: (string | undefined)[];
+			}>(destKey);
+
+			// Remove from source
+			if (prevSource) {
+				queryClient.setQueryData(sourceKey, {
+					...prevSource,
+					pages: prevSource.pages.map((page) => ({
+						...page,
+						items: page.items.filter((i) => i.id !== item.id),
+					})),
+				});
+			}
+
+			// Insert into dest at position (or append if undefined).
+			// Use same flatten + redistribute trick as reorder so page sizes stay stable.
+			if (prevDest) {
+				const allItems = prevDest.pages.flatMap((p) => p.items);
+				const insertAt =
+					position === undefined
+						? allItems.length
+						: Math.min(Math.max(position, 0), allItems.length);
+				allItems.splice(insertAt, 0, item);
+
+				// Redistribute into existing page shape; extra items spill onto the last page.
+				let offset = 0;
+				const newPages = prevDest.pages.map((page, idx) => {
+					const isLast = idx === prevDest.pages.length - 1;
+					const count = isLast ? allItems.length - offset : page.items.length;
+					const items = allItems.slice(offset, offset + count);
+					offset += count;
+					return { ...page, items };
+				});
+
+				queryClient.setQueryData(destKey, {
+					...prevDest,
+					pages: newPages,
+				});
+			}
+
+			return { sourcePlaylistId, destPlaylistId, prevSource, prevDest };
+		},
+		onError: (_err, _vars, context) => {
+			if (!context) return;
+			if (context.prevSource) {
+				queryClient.setQueryData(
+					["playlistItems", context.sourcePlaylistId],
+					context.prevSource,
+				);
+			}
+			if (context.prevDest) {
+				queryClient.setQueryData(
+					["playlistItems", context.destPlaylistId],
+					context.prevDest,
+				);
+			}
+		},
+		onSettled: (_data, _err, _vars, context) => {
+			if (!context) return;
+			setTimeout(() => {
+				queryClient.invalidateQueries({
+					queryKey: ["playlistItems", context.sourcePlaylistId],
+				});
+				queryClient.invalidateQueries({
+					queryKey: ["playlistItems", context.destPlaylistId],
+				});
+				queryClient.invalidateQueries({
+					queryKey: ["playlistSnippet", context.sourcePlaylistId],
+				});
+				queryClient.invalidateQueries({
+					queryKey: ["playlistSnippet", context.destPlaylistId],
 				});
 			}, 2000);
 		},

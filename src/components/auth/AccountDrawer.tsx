@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { ListMusic, LogOut, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "~/components/auth/AuthContext";
 import { Button } from "~/components/ui/button";
@@ -12,7 +12,7 @@ import {
 	DrawerTitle,
 	DrawerTrigger,
 } from "~/components/ui/drawer";
-import { fetchUserPlaylists } from "~/lib/youtube";
+import { useUserPlaylists } from "~/lib/queries";
 
 type AccountDrawerProps = {
 	children: React.ReactNode;
@@ -20,24 +20,10 @@ type AccountDrawerProps = {
 
 export function AccountDrawer({ children }: AccountDrawerProps) {
 	const auth = useAuth();
+	const router = useRouter();
 	const [isOpen, setIsOpen] = useState(false);
 
-	const { data: userPlaylists } = useQuery({
-		queryKey: ["userPlaylists", auth.accessToken],
-		queryFn: async () => {
-			if (!auth.isAuthenticated || !auth.accessToken) return [];
-			try {
-				return await fetchUserPlaylists({
-					accessToken: auth.accessToken,
-					refreshToken: auth.getTokenSilently,
-				});
-			} catch {
-				return [];
-			}
-		},
-		enabled: Boolean(auth.isAuthenticated && auth.accessToken && isOpen),
-		staleTime: 1000 * 60,
-	});
+	const { data: userPlaylists } = useUserPlaylists();
 
 	const playlistCount = userPlaylists?.length ?? 0;
 
@@ -75,12 +61,28 @@ export function AccountDrawer({ children }: AccountDrawerProps) {
 							</p>
 						</div>
 
-						<div className="flex items-center gap-2 text-sm text-muted-foreground">
-							<ListMusic className="h-4 w-4" />
-							<span>
+						{playlistCount > 0 ? (
+							<Button
+								variant="ghost"
+								size="sm"
+								className="h-8 text-sm text-muted-foreground hover:text-foreground"
+								onClick={() => {
+									setIsOpen(false);
+									router.push("/playlists/manage");
+								}}
+							>
+								<ListMusic className="h-4 w-4" />
 								{playlistCount} {playlistCount === 1 ? "playlist" : "playlists"}
-							</span>
-						</div>
+							</Button>
+						) : (
+							<div className="flex items-center gap-2 text-sm text-muted-foreground">
+								<ListMusic className="h-4 w-4" />
+								<span>
+									{playlistCount}{" "}
+									{playlistCount === 1 ? "playlist" : "playlists"}
+								</span>
+							</div>
+						)}
 
 						<div className="mt-2 flex w-full flex-col gap-2">
 							<Button

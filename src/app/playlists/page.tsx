@@ -1,14 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { Globe, Library, Link as LinkIcon, Lock, Play } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "~/components/auth/AuthContext";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { Badge } from "~/components/ui/badge";
-import { useBuiltinPlaylists } from "~/lib/queries";
-import { fetchUserPlaylists } from "~/lib/youtube";
+import { useBuiltinPlaylists, useUserPlaylists } from "~/lib/queries";
 
 function PlaylistRow({
 	title,
@@ -102,22 +100,7 @@ export default function PlaylistsPage() {
 	const router = useRouter();
 	const playlist = usePlaylist();
 
-	const { data: userPlaylists } = useQuery({
-		queryKey: ["userPlaylists", auth.accessToken],
-		queryFn: async () => {
-			if (!auth.isAuthenticated || !auth.accessToken) return [];
-			try {
-				return await fetchUserPlaylists({
-					accessToken: auth.accessToken,
-					refreshToken: auth.getTokenSilently,
-				});
-			} catch {
-				return [];
-			}
-		},
-		enabled: Boolean(auth.isAuthenticated && auth.accessToken),
-		staleTime: 1000 * 60,
-	});
+	const { data: userPlaylists } = useUserPlaylists();
 
 	const { data: builtinPlaylists } = useBuiltinPlaylists(true);
 

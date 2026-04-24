@@ -4,7 +4,7 @@ import { GripVertical, Trash2 } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { usePlayer } from "~/components/playlist/PlayerContext";
+import { VideoThumbnail } from "~/components/playlist/VideoThumbnail";
 import { Button } from "~/components/ui/button";
 import {
 	Dialog,
@@ -14,7 +14,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "~/components/ui/dialog";
-import { formatDuration } from "~/lib/formatTime";
 import type { YouTubePlaylistItem } from "~/lib/youtube";
 
 type SortableItemProps = {
@@ -32,14 +31,8 @@ export function SortablePlaylistItem({
 	onSelect,
 	onDelete,
 }: SortableItemProps) {
-	const { getSavedProgress } = usePlayer();
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
-	const savedTime = item.videoId ? getSavedProgress(item.videoId) : null;
-	const watchProgress =
-		savedTime && item.durationSeconds
-			? Math.min(savedTime / item.durationSeconds, 1)
-			: 0;
 	const {
 		attributes,
 		listeners,
@@ -108,29 +101,7 @@ export function SortablePlaylistItem({
 					<div className="w-8 shrink-0" />
 				)}
 
-				{item.thumbnailUrl && (
-					<div className="relative h-16 w-28 rounded flex-shrink-0">
-						{/* biome-ignore lint/performance/noImgElement: external URL */}
-						<img
-							src={item.thumbnailUrl}
-							alt="thumbnail"
-							className="h-full w-full rounded object-cover"
-						/>
-						{item.durationSeconds !== undefined && (
-							<div className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded font-medium">
-								{formatDuration(item.durationSeconds)}
-							</div>
-						)}
-						{watchProgress > 0 && (
-							<div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/30 rounded-b">
-								<div
-									className="h-full bg-red-600 rounded-bl"
-									style={{ width: `${watchProgress * 100}%` }}
-								/>
-							</div>
-						)}
-					</div>
-				)}
+				<VideoThumbnail item={item} />
 
 				<div className="min-w-0 flex-1">
 					<div className="flex items-center gap-2">
