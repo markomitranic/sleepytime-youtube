@@ -40,7 +40,26 @@ export function useAuth(): AuthContextType {
 	const getTokenSilently = useCallback(async (): Promise<string | null> => {
 		if (!session?.accessToken) return null;
 		if (session.error === "RefreshTokenError") return null;
-		return session.accessToken;
+
+		// Force server-side refresh by calling refresh-session endpoint
+		// This triggers the JWT callback to refresh expired tokens
+		try {
+			const res = await fetch("/api/refresh-session");
+			if (!res.ok) return null;
+
+			const { accessToken, error } = (await res.json()) as {
+				accessToken?: string;
+				error?: string | null;
+			};
+
+			// If refresh failed server-side, return null to signal logout
+			if (error === "RefreshTokenError" || !accessToken) return null;
+
+			return accessToken;
+		} catch {
+			// Network error, fallback to current token
+			return session.accessToken;
+		}
 	}, [session]);
 
 	return useMemo(
