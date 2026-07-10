@@ -30,7 +30,10 @@ export function BottomNav() {
 			<div
 				className={cn(
 					"flex items-center justify-center gap-8 h-16 max-w-3xl mx-auto px-2 pb-[env(safe-area-inset-bottom)] transition-opacity duration-1000",
-					isFadedOut && "opacity-25",
+					isFadedOut &&
+						(pathname === "/player"
+							? "opacity-0 pointer-events-none"
+							: "opacity-25"),
 				)}
 			>
 				<Link

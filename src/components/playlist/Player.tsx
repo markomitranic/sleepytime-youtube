@@ -7,18 +7,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "~/components/auth/AuthContext";
 import { useGlobalLoading } from "~/components/GlobalLoadingContext";
-import { PlayerButtons } from "~/components/playlist/PlayerButtons";
 import { usePlayer } from "~/components/playlist/PlayerContext";
-import { PlayerControls } from "~/components/playlist/PlayerControls";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
-import { PlaylistSidebar } from "~/components/playlist/PlaylistSidebar";
+import { QueueDrawer } from "~/components/playlist/QueueDrawer";
+import { RemoteStrip } from "~/components/playlist/RemoteStrip";
 import { SleepTimerExpiryOverlay } from "~/components/playlist/SleepTimerExpiryOverlay";
 import { useYouTubePlayer } from "~/components/playlist/useYouTubePlayer";
 import { VideoEndedDialog } from "~/components/playlist/VideoEndedDialog";
-import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
 import { Button } from "~/components/ui/button";
 import { useUserPlaylists } from "~/lib/queries";
-import { cn } from "~/lib/utils";
 
 export function Player() {
 	const playlist = usePlaylist();
@@ -30,9 +27,9 @@ export function Player() {
 			playlist.playlistId &&
 			(userPlaylists?.some((p) => p.id === playlist.playlistId) ?? false),
 	);
-	const { isFadedOut } = useSleepyFadeout();
 	const currentVideoId = playlist.currentVideoId;
 	const [endedOpen, setEndedOpen] = useState(false);
+	const [queueOpen, setQueueOpen] = useState(false);
 	const endedVideoIdRef = useRef<string | undefined>(undefined);
 
 	// Declarative loading from mutations
@@ -248,12 +245,14 @@ export function Player() {
 				onShowDialog={handleShowDialog}
 			/>
 
-			{/* Mobile: video pinned on top, rest scrolls below */}
-			{/* Desktop: side-by-side with video+controls left, playlist right */}
-			<div className="flex flex-col lg:flex-row lg:gap-2 h-full">
-				{/* Video - pinned on mobile, part of left column on desktop */}
-				<div className="flex flex-col lg:w-2/3 shrink-0 lg:shrink lg:min-h-0 px-2.5">
-					<div className="shrink-0 aspect-video max-h-[50vh] lg:max-h-none w-full overflow-hidden rounded-xl glass-panel bg-black">
+			{/* One unified layout: huge video, remote strip below, nothing scrolls */}
+			<div className="flex h-full flex-col">
+				{/* Video maximizes 16:9 within the free space above the strip.
+				    [container-type:size] lets the frame width derive from the free
+				    height (100cqh * 16/9), capped at full width — keeps a true 16:9
+				    box at max size in both orientations. */}
+				<div className="flex min-h-0 flex-1 items-start justify-center px-2.5 pt-2.5 [container-type:size]">
+					<div className="aspect-video w-[min(100%,177.78cqh)] overflow-hidden rounded-xl glass-panel bg-black">
 						<div
 							ref={playerRef}
 							id="youtube-player"
@@ -263,49 +262,31 @@ export function Player() {
 							playsInline={true}
 						/>
 					</div>
-
-					{/* Controls - desktop only (below video in left column) */}
-					<div className="hidden lg:block lg:flex-1 lg:overflow-y-auto lg:min-h-0 mt-2">
-						<PlayerControls
-							currentVideo={current}
-							isPlaying={player.isPlaying}
-							sleepTimerIsActive={playlist.sleepTimer.isActive}
-							onPlayPause={handlePlayPause}
-							onNext={handleNext}
-						/>
-					</div>
 				</div>
 
-				{/* Mobile: control buttons (static, transparent) */}
-				<div
-					className={cn(
-						"lg:hidden transition-opacity duration-1000",
-						isFadedOut && "opacity-25",
-					)}
-				>
-					<PlayerButtons
-						sleepTimerIsActive={playlist.sleepTimer.isActive}
-						isPlaying={player.isPlaying}
-						onPlayPause={handlePlayPause}
-						onNext={handleNext}
-					/>
-				</div>
-
-				{/* Playlist: self-contained scrollable block */}
-				<div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 lg:w-1/3 lg:flex-none rounded-[15px] mx-2.5 mb-[calc(4rem+env(safe-area-inset-bottom))] border border-white/10 shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]">
-					<PlaylistSidebar
-						items={playlist.items}
-						currentVideoId={currentVideoId}
-						canEdit={canEdit}
-						hasMore={playlist.hasMore}
-						snippet={playlist.snippet}
-						onSelectVideo={playlist.setCurrentVideoId}
-						onDeleteItem={handleDeleteItem}
-						onDragEnd={handleDragEnd}
-						onLoadMore={playlist.loadMoreItems}
-					/>
-				</div>
+				<RemoteStrip
+					current={current}
+					currentVideoId={currentVideoId}
+					isPlaying={player.isPlaying}
+					onPlayPause={handlePlayPause}
+					onNext={handleNext}
+					onOpenQueue={() => setQueueOpen(true)}
+				/>
 			</div>
+
+			<QueueDrawer
+				open={queueOpen}
+				onOpenChange={setQueueOpen}
+				items={playlist.items}
+				currentVideoId={currentVideoId}
+				canEdit={canEdit}
+				hasMore={playlist.hasMore}
+				snippet={playlist.snippet}
+				onSelectVideo={playlist.setCurrentVideoId}
+				onDeleteItem={handleDeleteItem}
+				onDragEnd={handleDragEnd}
+				onLoadMore={playlist.loadMoreItems}
+			/>
 		</>
 	);
 }

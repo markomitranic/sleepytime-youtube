@@ -494,6 +494,74 @@ export async function fetchVideoDurations({
 	return durations;
 }
 
+export type VideoRating = "like" | "dislike" | "none";
+
+/**
+ * Fetches the signed-in user's rating ("like"/"dislike"/"none") for a video.
+ *
+ * Requires an OAuth access token — the public API key is not sufficient for
+ * this endpoint since the rating is user-specific.
+ * @example getVideoRating({ accessToken, videoId: "abc123" }); // "like"
+ */
+export async function getVideoRating({
+	accessToken,
+	videoId,
+	refreshToken,
+	signal,
+}: {
+	accessToken: string;
+	videoId: string;
+	refreshToken?: () => Promise<string | null>;
+	signal?: AbortSignal;
+}): Promise<VideoRating> {
+	const url = new URL("https://www.googleapis.com/youtube/v3/videos/getRating");
+	url.searchParams.set("id", videoId);
+
+	const res = await youtubeFetch({ url, accessToken, refreshToken, signal });
+	if (!res.ok) {
+		const text = await res.text().catch(() => "");
+		throwYouTubeError(res, text, "getRating");
+	}
+
+	const json = await res.json();
+	const rating = json.items?.[0]?.rating;
+	return rating === "like" || rating === "dislike" ? rating : "none";
+}
+
+/**
+ * Sets the signed-in user's rating for a video (like or remove rating).
+ *
+ * The YouTube API returns 204 No Content on success, so no body is parsed.
+ * @example rateVideo({ accessToken, videoId: "abc123", rating: "like" });
+ */
+export async function rateVideo({
+	accessToken,
+	videoId,
+	rating,
+	refreshToken,
+}: {
+	accessToken: string;
+	videoId: string;
+	rating: "like" | "none";
+	refreshToken?: () => Promise<string | null>;
+}): Promise<void> {
+	const url = new URL("https://www.googleapis.com/youtube/v3/videos/rate");
+	url.searchParams.set("id", videoId);
+	url.searchParams.set("rating", rating);
+
+	const res = await youtubeFetch({
+		url,
+		method: "POST",
+		accessToken,
+		refreshToken,
+	});
+
+	if (!res.ok) {
+		const text = await res.text().catch(() => "");
+		throwYouTubeError(res, text, "rate video");
+	}
+}
+
 export async function fetchVideosByIds({
 	apiKey,
 	accessToken,

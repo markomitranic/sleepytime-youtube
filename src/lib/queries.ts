@@ -6,7 +6,11 @@ import {
 } from "@tanstack/react-query";
 import { useAuth } from "~/components/auth/AuthContext";
 import { filterNotEmpty } from "~/lib/filterNotEmpty";
-import type { YouTubePlaylistItem, YouTubeUserPlaylist } from "~/lib/youtube";
+import type {
+	VideoRating,
+	YouTubePlaylistItem,
+	YouTubeUserPlaylist,
+} from "~/lib/youtube";
 import {
 	addVideoToPlaylist,
 	deletePlaylistItem,
@@ -14,6 +18,8 @@ import {
 	fetchPlaylistSnippet,
 	fetchUserPlaylists,
 	fetchVideoDurations,
+	getVideoRating,
+	rateVideo,
 	updatePlaylistItemPosition,
 } from "~/lib/youtube";
 
@@ -422,6 +428,78 @@ export function useMovePlaylistItem() {
 					queryKey: ["playlistSnippet", context.destPlaylistId],
 				});
 			}, 2000);
+		},
+	});
+}
+
+/**
+ * Fetches the signed-in user's like/dislike rating for a video.
+ *
+ * Only enabled when authenticated and a videoId is provided, since the
+ * rating endpoint requires an OAuth token and is meaningless without a video.
+ * @example const { data: rating } = useVideoRating(videoId); // "like" | "dislike" | "none" | undefined
+ */
+export function useVideoRating(videoId: string | null) {
+	const auth = useAuth();
+	return useQuery<VideoRating>({
+		queryKey: ["videoRating", videoId],
+		queryFn: async () => {
+			if (!videoId || !auth.accessToken) return "none";
+			return getVideoRating({
+				accessToken: auth.accessToken,
+				videoId,
+				refreshToken: auth.getTokenSilently,
+			});
+		},
+		enabled: Boolean(auth.isAuthenticated && auth.accessToken && videoId),
+	});
+}
+
+/**
+ * Toggles a video's rating (like/none) with an optimistic cache update.
+ *
+ * Rolls back the ["videoRating", videoId] cache entry on error; the caller
+ * is responsible for surfacing the error (e.g. via toast), matching the
+ * pattern used by the other mutations in this file.
+ * @example useRateVideo().mutate({ videoId, rating: "like" });
+ */
+export function useRateVideo() {
+	const auth = useAuth();
+	const queryClient = useQueryClient();
+
+	return useMutation<
+		void,
+		Error,
+		{ videoId: string; rating: "like" | "none" },
+		{ prev?: VideoRating; videoId: string }
+	>({
+		mutationFn: async ({ videoId, rating }) => {
+			if (!auth.accessToken) throw new Error("Not authenticated");
+			await rateVideo({
+				accessToken: auth.accessToken,
+				videoId,
+				rating,
+				refreshToken: auth.getTokenSilently,
+			});
+		},
+		onMutate: async ({ videoId, rating }) => {
+			const key = ["videoRating", videoId];
+			await queryClient.cancelQueries({ queryKey: key });
+			const prev = queryClient.getQueryData<VideoRating>(key);
+			queryClient.setQueryData<VideoRating>(key, rating);
+			return { prev, videoId };
+		},
+		onError: (_err, _vars, context) => {
+			if (!context) return;
+			const key = ["videoRating", context.videoId];
+			if (context.prev !== undefined) {
+				// setQueryData is a no-op when passed `undefined`, so if there was
+				// no cached value yet, invalidate instead to force a refetch and
+				// clear the stuck optimistic value.
+				queryClient.setQueryData(key, context.prev);
+			} else {
+				queryClient.invalidateQueries({ queryKey: key });
+			}
 		},
 	});
 }

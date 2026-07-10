@@ -77,7 +77,7 @@ export function PlaylistSidebar({
 	const sensors = useSensors(
 		useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
 		useSensor(TouchSensor, {
-			activationConstraint: { delay: 100, tolerance: 8 },
+			activationConstraint: { delay: 300, tolerance: 10 },
 		}),
 		useSensor(KeyboardSensor, {
 			coordinateGetter: sortableKeyboardCoordinates,
