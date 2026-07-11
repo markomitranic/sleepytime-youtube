@@ -29,8 +29,10 @@ export function Player() {
 	);
 	const currentVideoId = playlist.currentVideoId;
 	const [endedOpen, setEndedOpen] = useState(false);
-	const [queueOpen, setQueueOpen] = useState(false);
-	const [playlistsOpen, setPlaylistsOpen] = useState(false);
+	// One tray at a time: opening either panel closes the other
+	const [openPanel, setOpenPanel] = useState<"queue" | "playlists" | null>(
+		null,
+	);
 	const endedVideoIdRef = useRef<string | undefined>(undefined);
 
 	// Declarative loading from mutations
@@ -220,15 +222,15 @@ export function Player() {
 				<Button
 					size="lg"
 					className="gap-2"
-					onClick={() => setPlaylistsOpen(true)}
+					onClick={() => setOpenPanel("playlists")}
 				>
 					<Library className="h-5 w-5" />
 					Browse Playlists
 				</Button>
 				{/* No deck here to anchor to — the tray rises from the screen bottom */}
 				<PlaylistTray
-					open={playlistsOpen}
-					onOpenChange={setPlaylistsOpen}
+					open={openPanel === "playlists"}
+					onOpenChange={(o) => setOpenPanel(o ? "playlists" : null)}
 					className="bottom-[calc(0.75rem+env(safe-area-inset-bottom))]"
 				/>
 			</div>
@@ -276,7 +278,10 @@ export function Player() {
 				{/* Deck bay: the cassette tray rises out of the chassis top edge,
 				    its lower lip hidden behind the deck (which stacks above it) */}
 				<div className="relative">
-					<PlaylistTray open={playlistsOpen} onOpenChange={setPlaylistsOpen} />
+					<PlaylistTray
+						open={openPanel === "playlists"}
+						onOpenChange={(o) => setOpenPanel(o ? "playlists" : null)}
+					/>
 					<div className="relative z-30">
 						<Deck
 							current={current}
@@ -284,16 +289,19 @@ export function Player() {
 							isPlaying={player.isPlaying}
 							onPlayPause={handlePlayPause}
 							onNext={handleNext}
-							onOpenQueue={() => setQueueOpen(true)}
-							onOpenPlaylists={() => setPlaylistsOpen((o) => !o)}
+							onOpenQueue={() => setOpenPanel("queue")}
+							onOpenPlaylists={() =>
+								setOpenPanel((p) => (p === "playlists" ? null : "playlists"))
+							}
+							onSheetOpen={() => setOpenPanel(null)}
 						/>
 					</div>
 				</div>
 			</div>
 
 			<QueueDrawer
-				open={queueOpen}
-				onOpenChange={setQueueOpen}
+				open={openPanel === "queue"}
+				onOpenChange={(o) => setOpenPanel(o ? "queue" : null)}
 				items={playlist.items}
 				currentVideoId={currentVideoId}
 				canEdit={canEdit}

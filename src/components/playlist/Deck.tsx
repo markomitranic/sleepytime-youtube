@@ -39,6 +39,7 @@ export function Deck({
 	onNext,
 	onOpenQueue,
 	onOpenPlaylists,
+	onSheetOpen,
 }: {
 	current: YouTubePlaylistItem | undefined;
 	currentVideoId: string | undefined;
@@ -47,6 +48,8 @@ export function Deck({
 	onNext: () => void;
 	onOpenQueue: () => void;
 	onOpenPlaylists: () => void;
+	/** Fires when a deck-launched sheet (sleep, account) opens, so the player can shut other trays */
+	onSheetOpen?: () => void;
 }) {
 	const { isFadedOut } = useSleepyFadeout();
 	const player = usePlayer();
@@ -91,7 +94,7 @@ export function Deck({
 						<p className="min-w-0 truncate font-(family-name:--font-dot) text-[11px] uppercase tracking-[0.16em] text-(--phosphor) opacity-50">
 							{current?.channelTitle ?? ""}
 						</p>
-						<GlassIndicators />
+						<GlassIndicators onSheetOpen={onSheetOpen} />
 					</div>
 					<div className="flex items-center gap-3.5">
 						<SevenSegmentTime seconds={player.currentTime} />
@@ -116,7 +119,7 @@ export function Deck({
 							icon={<EjectIcon />}
 						/>
 						<LikeKey videoId={currentVideoId ?? null} />
-						<SleepKey />
+						<SleepKey onSheetOpen={onSheetOpen} />
 						<DeckKey
 							label="Next"
 							ariaLabel="Next video"
@@ -142,7 +145,7 @@ export function Deck({
  * targets. SLEEP opens the timer sheet (lit while armed), HOME leads back to
  * the homepage, ACCOUNT opens the account sheet (lit when signed in).
  */
-function GlassIndicators() {
+function GlassIndicators({ onSheetOpen }: { onSheetOpen?: () => void }) {
 	const playlist = usePlaylist();
 	const auth = useAuth();
 	const timerOn = playlist.sleepTimer.isActive;
@@ -153,6 +156,7 @@ function GlassIndicators() {
 			<SleepTimerDrawer>
 				<button
 					type="button"
+					onClick={onSheetOpen}
 					aria-label={
 						timerOn ? "Sleep timer armed. Tap to change." : "Set sleep timer"
 					}
@@ -168,6 +172,7 @@ function GlassIndicators() {
 				<AccountDrawer>
 					<button
 						type="button"
+						onClick={onSheetOpen}
 						aria-label="Account"
 						className={cn(indClass, "deck-ind-lit")}
 					>
@@ -296,9 +301,10 @@ function LikeKey({ videoId }: { videoId: string | null }) {
 
 /**
  * Sleep timer as a deck key: opens the timer sheet, lights amber while armed.
- * The DrawerTrigger's onClick reaches the button through DeckKey's onClick prop.
+ * The DrawerTrigger's onClick reaches the button through DeckKey's onClick
+ * prop, composed with `onSheetOpen` so other trays shut as the sheet opens.
  */
-function SleepKey() {
+function SleepKey({ onSheetOpen }: { onSheetOpen?: () => void }) {
 	const playlist = usePlaylist();
 	const timerOn = playlist.sleepTimer.isActive;
 
@@ -310,6 +316,7 @@ function SleepKey() {
 					timerOn ? "Sleep timer armed. Tap to change." : "Set sleep timer"
 				}
 				active={timerOn}
+				onClick={onSheetOpen}
 				icon={<Moon className={cn(timerOn && "fill-current")} />}
 			/>
 		</SleepTimerDrawer>

@@ -5,6 +5,7 @@ import "~/styles/globals.css";
 import { Toaster } from "sonner";
 import { BottomNav } from "~/components/BottomNav";
 import { CookieBanner } from "~/components/CookieBanner";
+import { DeployRefresh } from "~/components/DeployRefresh";
 import { GlobalLoadingProvider } from "~/components/GlobalLoadingContext";
 import { GlobalLoadingIndicator } from "~/components/GlobalLoadingIndicator";
 import { InstallPrompt } from "~/components/InstallPrompt";
@@ -108,6 +109,7 @@ export default function RootLayout({
 								<CookieBanner />
 								<InstallPrompt />
 								<ServiceWorkerKillSwitch />
+								<DeployRefresh />
 							</SleepyFadeoutProvider>
 						</GlobalLoadingProvider>
 					</PlayerProvider>
