@@ -16,7 +16,7 @@ import {
 	sortableKeyboardCoordinates,
 	verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { GripVertical, Loader2 } from "lucide-react";
+import { GripVertical, Loader2, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { SortablePlaylistItem } from "~/components/playlist/SortablePlaylistItem";
@@ -39,20 +39,24 @@ export function PlaylistSidebar({
 	canEdit,
 	hasMore,
 	snippet,
+	isRefreshing,
 	onSelectVideo,
 	onDeleteItem,
 	onDragEnd,
 	onLoadMore,
+	onRefresh,
 }: {
 	items: YouTubePlaylistItem[];
 	currentVideoId: string | undefined;
 	canEdit: boolean;
 	hasMore: boolean | undefined;
 	snippet?: YouTubePlaylistSnippet | null;
+	isRefreshing?: boolean;
 	onSelectVideo: (videoId?: string) => void;
 	onDeleteItem: (itemId: string) => Promise<void>;
 	onDragEnd: (event: DragEndEvent) => Promise<void>;
 	onLoadMore: () => Promise<void>;
+	onRefresh?: () => Promise<void>;
 }) {
 	const { isFadedOut } = useSleepyFadeout();
 	const [activeItem, setActiveItem] = useState<YouTubePlaylistItem | null>(
@@ -152,10 +156,25 @@ export function PlaylistSidebar({
 							</p>
 						)}
 					</div>
+					{onRefresh && (
+						<button
+							type="button"
+							onClick={() => {
+								void onRefresh();
+							}}
+							disabled={isRefreshing}
+							aria-label="Refresh playlist"
+							className="shrink-0 self-start -mr-1 -mt-1 p-2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+						>
+							<RefreshCw
+								className={cn("h-4 w-4", isRefreshing && "animate-spin")}
+							/>
+						</button>
+					)}
 				</div>
 			)}
 			<div
-				className={`pr-2 -mr-2 touch-drag-container ${activeItem ? "dragging" : ""}`}
+				className={`touch-drag-container ${activeItem ? "dragging" : ""}`}
 			>
 				<DndContext
 					sensors={sensors}

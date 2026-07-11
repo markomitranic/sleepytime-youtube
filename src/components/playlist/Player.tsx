@@ -282,10 +282,12 @@ export function Player() {
 				canEdit={canEdit}
 				hasMore={playlist.hasMore}
 				snippet={playlist.snippet}
+				isRefreshing={playlist.isRefreshing}
 				onSelectVideo={playlist.setCurrentVideoId}
 				onDeleteItem={handleDeleteItem}
 				onDragEnd={handleDragEnd}
 				onLoadMore={playlist.loadMoreItems}
+				onRefresh={playlist.refresh}
 			/>
 		</>
 	);

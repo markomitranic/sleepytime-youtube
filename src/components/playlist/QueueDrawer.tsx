@@ -34,10 +34,12 @@ export function QueueDrawer({
 	canEdit,
 	hasMore,
 	snippet,
+	isRefreshing,
 	onSelectVideo,
 	onDeleteItem,
 	onDragEnd,
 	onLoadMore,
+	onRefresh,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -46,10 +48,12 @@ export function QueueDrawer({
 	canEdit: boolean;
 	hasMore: boolean | undefined;
 	snippet?: YouTubePlaylistSnippet | null;
+	isRefreshing?: boolean;
 	onSelectVideo: (videoId?: string) => void;
 	onDeleteItem: (itemId: string) => Promise<void>;
 	onDragEnd: (event: DragEndEvent) => Promise<void>;
 	onLoadMore: () => Promise<void>;
+	onRefresh?: () => Promise<void>;
 }) {
 	return (
 		<Drawer
@@ -58,20 +62,22 @@ export function QueueDrawer({
 			onOpenChange={onOpenChange}
 			handleOnly
 		>
-			<DrawerContent className="gap-0 p-0 data-[vaul-drawer-direction=right]:sm:max-w-md">
+			<DrawerContent className="gap-0 p-0 data-[vaul-drawer-direction=right]:w-[calc(100%-3rem)] data-[vaul-drawer-direction=right]:sm:max-w-md">
 				<DrawerTitle className="sr-only">Queue</DrawerTitle>
 
-				<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+				<div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
 					<PlaylistSidebar
 						items={items}
 						currentVideoId={currentVideoId}
 						canEdit={canEdit}
 						hasMore={hasMore}
 						snippet={snippet}
+						isRefreshing={isRefreshing}
 						onSelectVideo={onSelectVideo}
 						onDeleteItem={onDeleteItem}
 						onDragEnd={onDragEnd}
 						onLoadMore={onLoadMore}
+						onRefresh={onRefresh}
 					/>
 				</div>
 
