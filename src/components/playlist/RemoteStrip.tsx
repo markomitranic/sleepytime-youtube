@@ -3,6 +3,7 @@
 import { ListVideo, SkipForward } from "lucide-react";
 import { useEffect } from "react";
 import { LikeButton } from "~/components/playlist/LikeButton";
+import { usePlayer } from "~/components/playlist/PlayerContext";
 import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
 import { MetalPlayButton } from "~/components/ui/MetalPlayButton";
 import { NeomorphicIconButton } from "~/components/ui/NeomorphicIconButton";
@@ -34,6 +35,9 @@ export function RemoteStrip({
 	onOpenQueue: () => void;
 }) {
 	const { isFadedOut } = useSleepyFadeout();
+	const player = usePlayer();
+	const progress =
+		player.duration > 0 ? player.currentTime / player.duration : 0;
 
 	// Spacebar for play/pause (lives with the strip now)
 	useEffect(() => {
@@ -82,6 +86,7 @@ export function RemoteStrip({
 					isPlaying={isPlaying}
 					onClick={onPlayPause}
 					size="lg"
+					progress={progress}
 				/>
 				<NeomorphicIconButton ariaLabel="Next video" onClick={onNext}>
 					<SkipForward className="h-5 w-5" />

@@ -7,14 +7,22 @@ export function MetalPlayButton({
 	isPlaying,
 	onClick,
 	size = "lg",
+	progress,
 	className,
 }: {
 	isPlaying: boolean;
 	onClick: () => void;
 	size?: "sm" | "lg";
+	/** 0..1 playback progress; lights up the rim dots LCD-style when set */
+	progress?: number;
 	className?: string;
 }) {
 	const isLg = size === "lg";
+	// Rim = 60 light/dark dot pairs of 6deg; light whole dots only so the ring
+	// fills one discrete segment at a time
+	const litAngle = progress
+		? Math.min(360, Math.floor(Math.min(1, progress) * 60) * 6)
+		: 0;
 
 	return (
 		<button
@@ -36,6 +44,21 @@ export function MetalPlayButton({
 				].join(", "),
 			}}
 		>
+			{/* Celadon LCD progress: lights the rim's bright dots up to litAngle,
+			    rendered under the inner face so only the rim shows */}
+			{litAngle > 0 && (
+				<span
+					aria-hidden
+					className="absolute inset-0 rounded-full pointer-events-none"
+					style={{
+						background:
+							"repeating-conic-gradient(from 0deg, rgba(158,233,192,0.95) 0deg 3deg, transparent 3deg 6deg)",
+						WebkitMaskImage: `conic-gradient(from 0deg, black ${litAngle}deg, transparent ${litAngle}deg)`,
+						maskImage: `conic-gradient(from 0deg, black ${litAngle}deg, transparent ${litAngle}deg)`,
+						filter: "drop-shadow(0 0 3px rgba(134,239,172,0.65))",
+					}}
+				/>
+			)}
 			{/* Inner metallic face with concentric ribs */}
 			<span
 				className={cn(
