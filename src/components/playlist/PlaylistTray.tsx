@@ -2,21 +2,17 @@
 
 import { Globe, Library, Link as LinkIcon, Lock, Play } from "lucide-react";
 import Image from "next/image";
-import { useEffect } from "react";
 import { useAuth } from "~/components/auth/AuthContext";
+import { DeckTray } from "~/components/playlist/DeckTray";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { Badge } from "~/components/ui/badge";
 import { useBuiltinPlaylists, useUserPlaylists } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
 /**
- * The cassette tray: the playlist library slides out of the deck's top edge,
- * door-style, hovering over the bottom of the video window. Its lower lip
- * stays tucked behind the chassis so it reads as part of the machine.
- *
- * Render it inside a `relative` wrapper around the deck — it anchors to the
- * wrapper's top and matches the chassis width. Picking a playlist loads it in
- * place and shuts the door; so do Escape, the scrim, and the eject key.
+ * The cassette bay: the playlist library inside a DeckTray door.
+ * Picking a playlist loads it in place and shuts the door; so do Escape,
+ * the scrim, and the eject key.
  * @example <PlaylistTray open={open} onOpenChange={setOpen} />
  */
 export function PlaylistTray({
@@ -33,16 +29,6 @@ export function PlaylistTray({
 	const { data: userPlaylists } = useUserPlaylists();
 	const { data: builtinPlaylists } = useBuiltinPlaylists(true);
 
-	// Escape shuts the door
-	useEffect(() => {
-		if (!open) return;
-		const onKey = (e: KeyboardEvent) => {
-			if (e.key === "Escape") onOpenChange(false);
-		};
-		window.addEventListener("keydown", onKey);
-		return () => window.removeEventListener("keydown", onKey);
-	}, [open, onOpenChange]);
-
 	const handleSelect = async (playlistId: string) => {
 		onOpenChange(false);
 		await playlist.loadByPlaylistId(playlistId);
@@ -56,78 +42,57 @@ export function PlaylistTray({
 	);
 
 	return (
-		<>
-			{/* Invisible scrim: tapping off the tray closes it */}
-			{open && (
-				<button
-					type="button"
-					aria-label="Close playlists"
-					className="fixed inset-0 z-10 cursor-default"
-					onClick={() => onOpenChange(false)}
-				/>
-			)}
-			<section
-				aria-label="Playlists"
-				inert={!open}
-				className={cn(
-					// Phones get the whole screen above the deck; md+ keeps the door modest
-					"deck-tray absolute inset-x-2.5 bottom-[calc(100%-1.25rem)] z-20 flex max-h-[calc(100dvh-16rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col pb-3 transition-all duration-500 ease-out md:max-h-[42dvh]",
-					!open && "pointer-events-none translate-y-6 opacity-0",
-					className,
-				)}
-			>
-				<p className="px-5 pt-2.5 pb-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#8a7961]">
-					Playlists
-				</p>
-
-				<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 pb-2">
-					{/* User playlists */}
-					{auth.isAuthenticated && sortedUserPlaylists.length > 0 && (
-						<section className="mb-2">
-							<h2 className="mb-2 px-3 font-(family-name:--font-dot) text-[10px] uppercase tracking-[0.2em] text-[rgba(228,211,188,0.4)] md:text-[11px]">
-								Your Playlists
-							</h2>
-							<div className="space-y-1">
-								{sortedUserPlaylists.map((p) => (
-									<TrayRow
-										key={p.id}
-										title={p.title}
-										thumbnailUrl={p.thumbnailUrl}
-										subtitle={`${p.itemCount ?? 0} videos`}
-										badge={<PrivacyBadge status={p.privacyStatus} />}
-										isPlaying={playlist.playlistId === p.id}
-										onClick={() => handleSelect(p.id)}
-									/>
-								))}
-							</div>
-						</section>
-					)}
-
-					{/* Separator */}
-					<div className="flex items-center gap-4 py-3">
-						<div className="h-px flex-1 bg-white/[0.06]" />
-						<span className="font-(family-name:--font-dot) text-[10px] uppercase tracking-[0.2em] text-[rgba(228,211,188,0.4)] md:text-[11px]">
-							Recommended
-						</span>
-						<div className="h-px flex-1 bg-white/[0.06]" />
-					</div>
-
-					{/* Built-in playlists */}
+		<DeckTray
+			open={open}
+			onOpenChange={onOpenChange}
+			label="Playlists"
+			className={className}
+		>
+			{/* User playlists */}
+			{auth.isAuthenticated && sortedUserPlaylists.length > 0 && (
+				<section className="mb-2">
+					<h2 className="mb-2 px-3 font-(family-name:--font-dot) text-[10px] uppercase tracking-[0.2em] text-[rgba(228,211,188,0.4)] md:text-[11px]">
+						Your Playlists
+					</h2>
 					<div className="space-y-1">
-						{sortedBuiltins.map((p) => (
+						{sortedUserPlaylists.map((p) => (
 							<TrayRow
 								key={p.id}
-								title={p.title ?? "Playlist"}
+								title={p.title}
 								thumbnailUrl={p.thumbnailUrl}
-								subtitle={p.itemCount ? `${p.itemCount} videos` : undefined}
+								subtitle={`${p.itemCount ?? 0} videos`}
+								badge={<PrivacyBadge status={p.privacyStatus} />}
 								isPlaying={playlist.playlistId === p.id}
 								onClick={() => handleSelect(p.id)}
 							/>
 						))}
 					</div>
-				</div>
-			</section>
-		</>
+				</section>
+			)}
+
+			{/* Separator */}
+			<div className="flex items-center gap-4 py-3">
+				<div className="h-px flex-1 bg-white/[0.06]" />
+				<span className="font-(family-name:--font-dot) text-[10px] uppercase tracking-[0.2em] text-[rgba(228,211,188,0.4)] md:text-[11px]">
+					Recommended
+				</span>
+				<div className="h-px flex-1 bg-white/[0.06]" />
+			</div>
+
+			{/* Built-in playlists */}
+			<div className="space-y-1">
+				{sortedBuiltins.map((p) => (
+					<TrayRow
+						key={p.id}
+						title={p.title ?? "Playlist"}
+						thumbnailUrl={p.thumbnailUrl}
+						subtitle={p.itemCount ? `${p.itemCount} videos` : undefined}
+						isPlaying={playlist.playlistId === p.id}
+						onClick={() => handleSelect(p.id)}
+					/>
+				))}
+			</div>
+		</DeckTray>
 	);
 }
 

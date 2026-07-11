@@ -1,11 +1,10 @@
 "use client";
 
-import { ListVideo, Moon, SkipForward, ThumbsUp } from "lucide-react";
+import { ListVideo, LogIn, Moon, SkipForward, ThumbsUp } from "lucide-react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useEffect } from "react";
 import { toast } from "sonner";
-import { AccountDrawer } from "~/components/auth/AccountDrawer";
 import { useAuth } from "~/components/auth/AuthContext";
 import { usePlayer } from "~/components/playlist/PlayerContext";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
@@ -39,6 +38,8 @@ export function Deck({
 	onNext,
 	onOpenQueue,
 	onOpenPlaylists,
+	onOpenAccount,
+	playlistsOpen = false,
 	onSheetOpen,
 }: {
 	current: YouTubePlaylistItem | undefined;
@@ -48,7 +49,10 @@ export function Deck({
 	onNext: () => void;
 	onOpenQueue: () => void;
 	onOpenPlaylists: () => void;
-	/** Fires when a deck-launched sheet (sleep, account) opens, so the player can shut other trays */
+	onOpenAccount?: () => void;
+	/** Lights the PLAYLISTS key while its tray is out */
+	playlistsOpen?: boolean;
+	/** Fires when a deck-launched sheet (sleep) opens, so the player can shut other trays */
 	onSheetOpen?: () => void;
 }) {
 	const { isFadedOut } = useSleepyFadeout();
@@ -94,7 +98,10 @@ export function Deck({
 						<p className="min-w-0 truncate font-(family-name:--font-dot) text-[11px] uppercase tracking-[0.16em] text-(--phosphor) opacity-50">
 							{current?.channelTitle ?? ""}
 						</p>
-						<GlassIndicators onSheetOpen={onSheetOpen} />
+						<GlassIndicators
+							onSheetOpen={onSheetOpen}
+							onOpenAccount={onOpenAccount}
+						/>
 					</div>
 					<div className="flex items-center gap-3.5">
 						<SevenSegmentTime seconds={player.currentTime} />
@@ -116,6 +123,7 @@ export function Deck({
 							label="Playlists"
 							ariaLabel="Open playlists"
 							onClick={onOpenPlaylists}
+							active={playlistsOpen}
 							icon={<EjectIcon />}
 						/>
 						<LikeKey videoId={currentVideoId ?? null} />
@@ -143,9 +151,16 @@ export function Deck({
  * SLEEP / HOME / ACCOUNT — words printed on the LCD glass, hi-fi indicator
  * style: ghost when off, lit amber when live. Small visuals, oversized tap
  * targets. SLEEP opens the timer sheet (lit while armed), HOME leads back to
- * the homepage, ACCOUNT opens the account sheet (lit when signed in).
+ * the homepage, ACCOUNT opens the account tray (lit when signed in) or
+ * starts the Google sign-in when signed out.
  */
-function GlassIndicators({ onSheetOpen }: { onSheetOpen?: () => void }) {
+function GlassIndicators({
+	onSheetOpen,
+	onOpenAccount,
+}: {
+	onSheetOpen?: () => void;
+	onOpenAccount?: () => void;
+}) {
 	const playlist = usePlaylist();
 	const auth = useAuth();
 	const timerOn = playlist.sleepTimer.isActive;
@@ -169,16 +184,14 @@ function GlassIndicators({ onSheetOpen }: { onSheetOpen?: () => void }) {
 				Home
 			</Link>
 			{auth.isAuthenticated ? (
-				<AccountDrawer>
-					<button
-						type="button"
-						onClick={onSheetOpen}
-						aria-label="Account"
-						className={cn(indClass, "deck-ind-lit")}
-					>
-						Account
-					</button>
-				</AccountDrawer>
+				<button
+					type="button"
+					onClick={onOpenAccount}
+					aria-label="Account"
+					className={cn(indClass, "deck-ind-lit")}
+				>
+					Account
+				</button>
 			) : (
 				<button
 					type="button"
@@ -263,16 +276,15 @@ function DeckKey({
 }
 
 /**
- * Like toggle as a deck key. Machines don't remove keys, so it renders
- * disabled (dimmed) when signed out or with no video, and lights amber
- * while the current video is liked.
+ * Like toggle as a deck key: lights amber while the current video is liked.
+ * Signed out, a dead Like key helps no one — the cap relabels to LOG IN and
+ * starts the Google sign-in instead.
  */
 function LikeKey({ videoId }: { videoId: string | null }) {
 	const auth = useAuth();
 	const { data: rating } = useVideoRating(videoId);
 	const rateVideoMutation = useRateVideo();
 
-	const available = auth.isAuthenticated && Boolean(videoId);
 	const isLiked = rating === "like";
 
 	const handleClick = async () => {
@@ -287,13 +299,24 @@ function LikeKey({ videoId }: { videoId: string | null }) {
 		}
 	};
 
+	if (!auth.isAuthenticated) {
+		return (
+			<DeckKey
+				label="Log In"
+				ariaLabel="Sign in with Google"
+				onClick={() => signIn("google")}
+				icon={<LogIn />}
+			/>
+		);
+	}
+
 	return (
 		<DeckKey
 			label="Like"
 			ariaLabel={isLiked ? "Unlike video" : "Like video"}
 			onClick={handleClick}
 			active={isLiked}
-			disabled={!available}
+			disabled={!videoId}
 			icon={<ThumbsUp className={cn(isLiked && "fill-current")} />}
 		/>
 	);

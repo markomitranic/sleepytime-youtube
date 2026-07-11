@@ -4,6 +4,7 @@ import type { DragEndEvent } from "@dnd-kit/core";
 import { Library } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { AccountTray } from "~/components/auth/AccountTray";
 import { useAuth } from "~/components/auth/AuthContext";
 import { useGlobalLoading } from "~/components/GlobalLoadingContext";
 import { Deck } from "~/components/playlist/Deck";
@@ -29,10 +30,10 @@ export function Player() {
 	);
 	const currentVideoId = playlist.currentVideoId;
 	const [endedOpen, setEndedOpen] = useState(false);
-	// One tray at a time: opening either panel closes the other
-	const [openPanel, setOpenPanel] = useState<"queue" | "playlists" | null>(
-		null,
-	);
+	// One tray at a time: opening any panel closes the others
+	const [openPanel, setOpenPanel] = useState<
+		"queue" | "playlists" | "account" | null
+	>(null);
 	const endedVideoIdRef = useRef<string | undefined>(undefined);
 
 	// Declarative loading from mutations
@@ -282,6 +283,10 @@ export function Player() {
 						open={openPanel === "playlists"}
 						onOpenChange={(o) => setOpenPanel(o ? "playlists" : null)}
 					/>
+					<AccountTray
+						open={openPanel === "account"}
+						onOpenChange={(o) => setOpenPanel(o ? "account" : null)}
+					/>
 					<div className="relative z-30">
 						<Deck
 							current={current}
@@ -293,6 +298,10 @@ export function Player() {
 							onOpenPlaylists={() =>
 								setOpenPanel((p) => (p === "playlists" ? null : "playlists"))
 							}
+							onOpenAccount={() =>
+								setOpenPanel((p) => (p === "account" ? null : "account"))
+							}
+							playlistsOpen={openPanel === "playlists"}
 							onSheetOpen={() => setOpenPanel(null)}
 						/>
 					</div>
