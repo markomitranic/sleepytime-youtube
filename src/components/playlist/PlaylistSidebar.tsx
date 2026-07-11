@@ -174,7 +174,7 @@ export function PlaylistSidebar({
 				</div>
 			)}
 			<div
-				className={`pr-2 -mr-2 touch-drag-container ${activeItem ? "dragging" : ""}`}
+				className={`touch-drag-container ${activeItem ? "dragging" : ""}`}
 			>
 				<DndContext
 					sensors={sensors}
