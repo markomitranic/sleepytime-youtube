@@ -10,7 +10,7 @@ export default function PlayerPage() {
 	if (playlist.isLoading) {
 		return (
 			<main className="h-dvh flex lg:items-center justify-center pt-[env(safe-area-inset-top)] overflow-hidden">
-				<div className="w-full max-w-350 h-full">
+				<div className="h-full max-h-[1024px] w-full max-w-[1366px]">
 					<SkeletonPlayer />
 				</div>
 			</main>
@@ -19,7 +19,8 @@ export default function PlayerPage() {
 
 	return (
 		<main className="h-dvh flex lg:items-center justify-center pt-[env(safe-area-inset-top)] overflow-hidden">
-			<div className="w-full max-w-350 h-full">
+			{/* Cap = 12.9" iPad Pro landscape (1366x1024 logical px): fills that screen, never grows past it */}
+			<div className="h-full max-h-[1024px] w-full max-w-[1366px]">
 				<Player />
 			</div>
 		</main>

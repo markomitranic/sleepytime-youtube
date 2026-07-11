@@ -2,7 +2,6 @@
 
 import type { DragEndEvent } from "@dnd-kit/core";
 import { Library } from "lucide-react";
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "~/components/auth/AuthContext";
@@ -10,6 +9,7 @@ import { useGlobalLoading } from "~/components/GlobalLoadingContext";
 import { Deck } from "~/components/playlist/Deck";
 import { usePlayer } from "~/components/playlist/PlayerContext";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
+import { PlaylistTray } from "~/components/playlist/PlaylistTray";
 import { QueueDrawer } from "~/components/playlist/QueueDrawer";
 import { SleepTimerExpiryOverlay } from "~/components/playlist/SleepTimerExpiryOverlay";
 import { useYouTubePlayer } from "~/components/playlist/useYouTubePlayer";
@@ -30,6 +30,7 @@ export function Player() {
 	const currentVideoId = playlist.currentVideoId;
 	const [endedOpen, setEndedOpen] = useState(false);
 	const [queueOpen, setQueueOpen] = useState(false);
+	const [playlistsOpen, setPlaylistsOpen] = useState(false);
 	const endedVideoIdRef = useRef<string | undefined>(undefined);
 
 	// Declarative loading from mutations
@@ -205,10 +206,10 @@ export function Player() {
 		}
 	}, [playlist.isPaused, playerInstanceRef]);
 
-	// Empty state
+	// Empty state: the library tray is the only way in
 	if (!playlist.items.length || !currentVideoId) {
 		return (
-			<div className="flex flex-col items-center justify-center h-[calc(100vh-6rem)] gap-6 text-center px-4">
+			<div className="relative flex h-full flex-col items-center justify-center gap-6 px-4 text-center">
 				<div className="space-y-3">
 					<Library className="h-16 w-16 mx-auto text-muted-foreground" />
 					<h2 className="text-2xl font-semibold">No Playlist Selected</h2>
@@ -216,12 +217,20 @@ export function Player() {
 						Pick a playlist from the library to start listening.
 					</p>
 				</div>
-				<Link href="/playlists">
-					<Button size="lg" className="gap-2">
-						<Library className="h-5 w-5" />
-						Browse Playlists
-					</Button>
-				</Link>
+				<Button
+					size="lg"
+					className="gap-2"
+					onClick={() => setPlaylistsOpen(true)}
+				>
+					<Library className="h-5 w-5" />
+					Browse Playlists
+				</Button>
+				{/* No deck here to anchor to — the tray rises from the screen bottom */}
+				<PlaylistTray
+					open={playlistsOpen}
+					onOpenChange={setPlaylistsOpen}
+					className="bottom-[calc(0.75rem+env(safe-area-inset-bottom))]"
+				/>
 			</div>
 		);
 	}
@@ -264,14 +273,22 @@ export function Player() {
 					</div>
 				</div>
 
-				<Deck
-					current={current}
-					currentVideoId={currentVideoId}
-					isPlaying={player.isPlaying}
-					onPlayPause={handlePlayPause}
-					onNext={handleNext}
-					onOpenQueue={() => setQueueOpen(true)}
-				/>
+				{/* Deck bay: the cassette tray rises out of the chassis top edge,
+				    its lower lip hidden behind the deck (which stacks above it) */}
+				<div className="relative">
+					<PlaylistTray open={playlistsOpen} onOpenChange={setPlaylistsOpen} />
+					<div className="relative z-30">
+						<Deck
+							current={current}
+							currentVideoId={currentVideoId}
+							isPlaying={player.isPlaying}
+							onPlayPause={handlePlayPause}
+							onNext={handleNext}
+							onOpenQueue={() => setQueueOpen(true)}
+							onOpenPlaylists={() => setPlaylistsOpen((o) => !o)}
+						/>
+					</div>
+				</div>
 			</div>
 
 			<QueueDrawer

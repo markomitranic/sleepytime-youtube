@@ -25,9 +25,9 @@ import type { YouTubePlaylistItem } from "~/lib/youtube";
  * the SLEEP / HOME / ACCOUNT words printed on the glass. The right side is
  * hardware: a 2x2 key grid (Playlists, Like, Queue, Next) and the knurled
  * play knob. Replaces both the old RemoteStrip and the bottom nav on this
- * screen. Owns the spacebar shortcut and the sleepy fade tiers (glass dims
- * to 20%, hardware to 50%).
- * @example <Deck current={item} currentVideoId={id} isPlaying onPlayPause={fn} onNext={fn} onOpenQueue={fn} />
+ * screen. Owns the spacebar shortcut and the sleepy fade (the whole
+ * faceplate dims to 20% when idle).
+ * @example <Deck current={item} currentVideoId={id} isPlaying onPlayPause={fn} onNext={fn} onOpenQueue={fn} onOpenPlaylists={fn} />
  */
 export function Deck({
 	current,
@@ -36,6 +36,7 @@ export function Deck({
 	onPlayPause,
 	onNext,
 	onOpenQueue,
+	onOpenPlaylists,
 }: {
 	current: YouTubePlaylistItem | undefined;
 	currentVideoId: string | undefined;
@@ -43,6 +44,7 @@ export function Deck({
 	onPlayPause: () => void;
 	onNext: () => void;
 	onOpenQueue: () => void;
+	onOpenPlaylists: () => void;
 }) {
 	const { isFadedOut } = useSleepyFadeout();
 	const player = usePlayer();
@@ -72,14 +74,14 @@ export function Deck({
 
 	return (
 		<div className="shrink-0 px-2.5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-			<div className="deck-chassis flex flex-wrap items-stretch gap-3 p-3.5 md:gap-4">
+			<div
+				className={cn(
+					"deck-chassis flex flex-wrap items-stretch gap-3 p-3.5 transition-opacity duration-1000 md:gap-4",
+					isFadedOut && "opacity-20",
+				)}
+			>
 				{/* The LCD window: all text lives in the glass */}
-				<div
-					className={cn(
-						"deck-lcd flex min-w-0 flex-1 flex-col justify-between gap-2 px-3.5 py-2.5 transition-opacity duration-1000 max-md:basis-full",
-						isFadedOut && "opacity-20",
-					)}
-				>
+				<div className="deck-lcd flex min-w-0 flex-1 flex-col justify-between gap-2 px-3.5 py-2.5 max-md:basis-full">
 					<h2 className="phos-text truncate font-(family-name:--font-dot) text-base uppercase tracking-[0.05em]">
 						{current?.title ?? ""}
 					</h2>
@@ -103,17 +105,12 @@ export function Deck({
 				</div>
 
 				{/* The hardware: 2x2 key grid + play knob */}
-				<div
-					className={cn(
-						"flex shrink-0 items-center gap-3 transition-opacity duration-1000 md:gap-4 max-md:flex-1 max-md:justify-end",
-						isFadedOut && "opacity-50",
-					)}
-				>
+				<div className="flex shrink-0 items-center gap-3 md:gap-4 max-md:flex-1 max-md:justify-end">
 					<div className="grid grid-cols-2 gap-2">
 						<DeckKey
 							label="Playlists"
-							ariaLabel="Playlists"
-							href="/playlists"
+							ariaLabel="Open playlists"
+							onClick={onOpenPlaylists}
 							icon={<EjectIcon />}
 						/>
 						<LikeKey videoId={currentVideoId ?? null} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, Library, Play, User, UserCircle } from "lucide-react";
+import { Home, Play, User, UserCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -8,7 +8,6 @@ import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { AccountDrawer } from "~/components/auth/AccountDrawer";
 import { useAuth } from "~/components/auth/AuthContext";
-import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
 import { Spinner } from "~/components/ui/spinner";
 import { cn } from "~/lib/utils";
@@ -19,11 +18,8 @@ const navItemClass =
 export function BottomNav() {
 	const pathname = usePathname();
 	const { isAuthenticated, user } = useAuth();
-	const playlist = usePlaylist();
 	const [isRedirecting, setIsRedirecting] = useState(false);
 	const { isFadedOut } = useSleepyFadeout();
-
-	const hasPlaylist = Boolean(playlist.playlistId && playlist.items.length > 0);
 
 	// The player page folds all nav into the deck itself — no footer there
 	if (pathname === "/player") return null;
@@ -48,40 +44,16 @@ export function BottomNav() {
 					<span className="text-xs font-medium">Home</span>
 				</Link>
 
-				{hasPlaylist ? (
-					<Link
-						href="/player"
-						className={cn(
-							navItemClass,
-							"text-muted-foreground hover:text-foreground hover:bg-secondary/50",
-							pathname === "/player" && "text-white bg-secondary",
-						)}
-					>
-						<Play className="h-5 w-5" />
-						<span className="text-xs font-medium">Player</span>
-					</Link>
-				) : (
-					<span
-						className={cn(
-							navItemClass,
-							"text-muted-foreground/40 cursor-not-allowed",
-						)}
-					>
-						<Play className="h-5 w-5" />
-						<span className="text-xs font-medium">Player</span>
-					</span>
-				)}
-
 				<Link
-					href="/playlists"
+					href="/player"
 					className={cn(
 						navItemClass,
 						"text-muted-foreground hover:text-foreground hover:bg-secondary/50",
-						pathname === "/playlists" && "text-white bg-secondary",
+						pathname === "/player" && "text-white bg-secondary",
 					)}
 				>
-					<Library className="h-5 w-5" />
-					<span className="text-xs font-medium">Playlists</span>
+					<Play className="h-5 w-5" />
+					<span className="text-xs font-medium">Player</span>
 				</Link>
 
 				{isAuthenticated ? (
