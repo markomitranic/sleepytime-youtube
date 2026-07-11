@@ -128,6 +128,25 @@
 	--glass-glow: none;
 }
 
+/* ---- The Deck: hi-fi player hardware tokens ----
+   The app itself is always dark; only the display phosphor follows the
+   system scheme. Night (dark) = filament red, day (light) = celadon. */
+:root {
+	--phosphor: #e85335;
+	--phosphor-glow: rgba(232, 83, 53, 0.45);
+	--phosphor-ghost: rgba(232, 83, 53, 0.075);
+	--lcd-glass: #150d09;
+	--lamp: #d99a55;
+}
+@media (prefers-color-scheme: light) {
+	:root {
+		--phosphor: #8bd3aa;
+		--phosphor-glow: rgba(139, 211, 170, 0.45);
+		--phosphor-ghost: rgba(139, 211, 170, 0.08);
+		--lcd-glass: #10150f;
+	}
+}
+
 @layer base {
 	* {
 		@apply border-border outline-ring/50;
@@ -385,5 +404,125 @@
 	.playlist-item-playing {
 		border-left: 2px solid rgba(74, 222, 128, 0.8);
 		box-shadow: inset 0 0 20px rgba(74, 222, 128, 0.1);
+	}
+}
+
+/* ---- The Deck: player faceplate hardware ---- */
+@layer components {
+	/* Brushed-graphite chassis holding the LCD, keys and knob */
+	.deck-chassis {
+		border-radius: 4px;
+		background:
+			repeating-linear-gradient(
+				90deg,
+				rgba(255, 255, 255, 0.013) 0 1px,
+				transparent 1px 3px
+			),
+			linear-gradient(180deg, #27221b 0%, #1d1913 48%, #16120e 100%);
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.07),
+			inset 0 -1px 0 rgba(0, 0, 0, 0.55),
+			0 12px 32px rgba(0, 0, 0, 0.5),
+			0 2px 6px rgba(0, 0, 0, 0.4);
+	}
+
+	/* LCD window: recessed glass in a hard bezel; every word inside glows */
+	.deck-lcd {
+		position: relative;
+		overflow: hidden;
+		border-radius: 2px;
+		border: 3px solid #0d0b08;
+		background: var(--lcd-glass);
+		box-shadow:
+			inset 0 3px 9px rgba(0, 0, 0, 0.8),
+			inset 0 -1px 0 rgba(255, 255, 255, 0.03),
+			0 1px 0 rgba(255, 255, 255, 0.06),
+			0 -1px 0 rgba(0, 0, 0, 0.6);
+	}
+	.deck-lcd::before {
+		/* anode mesh */
+		content: "";
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		background: repeating-linear-gradient(
+			0deg,
+			transparent 0 2px,
+			rgba(255, 255, 255, 0.02) 2px 3px
+		);
+	}
+	.deck-lcd::after {
+		/* glass reflection: ambient top-left bloom + one diagonal streak */
+		content: "";
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		background:
+			radial-gradient(
+				130% 70% at 6% -12%,
+				rgba(255, 255, 255, 0.075),
+				transparent 58%
+			),
+			linear-gradient(
+				103deg,
+				transparent 34%,
+				rgba(255, 255, 255, 0.05) 42%,
+				rgba(255, 255, 255, 0.015) 49%,
+				transparent 56%
+			);
+	}
+
+	/* Phosphor-lit text inside the glass */
+	.phos-text {
+		color: var(--phosphor);
+		text-shadow: 0 0 6px var(--phosphor-glow);
+	}
+
+	/* Faceted key cap: slanted face, hard break, chamfered foot angling back
+	   into the panel. Cross-section is a slanted trapezoid, never a half-moon. */
+	.deck-key {
+		border-radius: 3px;
+		color: #b3a288;
+		background: linear-gradient(
+			180deg,
+			#383127 0%,
+			#2f2921 10%,
+			#272119 66%,
+			#241e17 76%,
+			#110e0a 77%,
+			#1c1712 85%,
+			#0f0c09 100%
+		);
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.16),
+			inset 1px 0 0 rgba(255, 255, 255, 0.03),
+			inset -1px 0 0 rgba(0, 0, 0, 0.45),
+			0 3px 6px rgba(0, 0, 0, 0.5),
+			0 1px 2px rgba(0, 0, 0, 0.45);
+	}
+	.deck-key:active:not(:disabled) {
+		transform: translateY(1px);
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.04),
+			inset 0 -1px 2px rgba(0, 0, 0, 0.5),
+			inset 0 2px 6px rgba(0, 0, 0, 0.35),
+			0 2px 4px rgba(0, 0, 0, 0.5);
+	}
+
+	/* Words printed on the glass: ghost when off, lit (amber lamp) when live */
+	.deck-ind {
+		font-size: 10px;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: rgba(228, 211, 188, 0.14);
+		transition: color 0.25s;
+	}
+	.deck-ind:hover {
+		color: rgba(228, 211, 188, 0.3);
+	}
+	.deck-ind-lit,
+	.deck-ind-lit:hover {
+		color: var(--lamp);
+		text-shadow: 0 0 6px rgba(217, 154, 85, 0.7);
 	}
 }

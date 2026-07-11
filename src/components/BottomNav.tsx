@@ -25,15 +25,15 @@ export function BottomNav() {
 
 	const hasPlaylist = Boolean(playlist.playlistId && playlist.items.length > 0);
 
+	// The player page folds all nav into the deck itself — no footer there
+	if (pathname === "/player") return null;
+
 	return (
 		<nav className="fixed inset-x-0 bottom-[0px] z-50 bg-[linear-gradient(to_bottom,transparent_0%,black_30%)]">
 			<div
 				className={cn(
 					"flex items-center justify-center gap-8 h-16 max-w-3xl mx-auto px-2 pb-[env(safe-area-inset-bottom)] transition-opacity duration-1000",
-					isFadedOut &&
-						(pathname === "/player"
-							? "opacity-0 pointer-events-none"
-							: "opacity-25"),
+					isFadedOut && "opacity-25",
 				)}
 			>
 				<Link

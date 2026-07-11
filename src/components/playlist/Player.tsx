@@ -7,10 +7,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "~/components/auth/AuthContext";
 import { useGlobalLoading } from "~/components/GlobalLoadingContext";
+import { Deck } from "~/components/playlist/Deck";
 import { usePlayer } from "~/components/playlist/PlayerContext";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { QueueDrawer } from "~/components/playlist/QueueDrawer";
-import { RemoteStrip } from "~/components/playlist/RemoteStrip";
 import { SleepTimerExpiryOverlay } from "~/components/playlist/SleepTimerExpiryOverlay";
 import { useYouTubePlayer } from "~/components/playlist/useYouTubePlayer";
 import { VideoEndedDialog } from "~/components/playlist/VideoEndedDialog";
@@ -245,14 +245,14 @@ export function Player() {
 				onShowDialog={handleShowDialog}
 			/>
 
-			{/* One unified layout: huge video, remote strip below, nothing scrolls */}
+			{/* One unified layout: huge video on top, the deck below, nothing scrolls */}
 			<div className="flex h-full flex-col">
-				{/* Video maximizes 16:9 within the free space above the strip.
+				{/* Video maximizes 16:9 within the free space above the deck.
 				    [container-type:size] lets the frame width derive from the free
 				    height (100cqh * 16/9), capped at full width — keeps a true 16:9
 				    box at max size in both orientations. */}
 				<div className="flex min-h-0 flex-1 items-start justify-center px-2.5 pt-2.5 [container-type:size]">
-					<div className="aspect-video w-[min(100%,177.78cqh)] overflow-hidden rounded-xl glass-panel bg-black">
+					<div className="aspect-video w-[min(100%,177.78cqh)] overflow-hidden rounded-sm glass-panel bg-black">
 						<div
 							ref={playerRef}
 							id="youtube-player"
@@ -264,7 +264,7 @@ export function Player() {
 					</div>
 				</div>
 
-				<RemoteStrip
+				<Deck
 					current={current}
 					currentVideoId={currentVideoId}
 					isPlaying={player.isPlaying}

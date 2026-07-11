@@ -96,9 +96,6 @@ export function QueueDrawer({
 function SleepTimerRow() {
 	const playlist = usePlaylist();
 	const isActive = playlist.sleepTimer.isActive;
-	const remainingMin = Math.ceil(
-		(playlist.sleepTimer.remainingSeconds ?? 0) / 60,
-	);
 
 	return (
 		<SleepTimerDrawer>
@@ -120,7 +117,7 @@ function SleepTimerRow() {
 						isActive ? "text-green-300" : "text-muted-foreground",
 					)}
 				>
-					{isActive ? `${remainingMin} min left` : "Off"}
+					{isActive ? "On" : "Off"}
 				</span>
 			</button>
 		</SleepTimerDrawer>

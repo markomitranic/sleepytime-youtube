@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Lora } from "next/font/google";
+import localFont from "next/font/local";
 import "~/styles/globals.css";
 import { Toaster } from "sonner";
 import { BottomNav } from "~/components/BottomNav";
@@ -56,6 +57,14 @@ export const metadata: Metadata = {
 
 const geist = Geist({ subsets: ["latin"] });
 const lora = Lora({ subsets: ["latin"], variable: "--font-lora" });
+/** DotGothic16 (Fontworks, OFL) — the deck's dot-matrix LCD face.
+ * Latin subset only (10 KB); non-latin glyphs fall back to Geist. */
+const dotGothic = localFont({
+	src: "../fonts/DotGothic16-latin.woff2",
+	variable: "--font-dot",
+	weight: "400",
+	display: "block",
+});
 
 export default function RootLayout({
 	children,
@@ -83,7 +92,9 @@ export default function RootLayout({
 				<link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
 				<link rel="apple-touch-startup-image" href="/icon-512.png" />
 			</head>
-			<body className={`${geist.className} ${lora.variable}`}>
+			<body
+				className={`${geist.className} ${lora.variable} ${dotGothic.variable}`}
+			>
 				<AppProviders>
 					<PlayerProvider>
 						<GlobalLoadingProvider>

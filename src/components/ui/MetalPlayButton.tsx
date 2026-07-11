@@ -3,26 +3,27 @@
 import { Pause, Play } from "lucide-react";
 import { cn } from "~/lib/utils";
 
+/**
+ * Knurled metal play/pause knob — the deck's transport control.
+ *
+ * The rim's phosphor dot-ring is always-on ghost texture; while playing it
+ * wakes to a mid glow and the cap is backlit from within (a radial phosphor
+ * lamp under the metal), like the play key on an old backlit radio. Colors
+ * follow the --phosphor tokens, so the day/night theme switches for free.
+ * @example <MetalPlayButton isPlaying={isPlaying} onClick={toggle} size="lg" />
+ */
 export function MetalPlayButton({
 	isPlaying,
 	onClick,
 	size = "lg",
-	progress,
 	className,
 }: {
 	isPlaying: boolean;
 	onClick: () => void;
 	size?: "sm" | "lg";
-	/** 0..1 playback progress; lights up the rim dots LCD-style when set */
-	progress?: number;
 	className?: string;
 }) {
 	const isLg = size === "lg";
-	// Rim = 60 light/dark dot pairs of 6deg; light whole dots only so the ring
-	// fills one discrete segment at a time
-	const litAngle = progress
-		? Math.min(360, Math.floor(Math.min(1, progress) * 60) * 6)
-		: 0;
 
 	return (
 		<button
@@ -30,7 +31,7 @@ export function MetalPlayButton({
 			onClick={onClick}
 			className={cn(
 				"relative shrink-0 rounded-full active:scale-95 transition-transform duration-100",
-				isLg ? "h-14 w-14" : "h-9 w-9",
+				isLg ? "h-20 w-20" : "h-9 w-9",
 				className,
 			)}
 			aria-label={isPlaying ? "Pause" : "Play"}
@@ -44,21 +45,19 @@ export function MetalPlayButton({
 				].join(", "),
 			}}
 		>
-			{/* Celadon LCD progress: lights the rim's bright dots up to litAngle,
-			    rendered under the inner face so only the rim shows */}
-			{litAngle > 0 && (
-				<span
-					aria-hidden
-					className="absolute inset-0 rounded-full pointer-events-none"
-					style={{
-						background:
-							"repeating-conic-gradient(from 0deg, rgba(158,233,192,0.95) 0deg 3deg, transparent 3deg 6deg)",
-						WebkitMaskImage: `conic-gradient(from 0deg, black ${litAngle}deg, transparent ${litAngle}deg)`,
-						maskImage: `conic-gradient(from 0deg, black ${litAngle}deg, transparent ${litAngle}deg)`,
-						filter: "drop-shadow(0 0 3px rgba(134,239,172,0.65))",
-					}}
-				/>
-			)}
+			{/* Phosphor dot-ring: ghost texture at rest, mid glow while playing */}
+			<span
+				aria-hidden
+				className="absolute inset-0 rounded-full pointer-events-none transition-opacity duration-500"
+				style={{
+					background:
+						"repeating-conic-gradient(from 0deg, var(--phosphor) 0deg 3deg, transparent 3deg 6deg)",
+					opacity: isPlaying ? 0.3 : 0.12,
+					filter: isPlaying
+						? "drop-shadow(0 0 4px var(--phosphor-glow))"
+						: undefined,
+				}}
+			/>
 			{/* Inner metallic face with concentric ribs */}
 			<span
 				className={cn(
@@ -74,18 +73,31 @@ export function MetalPlayButton({
 						"inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.25)",
 				}}
 			/>
+			{/* Backlight: the dial lamp shining through the cap while playing */}
+			<span
+				aria-hidden
+				className={cn(
+					"absolute rounded-full pointer-events-none transition-opacity duration-500",
+					isLg ? "inset-[3px]" : "inset-[2px]",
+				)}
+				style={{
+					background:
+						"radial-gradient(circle at 50% 45%, var(--phosphor) 0%, transparent 72%)",
+					opacity: isPlaying ? 0.3 : 0,
+				}}
+			/>
 			{/* Icon */}
 			<span className="relative z-10 flex items-center justify-center w-full h-full text-[#2a1f18] drop-shadow-[0_1px_0_rgba(255,255,255,0.2)]">
 				{isPlaying ? (
 					<Pause
-						className={isLg ? "h-6 w-6" : "h-3.5 w-3.5"}
+						className={isLg ? "h-7 w-7" : "h-3.5 w-3.5"}
 						fill="currentColor"
 						strokeWidth={0}
 					/>
 				) : (
 					<Play
 						className={cn(
-							isLg ? "h-6 w-6" : "h-3.5 w-3.5",
+							isLg ? "h-7 w-7" : "h-3.5 w-3.5",
 							isLg ? "ml-1" : "ml-0.5",
 						)}
 						fill="currentColor"
