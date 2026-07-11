@@ -182,6 +182,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 	}, [queryError, errorInfo, auth, setPersistedState]);
 
 	// When items arrive and we have a pending videoId or need a default
+	const { hasNextPage, isFetchingNextPage, fetchNextPage } = itemsQuery;
 	useEffect(() => {
 		if (!allItems.length || !playlistId) return;
 
@@ -193,6 +194,14 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 				pendingVideoIdRef.current = undefined;
 				return;
 			}
+			// Restored video may sit on a page not fetched yet (items load 50 at
+			// a time) — keep paging before declaring it gone, else positions deep
+			// in long playlists reset to the first video on refresh
+			if (hasNextPage) {
+				if (!isFetchingNextPage) void fetchNextPage();
+				return;
+			}
+			pendingVideoIdRef.current = undefined;
 		}
 
 		// If no currentVideoId or it's not in items, pick first
@@ -203,7 +212,14 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 			const fallback = allItems.find((i) => Boolean(i.videoId))?.videoId;
 			if (fallback) setCurrentVideoIdRaw(fallback);
 		}
-	}, [allItems, playlistId, currentVideoId]);
+	}, [
+		allItems,
+		playlistId,
+		currentVideoId,
+		hasNextPage,
+		isFetchingNextPage,
+		fetchNextPage,
+	]);
 
 	const setCurrentVideoId = useCallback((videoId: string | undefined) => {
 		setCurrentVideoIdRaw(videoId);
@@ -212,6 +228,9 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 	const loadByPlaylistId = useCallback(
 		async (newPlaylistId: string, opts?: { currentVideoId?: string }) => {
 			pendingVideoIdRef.current = opts?.currentVideoId;
+			// Play the restored video right away — persisted meta covers the UI
+			// until the page containing it is fetched and validates it
+			setCurrentVideoIdRaw(opts?.currentVideoId);
 			setPlaylistId(newPlaylistId);
 			if (typeof window !== "undefined") {
 				try {
