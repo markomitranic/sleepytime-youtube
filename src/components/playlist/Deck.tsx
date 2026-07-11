@@ -1,6 +1,6 @@
 "use client";
 
-import { ListVideo, SkipForward, ThumbsUp } from "lucide-react";
+import { ListVideo, Moon, SkipForward, ThumbsUp } from "lucide-react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useEffect } from "react";
@@ -23,9 +23,11 @@ import type { YouTubePlaylistItem } from "~/lib/youtube";
  * LCD window on the left carries all text in the phosphor color — title,
  * channel, seven-segment elapsed/remaining and a segment progress bar — plus
  * the SLEEP / HOME / ACCOUNT words printed on the glass. The right side is
- * hardware: a 2x2 key grid (Playlists, Like, Queue, Next) and the knurled
- * play knob. Replaces both the old RemoteStrip and the bottom nav on this
- * screen. Owns the spacebar shortcut and the sleepy fade (the whole
+ * hardware: a 2x2 key grid (Playlists, Like, Sleep, Next) and the knurled
+ * queue knob — the big control opens the queue; play/pause lives on the
+ * video and the spacebar. The knob still backlights while playing (the
+ * deck's life sign). Replaces both the old RemoteStrip and the bottom nav
+ * on this screen. Owns the spacebar shortcut and the sleepy fade (the whole
  * faceplate dims to 20% when idle).
  * @example <Deck current={item} currentVideoId={id} isPlaying onPlayPause={fn} onNext={fn} onOpenQueue={fn} onOpenPlaylists={fn} />
  */
@@ -114,12 +116,7 @@ export function Deck({
 							icon={<EjectIcon />}
 						/>
 						<LikeKey videoId={currentVideoId ?? null} />
-						<DeckKey
-							label="Queue"
-							ariaLabel="Open queue"
-							onClick={onOpenQueue}
-							icon={<ListVideo />}
-						/>
+						<SleepKey />
 						<DeckKey
 							label="Next"
 							ariaLabel="Next video"
@@ -127,7 +124,12 @@ export function Deck({
 							icon={<SkipForward />}
 						/>
 					</div>
-					<MetalPlayButton isPlaying={isPlaying} onClick={onPlayPause} />
+					<MetalPlayButton
+						isPlaying={isPlaying}
+						onClick={onOpenQueue}
+						ariaLabel="Open queue"
+						icon={<ListVideo className="h-7 w-7" />}
+					/>
 				</div>
 			</div>
 		</div>
@@ -289,6 +291,28 @@ function LikeKey({ videoId }: { videoId: string | null }) {
 			disabled={!available}
 			icon={<ThumbsUp className={cn(isLiked && "fill-current")} />}
 		/>
+	);
+}
+
+/**
+ * Sleep timer as a deck key: opens the timer sheet, lights amber while armed.
+ * The DrawerTrigger's onClick reaches the button through DeckKey's onClick prop.
+ */
+function SleepKey() {
+	const playlist = usePlaylist();
+	const timerOn = playlist.sleepTimer.isActive;
+
+	return (
+		<SleepTimerDrawer>
+			<DeckKey
+				label="Sleep"
+				ariaLabel={
+					timerOn ? "Sleep timer armed. Tap to change." : "Set sleep timer"
+				}
+				active={timerOn}
+				icon={<Moon className={cn(timerOn && "fill-current")} />}
+			/>
+		</SleepTimerDrawer>
 	);
 }
 

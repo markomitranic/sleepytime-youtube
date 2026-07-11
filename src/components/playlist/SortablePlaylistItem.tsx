@@ -106,14 +106,14 @@ export function SortablePlaylistItem({
 				<div className="min-w-0 flex-1">
 					<div className="flex items-center gap-2">
 						<p
-							className={`truncate font-medium ${isCurrent ? "opacity-80" : ""}`}
+							className={`truncate font-medium md:text-lg ${isCurrent ? "opacity-80" : ""}`}
 						>
 							{item.title}
 						</p>
 					</div>
 					{item.channelTitle && (
 						<div className="flex flex-col gap-1">
-							<p className="text-xs text-muted-foreground">
+							<p className="text-xs text-muted-foreground md:text-sm">
 								{item.channelTitle}
 							</p>
 							{isCurrent && (

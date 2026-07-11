@@ -4,24 +4,31 @@ import { Pause, Play } from "lucide-react";
 import { cn } from "~/lib/utils";
 
 /**
- * Knurled metal play/pause knob — the deck's transport control.
+ * Knurled metal knob — the deck's most prominent control.
  *
- * The rim's phosphor dot-ring is always-on ghost texture; while playing it
- * wakes to a mid glow and the cap is backlit from within (a radial phosphor
- * lamp under the metal), like the play key on an old backlit radio. Colors
- * follow the --phosphor tokens, so the day/night theme switches for free.
- * @example <MetalPlayButton isPlaying={isPlaying} onClick={toggle} size="lg" />
+ * By default it's a play/pause transport (icon flips with `isPlaying`); pass
+ * `icon` + `ariaLabel` to give it another job while keeping the physicality.
+ * Either way the rim's phosphor dot-ring is always-on ghost texture; while
+ * playing it wakes to a mid glow and the cap is backlit from within (a radial
+ * phosphor lamp under the metal), like the play key on an old backlit radio.
+ * Colors follow the --phosphor tokens, so the day/night theme switches free.
+ * @example <MetalPlayButton isPlaying={isPlaying} onClick={toggle} size="sm" />
+ * @example <MetalPlayButton isPlaying onClick={openQueue} icon={<ListVideo />} ariaLabel="Open queue" />
  */
 export function MetalPlayButton({
 	isPlaying,
 	onClick,
 	size = "lg",
 	className,
+	icon,
+	ariaLabel,
 }: {
 	isPlaying: boolean;
 	onClick: () => void;
 	size?: "sm" | "lg";
 	className?: string;
+	icon?: React.ReactNode;
+	ariaLabel?: string;
 }) {
 	const isLg = size === "lg";
 
@@ -34,7 +41,7 @@ export function MetalPlayButton({
 				isLg ? "h-20 w-20" : "h-9 w-9",
 				className,
 			)}
-			aria-label={isPlaying ? "Pause" : "Play"}
+			aria-label={ariaLabel ?? (isPlaying ? "Pause" : "Play")}
 			style={{
 				background:
 					"repeating-conic-gradient(from 0deg, rgba(255,255,255,0.13) 0deg 3deg, rgba(0,0,0,0.10) 3deg 6deg)",
@@ -88,22 +95,23 @@ export function MetalPlayButton({
 			/>
 			{/* Icon */}
 			<span className="relative z-10 flex items-center justify-center w-full h-full text-[#2a1f18] drop-shadow-[0_1px_0_rgba(255,255,255,0.2)]">
-				{isPlaying ? (
-					<Pause
-						className={isLg ? "h-7 w-7" : "h-3.5 w-3.5"}
-						fill="currentColor"
-						strokeWidth={0}
-					/>
-				) : (
-					<Play
-						className={cn(
-							isLg ? "h-7 w-7" : "h-3.5 w-3.5",
-							isLg ? "ml-1" : "ml-0.5",
-						)}
-						fill="currentColor"
-						strokeWidth={0}
-					/>
-				)}
+				{icon ??
+					(isPlaying ? (
+						<Pause
+							className={isLg ? "h-7 w-7" : "h-3.5 w-3.5"}
+							fill="currentColor"
+							strokeWidth={0}
+						/>
+					) : (
+						<Play
+							className={cn(
+								isLg ? "h-7 w-7" : "h-3.5 w-3.5",
+								isLg ? "ml-1" : "ml-0.5",
+							)}
+							fill="currentColor"
+							strokeWidth={0}
+						/>
+					))}
 			</span>
 		</button>
 	);

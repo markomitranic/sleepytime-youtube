@@ -70,7 +70,8 @@ export function PlaylistTray({
 				aria-label="Playlists"
 				inert={!open}
 				className={cn(
-					"deck-tray absolute inset-x-2.5 bottom-[calc(100%-1.25rem)] z-20 flex max-h-[42dvh] flex-col pb-3 transition-all duration-500 ease-out",
+					// Phones get the whole screen above the deck; md+ keeps the door modest
+					"deck-tray absolute inset-x-2.5 bottom-[calc(100%-1.25rem)] z-20 flex max-h-[calc(100dvh-16rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col pb-3 transition-all duration-500 ease-out md:max-h-[42dvh]",
 					!open && "pointer-events-none translate-y-6 opacity-0",
 					className,
 				)}
@@ -83,7 +84,7 @@ export function PlaylistTray({
 					{/* User playlists */}
 					{auth.isAuthenticated && sortedUserPlaylists.length > 0 && (
 						<section className="mb-2">
-							<h2 className="mb-2 px-3 font-(family-name:--font-dot) text-[10px] uppercase tracking-[0.2em] text-[rgba(228,211,188,0.4)]">
+							<h2 className="mb-2 px-3 font-(family-name:--font-dot) text-[10px] uppercase tracking-[0.2em] text-[rgba(228,211,188,0.4)] md:text-[11px]">
 								Your Playlists
 							</h2>
 							<div className="space-y-1">
@@ -105,7 +106,7 @@ export function PlaylistTray({
 					{/* Separator */}
 					<div className="flex items-center gap-4 py-3">
 						<div className="h-px flex-1 bg-white/[0.06]" />
-						<span className="font-(family-name:--font-dot) text-[10px] uppercase tracking-[0.2em] text-[rgba(228,211,188,0.4)]">
+						<span className="font-(family-name:--font-dot) text-[10px] uppercase tracking-[0.2em] text-[rgba(228,211,188,0.4)] md:text-[11px]">
 							Recommended
 						</span>
 						<div className="h-px flex-1 bg-white/[0.06]" />
@@ -171,10 +172,14 @@ function TrayRow({
 				)}
 			</div>
 			<div className="min-w-0 flex-1">
-				<p className="truncate text-sm font-medium text-[#d8cbb4]">{title}</p>
+				<p className="truncate text-sm font-medium text-[#d8cbb4] md:text-base">
+					{title}
+				</p>
 				<div className="mt-0.5 flex items-center gap-2">
 					{subtitle && (
-						<span className="text-xs text-[#8a7961]">{subtitle}</span>
+						<span className="text-xs text-[#8a7961] md:text-sm">
+							{subtitle}
+						</span>
 					)}
 					{badge}
 					{isPlaying && (

@@ -110,10 +110,12 @@ function SleepTimerRow() {
 						isActive ? "text-green-300" : "text-muted-foreground",
 					)}
 				/>
-				<span className="flex-1 text-sm font-medium">Sleep timer</span>
+				<span className="flex-1 text-sm font-medium md:text-base">
+					Sleep timer
+				</span>
 				<span
 					className={cn(
-						"text-sm",
+						"text-sm md:text-base",
 						isActive ? "text-green-300" : "text-muted-foreground",
 					)}
 				>

@@ -135,24 +135,26 @@ export function PlaylistSidebar({
 						/>
 					)}
 					<div className="min-w-0 flex-1">
-						<h3 className="font-semibold text-sm truncate">{snippet.title}</h3>
+						<h3 className="font-semibold text-sm truncate md:text-base">
+							{snippet.title}
+						</h3>
 						{snippet.channelTitle && (
 							<a
 								href={`https://www.youtube.com/channel/${snippet.channelId}`}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+								className="text-xs text-muted-foreground hover:text-foreground transition-colors md:text-sm"
 							>
 								{snippet.channelTitle}
 							</a>
 						)}
 						{snippet.itemCount != null && (
-							<p className="text-xs text-muted-foreground mt-0.5">
+							<p className="text-xs text-muted-foreground mt-0.5 md:text-sm">
 								{snippet.itemCount} video{snippet.itemCount !== 1 ? "s" : ""}
 							</p>
 						)}
 						{snippet.description && (
-							<p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+							<p className="text-xs text-muted-foreground mt-1 line-clamp-2 md:text-sm">
 								{snippet.description}
 							</p>
 						)}
