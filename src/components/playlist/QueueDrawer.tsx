@@ -34,10 +34,12 @@ export function QueueDrawer({
 	canEdit,
 	hasMore,
 	snippet,
+	isRefreshing,
 	onSelectVideo,
 	onDeleteItem,
 	onDragEnd,
 	onLoadMore,
+	onRefresh,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -46,10 +48,12 @@ export function QueueDrawer({
 	canEdit: boolean;
 	hasMore: boolean | undefined;
 	snippet?: YouTubePlaylistSnippet | null;
+	isRefreshing?: boolean;
 	onSelectVideo: (videoId?: string) => void;
 	onDeleteItem: (itemId: string) => Promise<void>;
 	onDragEnd: (event: DragEndEvent) => Promise<void>;
 	onLoadMore: () => Promise<void>;
+	onRefresh?: () => Promise<void>;
 }) {
 	return (
 		<Drawer
@@ -68,10 +72,12 @@ export function QueueDrawer({
 						canEdit={canEdit}
 						hasMore={hasMore}
 						snippet={snippet}
+						isRefreshing={isRefreshing}
 						onSelectVideo={onSelectVideo}
 						onDeleteItem={onDeleteItem}
 						onDragEnd={onDragEnd}
 						onLoadMore={onLoadMore}
+						onRefresh={onRefresh}
 					/>
 				</div>
 

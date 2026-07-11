@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import {
 	createContext,
 	useCallback,
@@ -45,6 +46,7 @@ export type PlaylistState = {
 		channelTitle?: string;
 	};
 	isLoading?: boolean;
+	isRefreshing?: boolean;
 	hasMore?: boolean;
 	error?: string | null;
 	errorDetails?: string | null;
@@ -58,6 +60,7 @@ export type PlaylistActions = {
 		opts?: { currentVideoId?: string },
 	) => Promise<void>;
 	loadMoreItems: () => Promise<void>;
+	refresh: () => Promise<void>;
 	setCurrentVideoId: (videoId: string | undefined) => void;
 	clear: () => void;
 	setSleepTimer: (durationMinutes: number) => void;
@@ -116,6 +119,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 	const hasInitializedFromStorage = useRef(false);
 	const pendingVideoIdRef = useRef<string | undefined>(undefined);
 	const auth = useAuth();
+	const queryClient = useQueryClient();
 
 	// React Query hooks
 	const snippetQuery = usePlaylistSnippet(playlistId);
@@ -131,6 +135,9 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 
 	const snippet = snippetQuery.data ?? null;
 	const isLoading = itemsQuery.isLoading && Boolean(playlistId);
+	const isRefreshing =
+		Boolean(playlistId) &&
+		(itemsQuery.isRefetching || snippetQuery.isRefetching);
 	const hasMore = itemsQuery.hasNextPage ?? false;
 	const queryError = snippetQuery.error ?? itemsQuery.error;
 
@@ -221,6 +228,18 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 		}
 	}, [itemsQuery]);
 
+	const refresh = useCallback(async () => {
+		if (!playlistId) return;
+		await Promise.all([
+			queryClient.invalidateQueries({
+				queryKey: ["playlistItems", playlistId],
+			}),
+			queryClient.invalidateQueries({
+				queryKey: ["playlistSnippet", playlistId],
+			}),
+		]);
+	}, [playlistId, queryClient]);
+
 	const clear = useCallback(() => {
 		setPlaylistId(undefined);
 		setCurrentVideoIdRaw(undefined);
@@ -256,6 +275,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 			currentVideoId,
 			currentVideoMeta,
 			isLoading,
+			isRefreshing,
 			hasMore,
 			error: errorInfo.error,
 			errorDetails: errorInfo.errorDetails,
@@ -263,6 +283,7 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 			isPaused,
 			loadByPlaylistId,
 			loadMoreItems,
+			refresh,
 			setCurrentVideoId,
 			clear,
 			setSleepTimer: sleepTimerActions.setSleepTimer,
@@ -280,12 +301,14 @@ export function PlaylistProvider({ children }: { children: React.ReactNode }) {
 			currentVideoId,
 			currentVideoMeta,
 			isLoading,
+			isRefreshing,
 			hasMore,
 			errorInfo,
 			sleepTimer,
 			isPaused,
 			loadByPlaylistId,
 			loadMoreItems,
+			refresh,
 			setCurrentVideoId,
 			clear,
 			sleepTimerActions,
