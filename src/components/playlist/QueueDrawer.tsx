@@ -62,7 +62,7 @@ export function QueueDrawer({
 			onOpenChange={onOpenChange}
 			handleOnly
 		>
-			<DrawerContent className="gap-0 p-0 data-[vaul-drawer-direction=right]:w-[calc(100%-3rem)] data-[vaul-drawer-direction=right]:sm:max-w-md">
+			<DrawerContent className="gap-0 p-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] data-[vaul-drawer-direction=right]:w-[calc(100%-3rem)] data-[vaul-drawer-direction=right]:sm:max-w-md">
 				<DrawerTitle className="sr-only">Queue</DrawerTitle>
 
 				<div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">

@@ -18,6 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import { GripVertical, Loader2, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { SortablePlaylistItem } from "~/components/playlist/SortablePlaylistItem";
 import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
@@ -173,9 +174,7 @@ export function PlaylistSidebar({
 					)}
 				</div>
 			)}
-			<div
-				className={`touch-drag-container ${activeItem ? "dragging" : ""}`}
-			>
+			<div className={`touch-drag-container ${activeItem ? "dragging" : ""}`}>
 				<DndContext
 					sensors={sensors}
 					collisionDetection={closestCenter}
@@ -203,9 +202,15 @@ export function PlaylistSidebar({
 							))}
 						</ul>
 					</SortableContext>
-					<DragOverlay dropAnimation={null}>
-						{activeItem && <DragOverlayItem item={activeItem} />}
-					</DragOverlay>
+					{/* Portal to body: vaul's drawer transform hijacks the overlay's
+					    position:fixed containing block, flinging it off-screen */}
+					{typeof document !== "undefined" &&
+						createPortal(
+							<DragOverlay dropAnimation={null}>
+								{activeItem && <DragOverlayItem item={activeItem} />}
+							</DragOverlay>,
+							document.body,
+						)}
 				</DndContext>
 				{hasMore && (
 					<button
