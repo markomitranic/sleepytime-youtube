@@ -203,7 +203,7 @@ export function HomeContent({
 			{/* Hero: the Underwood painting mounted behind glass in a graphite frame */}
 			<div className="hero-glow mx-auto w-full max-w-5xl px-4 pt-6 md:pt-10">
 				<figure className="hero-bezel">
-					<div className="hero-well">
+					<div className="hero-well before:absolute before:inset-0 before:z-1 before:bg-black/15 before:content-['']">
 						<Image
 							src="/sleepytime-underwood.jpg"
 							alt="Sleepytime Celestial Seasonings Bear — by Underwood"
