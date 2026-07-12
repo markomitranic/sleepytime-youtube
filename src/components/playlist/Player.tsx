@@ -1,12 +1,12 @@
 "use client";
 
 import type { DragEndEvent } from "@dnd-kit/core";
-import { Library } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AccountTray } from "~/components/auth/AccountTray";
 import { useAuth } from "~/components/auth/AuthContext";
 import { useGlobalLoading } from "~/components/GlobalLoadingContext";
+import { HomeScreenMenu } from "~/components/home/HomeScreenMenu";
 import { Deck } from "~/components/playlist/Deck";
 import { usePlayer } from "~/components/playlist/PlayerContext";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
@@ -15,10 +15,18 @@ import { QueueDrawer } from "~/components/playlist/QueueDrawer";
 import { SleepTimerExpiryOverlay } from "~/components/playlist/SleepTimerExpiryOverlay";
 import { useYouTubePlayer } from "~/components/playlist/useYouTubePlayer";
 import { VideoEndedDialog } from "~/components/playlist/VideoEndedDialog";
-import { Button } from "~/components/ui/button";
 import { useUserPlaylists } from "~/lib/queries";
+import { cn } from "~/lib/utils";
 
-export function Player() {
+/**
+ * The full player chassis: screen, deck, trays and drawers.
+ *
+ * `screenLive` gates the embed — while false (mid-fold), the YouTube player
+ * gets no video so nothing loads or plays behind the folding page; the tape
+ * threads only once the fold has seated.
+ * @example <Player /> // /player direct load, screen live immediately
+ */
+export function Player({ screenLive = true }: { screenLive?: boolean }) {
 	const playlist = usePlaylist();
 	const player = usePlayer();
 	const auth = useAuth();
@@ -90,7 +98,7 @@ export function Player() {
 	}, []);
 
 	const { playerRef, playerInstanceRef } = useYouTubePlayer({
-		currentVideoId,
+		currentVideoId: screenLive ? currentVideoId : undefined,
 		sleepTimerIsActive: playlist.sleepTimer.isActive,
 		onVideoEnded,
 		onAutoAdvance: autoRemoveAndAdvance,
@@ -209,35 +217,6 @@ export function Player() {
 		}
 	}, [playlist.isPaused, playerInstanceRef]);
 
-	// Empty state: the library tray is the only way in
-	if (!playlist.items.length || !currentVideoId) {
-		return (
-			<div className="relative flex h-full flex-col items-center justify-center gap-6 px-4 text-center">
-				<div className="space-y-3">
-					<Library className="h-16 w-16 mx-auto text-muted-foreground" />
-					<h2 className="text-2xl font-semibold">No Playlist Selected</h2>
-					<p className="text-muted-foreground max-w-md">
-						Pick a playlist from the library to start listening.
-					</p>
-				</div>
-				<Button
-					size="lg"
-					className="gap-2"
-					onClick={() => setOpenPanel("playlists")}
-				>
-					<Library className="h-5 w-5" />
-					Browse Playlists
-				</Button>
-				{/* No deck here to anchor to — the tray rises from the screen bottom */}
-				<PlaylistTray
-					open={openPanel === "playlists"}
-					onOpenChange={(o) => setOpenPanel(o ? "playlists" : null)}
-					className="bottom-[calc(0.75rem+env(safe-area-inset-bottom))]"
-				/>
-			</div>
-		);
-	}
-
 	const current = playlist.items.find((i) => i.videoId === currentVideoId);
 
 	return (
@@ -264,15 +243,30 @@ export function Player() {
 				    height (100cqh * 16/9), capped at full width — keeps a true 16:9
 				    box at max size in both orientations. */}
 				<div className="flex min-h-0 flex-1 items-start justify-center px-2.5 pt-2.5 [container-type:size]">
-					<div className="aspect-video w-[min(100%,177.78cqh)] overflow-hidden rounded-sm glass-panel bg-black">
-						<div
-							ref={playerRef}
-							id="youtube-player"
-							className="h-full w-full"
-							// @ts-expect-error - iOS PWA properties
-							style={{ WebkitPlaysInline: true, playsInline: true }}
-							playsInline={true}
-						/>
+					<div
+						data-player-screen
+						className="relative aspect-video w-[min(100%,177.78cqh)] overflow-hidden rounded-sm glass-panel"
+						// Mid-fold the glass is a clear window: the folding page behind
+						// the chassis stays visible through the bezel. Inline because
+						// .glass-panel's unlayered background outranks any utility.
+						style={{ background: screenLive ? "#000" : "transparent" }}
+					>
+						{/* YT replaces the inner div with its iframe — this wrapper keeps
+						    the DOM React owns stable around that foreign swap */}
+						<div className={cn("absolute inset-0", !screenLive && "invisible")}>
+							<div
+								ref={playerRef}
+								id="youtube-player"
+								className="h-full w-full"
+								// @ts-expect-error - iOS PWA properties
+								style={{ WebkitPlaysInline: true, playsInline: true }}
+								playsInline={true}
+							/>
+						</div>
+						{/* No tape in: the screen is the menu channel (or a loading card) */}
+						{screenLive &&
+							!currentVideoId &&
+							(playlist.isLoading ? <ScreenLoading /> : <HomeScreenMenu />)}
 					</div>
 				</div>
 
@@ -286,6 +280,7 @@ export function Player() {
 					<AccountTray
 						open={openPanel === "account"}
 						onOpenChange={(o) => setOpenPanel(o ? "account" : null)}
+						onShowPlaylists={() => setOpenPanel("playlists")}
 					/>
 					<div className="relative z-30">
 						<Deck
@@ -324,5 +319,16 @@ export function Player() {
 				onRefresh={playlist.refresh}
 			/>
 		</>
+	);
+}
+
+/** Dot-matrix loading card on the screen glass while a playlist tunes in. */
+function ScreenLoading() {
+	return (
+		<div className="absolute inset-0 z-10 grid place-items-center bg-black">
+			<p className="phos-text animate-pulse font-(family-name:--font-dot) text-sm uppercase tracking-[0.35em]">
+				Loading
+			</p>
+		</div>
 	);
 }

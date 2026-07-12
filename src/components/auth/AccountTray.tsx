@@ -1,7 +1,6 @@
 "use client";
 
 import { ListMusic, LogOut, User } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "~/components/auth/AuthContext";
 import { DeckTray } from "~/components/playlist/DeckTray";
 import { useUserPlaylists } from "~/lib/queries";
@@ -9,19 +8,21 @@ import { useUserPlaylists } from "~/lib/queries";
 /**
  * The account bay: the signed-in user's card inside the same DeckTray door
  * as the playlists — avatar, name, playlist count, sign out.
- * @example <AccountTray open={open} onOpenChange={setOpen} />
+ * The playlist-count row hands off to the cassette tray via onShowPlaylists.
+ * @example <AccountTray open={open} onOpenChange={setOpen} onShowPlaylists={openTray} />
  */
 export function AccountTray({
 	open,
 	onOpenChange,
+	onShowPlaylists,
 	className,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	onShowPlaylists?: () => void;
 	className?: string;
 }) {
 	const auth = useAuth();
-	const router = useRouter();
 	const { data: userPlaylists } = useUserPlaylists();
 	const playlistCount = userPlaylists?.length ?? 0;
 
@@ -58,14 +59,11 @@ export function AccountTray({
 			</div>
 
 			<div className="space-y-1">
-				{playlistCount > 0 && (
+				{playlistCount > 0 && onShowPlaylists && (
 					<TrayAction
 						icon={<ListMusic />}
 						label={`${playlistCount} ${playlistCount === 1 ? "playlist" : "playlists"}`}
-						onClick={() => {
-							onOpenChange(false);
-							router.push("/playlists/manage");
-						}}
+						onClick={onShowPlaylists}
 					/>
 				)}
 				<TrayAction

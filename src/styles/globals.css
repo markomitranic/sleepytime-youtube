@@ -272,6 +272,64 @@
 			animation-iteration-count: 1;
 		}
 	}
+
+	/* ---- Homepage faceplate ---- */
+
+	/* Hook paragraph: warm serif drop cap, editorial passage opener */
+	.hook-dropcap::first-letter {
+		float: left;
+		font-family: var(--font-lora), serif;
+		font-size: 3.1em;
+		line-height: 0.78;
+		padding-right: 0.09em;
+		margin-top: 0.06em;
+		color: oklch(0.74 0.06 65);
+		text-shadow: 0 0 20px oklch(0.35 0.08 55 / 0.3);
+	}
+
+	/* Amber "now playing" lamp on the active playlist card */
+	@keyframes lamp-breathe {
+		0%,
+		100% {
+			opacity: 0.95;
+			box-shadow: 0 0 8px var(--lamp);
+		}
+		50% {
+			opacity: 0.5;
+			box-shadow: 0 0 3px var(--lamp);
+		}
+	}
+	.lamp-breathe {
+		animation: lamp-breathe 2.6s ease-in-out infinite;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.lamp-breathe {
+			animation: none;
+		}
+	}
+
+	/* Engraved hairline seam trailing a silk-screened panel label */
+	.chassis-seam {
+		flex: 1;
+		height: 1px;
+		background: linear-gradient(90deg, rgba(228, 211, 188, 0.09), transparent);
+		box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+	}
+
+	/* Faint amber status lamp silk-screened on the panel */
+	.deck-lamp {
+		width: 5px;
+		height: 5px;
+		border-radius: 9999px;
+		background: radial-gradient(
+			circle at 40% 35%,
+			rgba(217, 154, 85, 0.6),
+			rgba(217, 154, 85, 0.2)
+		);
+		box-shadow:
+			0 0 5px rgba(217, 154, 85, 0.28),
+			inset 0 0 1px rgba(0, 0, 0, 0.5);
+	}
 }
 
 /* Breathing green LED for built-in playlist badges */
@@ -424,6 +482,115 @@
 			inset 0 -1px 0 rgba(0, 0, 0, 0.55),
 			0 12px 32px rgba(0, 0, 0, 0.5),
 			0 2px 6px rgba(0, 0, 0, 0.4);
+	}
+
+	/* Dark-metal VCR foot: the chassis rests on two of these */
+	.deck-foot {
+		width: 21%;
+		height: 100%;
+		border-radius: 0 0 4px 4px;
+		background: linear-gradient(180deg, #1e1a15 0%, #12100c 40%, #070605 100%);
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.05),
+			inset 1px 0 0 rgba(255, 255, 255, 0.02),
+			inset -1px 0 0 rgba(0, 0, 0, 0.6),
+			0 2px 5px rgba(0, 0, 0, 0.55);
+	}
+
+	/* ---- Homepage: mounted on the deck chassis ---- */
+
+	/* Hero mounted behind glass: a brushed-graphite picture frame holding
+	   the Underwood painting, sunk into a recessed well. */
+	.hero-bezel {
+		position: relative;
+		border-radius: 6px;
+		padding: 12px;
+		background:
+			repeating-linear-gradient(
+				90deg,
+				rgba(255, 255, 255, 0.013) 0 1px,
+				transparent 1px 3px
+			),
+			linear-gradient(180deg, #27221b 0%, #1d1913 48%, #16120e 100%);
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.07),
+			inset 0 -1px 0 rgba(0, 0, 0, 0.55),
+			0 12px 32px rgba(0, 0, 0, 0.5),
+			0 2px 6px rgba(0, 0, 0, 0.4);
+	}
+
+	/* Recessed well: the painting behind a hard bezel, with a faint diagonal
+	   glass reflection drifting across it (nudged by device tilt like the LCD). */
+	.hero-well {
+		position: relative;
+		overflow: hidden;
+		border-radius: 2px;
+		border: 3px solid #0d0b08;
+		box-shadow:
+			inset 0 3px 12px rgba(0, 0, 0, 0.8),
+			inset 0 -1px 0 rgba(255, 255, 255, 0.03),
+			0 1px 0 rgba(255, 255, 255, 0.06);
+	}
+	.hero-well::after {
+		content: "";
+		position: absolute;
+		inset: -16px;
+		pointer-events: none;
+		translate: calc(var(--tilt-x, 0) * 10px) calc(var(--tilt-y, 0) * 7px);
+		background:
+			radial-gradient(
+				130% 70% at 6% -12%,
+				rgba(255, 255, 255, 0.06),
+				transparent 58%
+			),
+			linear-gradient(
+				103deg,
+				transparent 40%,
+				rgba(255, 255, 255, 0.04) 46%,
+				rgba(255, 255, 255, 0.012) 50%,
+				transparent 55%
+			);
+	}
+
+	/* Engraved brushed-graphite plate: hook + account copy sunk into metal */
+	.engraved-plate {
+		border-radius: 4px;
+		background:
+			repeating-linear-gradient(
+				90deg,
+				rgba(255, 255, 255, 0.013) 0 1px,
+				transparent 1px 3px
+			),
+			linear-gradient(180deg, #232019 0%, #1b1712 55%, #151109 100%);
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.06),
+			inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+			0 8px 24px rgba(0, 0, 0, 0.4),
+			0 1px 2px rgba(0, 0, 0, 0.4);
+	}
+
+	/* Letterpress: text sits a hair below the metal surface */
+	.engraved-text {
+		text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+	}
+
+	/* Program slot: a thumbnail sunk behind a hard, recessed bezel */
+	.deck-slot {
+		border: 1px solid #0e0b08;
+		background: var(--lcd-glass);
+		box-shadow:
+			inset 0 2px 8px rgba(0, 0, 0, 0.75),
+			inset 0 -1px 0 rgba(255, 255, 255, 0.03),
+			0 1px 0 rgba(255, 255, 255, 0.05);
+	}
+
+	/* Live program slot: a phosphor rim + faint bloom (the now-playing tape) */
+	.deck-slot-live {
+		border-color: color-mix(in oklch, var(--phosphor) 55%, #0e0b08);
+		box-shadow:
+			inset 0 2px 8px rgba(0, 0, 0, 0.55),
+			0 0 0 1px var(--phosphor-glow),
+			0 0 16px var(--phosphor-glow);
 	}
 
 	/* LCD window: recessed glass in a hard bezel; every word inside glows */

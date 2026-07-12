@@ -84,7 +84,7 @@ export function Deck({
 	}, [onPlayPause]);
 
 	return (
-		<div className="shrink-0 px-2.5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+		<div className="shrink-0 px-2.5 pt-3 pb-[env(safe-area-inset-bottom)]">
 			<div className="relative flex flex-wrap items-stretch gap-3 p-3.5 md:gap-4">
 				<div
 					className={cn(
@@ -155,6 +155,11 @@ export function Deck({
 						icon={<ListVideo className="h-7 w-7" />}
 					/>
 				</div>
+			</div>
+			{/* VCR feet: two wide dark-metal legs the chassis rests on */}
+			<div className="flex h-3 justify-between px-[9%]">
+				<span className="deck-foot" aria-hidden />
+				<span className="deck-foot" aria-hidden />
 			</div>
 		</div>
 	);
