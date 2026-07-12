@@ -26,8 +26,10 @@ import type { YouTubePlaylistItem } from "~/lib/youtube";
  * queue knob — the big control opens the queue; play/pause lives on the
  * video and the spacebar. The knob still backlights while playing (the
  * deck's life sign). Replaces both the old RemoteStrip and the bottom nav
- * on this screen. Owns the spacebar shortcut and the sleepy fade (the whole
- * faceplate dims to 20% when idle).
+ * on this screen. Owns the spacebar shortcut and the sleepy fade: when idle
+ * the chrome (chassis + hardware) dims to 30% while the LCD only drops to
+ * 50%, so the glass stays readable longest. The chassis face is its own
+ * absolute layer because a child can never be more opaque than its parent.
  * @example <Deck current={item} currentVideoId={id} isPlaying onPlayPause={fn} onNext={fn} onOpenQueue={fn} onOpenPlaylists={fn} />
  */
 export function Deck({
@@ -83,14 +85,20 @@ export function Deck({
 
 	return (
 		<div className="shrink-0 px-2.5 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-			<div
-				className={cn(
-					"deck-chassis flex flex-wrap items-stretch gap-3 p-3.5 transition-opacity duration-1000 md:gap-4",
-					isFadedOut && "opacity-20",
-				)}
-			>
+			<div className="relative flex flex-wrap items-stretch gap-3 p-3.5 md:gap-4">
+				<div
+					className={cn(
+						"deck-chassis absolute inset-0 transition-opacity duration-1000",
+						isFadedOut && "opacity-30",
+					)}
+				/>
 				{/* The LCD window: all text lives in the glass */}
-				<div className="deck-lcd flex min-w-0 flex-1 flex-col justify-between gap-2 px-3.5 py-2.5 max-md:basis-full">
+				<div
+					className={cn(
+						"deck-lcd flex min-w-0 flex-1 flex-col justify-between gap-2 px-3.5 py-2.5 transition-opacity duration-1000 max-md:basis-full",
+						isFadedOut && "opacity-50",
+					)}
+				>
 					<h2 className="phos-text truncate font-(family-name:--font-dot) text-base uppercase tracking-[0.05em]">
 						{current?.title ?? ""}
 					</h2>
@@ -117,7 +125,12 @@ export function Deck({
 				</div>
 
 				{/* The hardware: 2x2 key grid + play knob */}
-				<div className="flex shrink-0 items-center gap-3 md:gap-4 max-md:flex-1 max-md:justify-end">
+				<div
+					className={cn(
+						"relative flex shrink-0 items-center gap-3 transition-opacity duration-1000 md:gap-4 max-md:flex-1 max-md:justify-end",
+						isFadedOut && "opacity-30",
+					)}
+				>
 					<div className="grid grid-cols-2 gap-2">
 						<DeckKey
 							label="Playlists"
