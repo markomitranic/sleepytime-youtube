@@ -13,6 +13,7 @@ import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { PlaylistTray } from "~/components/playlist/PlaylistTray";
 import { QueueDrawer } from "~/components/playlist/QueueDrawer";
 import { SleepTimerExpiryOverlay } from "~/components/playlist/SleepTimerExpiryOverlay";
+import { SleepTray } from "~/components/playlist/SleepTray";
 import { useYouTubePlayer } from "~/components/playlist/useYouTubePlayer";
 import { VideoEndedDialog } from "~/components/playlist/VideoEndedDialog";
 import { useUserPlaylists } from "~/lib/queries";
@@ -40,7 +41,7 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 	const [endedOpen, setEndedOpen] = useState(false);
 	// One tray at a time: opening any panel closes the others
 	const [openPanel, setOpenPanel] = useState<
-		"queue" | "playlists" | "account" | null
+		"queue" | "playlists" | "account" | "sleep" | null
 	>(null);
 	const endedVideoIdRef = useRef<string | undefined>(undefined);
 
@@ -285,6 +286,10 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 						onOpenChange={(o) => setOpenPanel(o ? "account" : null)}
 						onShowPlaylists={() => setOpenPanel("playlists")}
 					/>
+					<SleepTray
+						open={openPanel === "sleep"}
+						onOpenChange={(o) => setOpenPanel(o ? "sleep" : null)}
+					/>
 					<div className="relative z-30">
 						<Deck
 							current={current}
@@ -300,7 +305,9 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 								setOpenPanel((p) => (p === "account" ? null : "account"))
 							}
 							playlistsOpen={openPanel === "playlists"}
-							onSheetOpen={() => setOpenPanel(null)}
+							onOpenSleep={() =>
+								setOpenPanel((p) => (p === "sleep" ? null : "sleep"))
+							}
 						/>
 					</div>
 				</div>

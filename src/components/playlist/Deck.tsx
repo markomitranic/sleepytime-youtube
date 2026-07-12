@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { useAuth } from "~/components/auth/AuthContext";
 import { usePlayer } from "~/components/playlist/PlayerContext";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
-import { SleepTimerDrawer } from "~/components/playlist/SleepTimerDrawer";
 import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
 import { MetalPlayButton } from "~/components/ui/MetalPlayButton";
 import { SegmentBar, SevenSegmentTime } from "~/components/ui/SegmentDisplay";
@@ -42,7 +41,7 @@ export function Deck({
 	onOpenPlaylists,
 	onOpenAccount,
 	playlistsOpen = false,
-	onSheetOpen,
+	onOpenSleep,
 }: {
 	current: YouTubePlaylistItem | undefined;
 	currentVideoId: string | undefined;
@@ -54,8 +53,8 @@ export function Deck({
 	onOpenAccount?: () => void;
 	/** Lights the PLAYLISTS key while its tray is out */
 	playlistsOpen?: boolean;
-	/** Fires when a deck-launched sheet (sleep) opens, so the player can shut other trays */
-	onSheetOpen?: () => void;
+	/** Opens the sleep timer tray */
+	onOpenSleep?: () => void;
 }) {
 	const { isFadedOut } = useSleepyFadeout();
 	const player = usePlayer();
@@ -107,7 +106,7 @@ export function Deck({
 							{current?.channelTitle ?? ""}
 						</p>
 						<GlassIndicators
-							onSheetOpen={onSheetOpen}
+							onOpenSleep={onOpenSleep}
 							onOpenAccount={onOpenAccount}
 						/>
 					</div>
@@ -140,7 +139,7 @@ export function Deck({
 							icon={<EjectIcon />}
 						/>
 						<LikeKey videoId={currentVideoId ?? null} />
-						<SleepKey onSheetOpen={onSheetOpen} />
+						<SleepKey onOpenSleep={onOpenSleep} />
 						<DeckKey
 							label="Next"
 							ariaLabel="Next video"
@@ -168,15 +167,15 @@ export function Deck({
 /**
  * SLEEP / HOME / ACCOUNT — words printed on the LCD glass, hi-fi indicator
  * style: ghost when off, lit amber when live. Small visuals, oversized tap
- * targets. SLEEP opens the timer sheet (lit while armed), HOME leads back to
+ * targets. SLEEP opens the timer tray (lit while armed), HOME leads back to
  * the homepage, ACCOUNT opens the account tray (lit when signed in) or
  * starts the Google sign-in when signed out.
  */
 function GlassIndicators({
-	onSheetOpen,
+	onOpenSleep,
 	onOpenAccount,
 }: {
-	onSheetOpen?: () => void;
+	onOpenSleep?: () => void;
 	onOpenAccount?: () => void;
 }) {
 	const playlist = usePlaylist();
@@ -186,18 +185,16 @@ function GlassIndicators({
 
 	return (
 		<div className="relative z-10 flex shrink-0 items-center">
-			<SleepTimerDrawer>
-				<button
-					type="button"
-					onClick={onSheetOpen}
-					aria-label={
-						timerOn ? "Sleep timer armed. Tap to change." : "Set sleep timer"
-					}
-					className={cn(indClass, timerOn && "deck-ind-lit")}
-				>
-					Sleep
-				</button>
-			</SleepTimerDrawer>
+			<button
+				type="button"
+				onClick={onOpenSleep}
+				aria-label={
+					timerOn ? "Sleep timer armed. Tap to change." : "Set sleep timer"
+				}
+				className={cn(indClass, timerOn && "deck-ind-lit")}
+			>
+				Sleep
+			</button>
 			<Link href="/" aria-label="Home" className={indClass}>
 				Home
 			</Link>
@@ -341,26 +338,22 @@ function LikeKey({ videoId }: { videoId: string | null }) {
 }
 
 /**
- * Sleep timer as a deck key: opens the timer sheet, lights amber while armed.
- * The DrawerTrigger's onClick reaches the button through DeckKey's onClick
- * prop, composed with `onSheetOpen` so other trays shut as the sheet opens.
+ * Sleep timer as a deck key: opens the timer tray, lights amber while armed.
  */
-function SleepKey({ onSheetOpen }: { onSheetOpen?: () => void }) {
+function SleepKey({ onOpenSleep }: { onOpenSleep?: () => void }) {
 	const playlist = usePlaylist();
 	const timerOn = playlist.sleepTimer.isActive;
 
 	return (
-		<SleepTimerDrawer>
-			<DeckKey
-				label="Sleep"
-				ariaLabel={
-					timerOn ? "Sleep timer armed. Tap to change." : "Set sleep timer"
-				}
-				active={timerOn}
-				onClick={onSheetOpen}
-				icon={<Moon className={cn(timerOn && "fill-current")} />}
-			/>
-		</SleepTimerDrawer>
+		<DeckKey
+			label="Sleep"
+			ariaLabel={
+				timerOn ? "Sleep timer armed. Tap to change." : "Set sleep timer"
+			}
+			active={timerOn}
+			onClick={onOpenSleep}
+			icon={<Moon className={cn(timerOn && "fill-current")} />}
+		/>
 	);
 }
 

@@ -9,8 +9,8 @@ import { cn } from "~/lib/utils";
  * reads as part of the machine. Playlists and Account both open this door.
  *
  * Render it inside a `relative` wrapper around the deck — it anchors to the
- * wrapper's top and matches the chassis width. Escape and the invisible
- * scrim shut it; content scrolls inside; the lip label names the bay.
+ * wrapper's top, centered at 90% width capped at 600px. Escape and the
+ * invisible scrim shut it; content scrolls inside; the lip label names the bay.
  * @example <DeckTray open={open} onOpenChange={setOpen} label="Playlists">…</DeckTray>
  */
 export function DeckTray({
@@ -52,7 +52,7 @@ export function DeckTray({
 				inert={!open}
 				className={cn(
 					// Phones get the whole screen above the deck; md+ keeps the door modest
-					"deck-tray absolute inset-x-2.5 bottom-[calc(100%-1.25rem)] z-20 flex max-h-[calc(100dvh-16rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col pb-3 transition-all duration-500 ease-out md:max-h-[42dvh]",
+					"deck-tray absolute inset-x-0 bottom-[calc(100%-1.25rem)] z-20 mx-auto flex w-[90%] max-w-[600px] max-h-[calc(100dvh-16rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col pb-3 transition-all duration-500 ease-out md:max-h-[42dvh]",
 					!open && "pointer-events-none translate-y-6 opacity-0",
 					className,
 				)}
