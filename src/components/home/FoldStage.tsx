@@ -49,6 +49,7 @@ const SCREEN_RADIUS_PX = 4;
 export function FoldStage() {
 	const [stage, setStage] = useState<Stage>("home");
 	const sheetRef = useRef<HTMLDivElement>(null);
+	const scrollerRef = useRef<HTMLDivElement>(null);
 	const layerRef = useRef<HTMLElement>(null);
 	const backdropRef = useRef<HTMLDivElement>(null);
 	const playlist = usePlaylist();
@@ -116,7 +117,7 @@ export function FoldStage() {
 
 		// If the page was scrolled, rewind it during the early beats so the
 		// top of the page is what lands on the glass
-		sheet.scrollTo({ top: 0, behavior: "smooth" });
+		scrollerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
 
 		// Beat 2: the deck slides in from below the viewport (fill backwards
 		// keeps it parked offscreen through its stagger delay)
@@ -206,19 +207,30 @@ export function FoldStage() {
 					className={cn(
 						// Opaque bg is load-bearing: the page must read as a solid
 						// panel while the deck is behind it, never bleed through
-						"fixed inset-0 z-20 overflow-y-auto overscroll-contain bg-background will-change-transform",
-						stage === "folding" && "pointer-events-none overflow-y-hidden",
+						"fixed inset-0 z-20 bg-background will-change-transform",
+						stage === "folding" && "pointer-events-none",
 					)}
 					style={{ transformOrigin: "50% 0" }}
 				>
 					{/* The sheet carries its own aurora: the transform makes the sheet
-					    its containing block, so the whole scene shrinks into the glass */}
+					    its containing block, so the whole scene shrinks into the glass.
+					    That same containment demotes the aurora's fixed positioning to
+					    absolute — so it hangs on this non-scrolling shell (covering the
+					    viewport) while the content scrolls one level down */}
 					<AuroraBackground />
-					<HomeContent
-						variant="page"
-						onSelectPlaylist={selectAndFold}
-						onGoToPlayer={fold}
-					/>
+					<div
+						ref={scrollerRef}
+						className={cn(
+							"h-full overflow-y-auto overscroll-contain",
+							stage === "folding" && "overflow-y-hidden",
+						)}
+					>
+						<HomeContent
+							variant="page"
+							onSelectPlaylist={selectAndFold}
+							onGoToPlayer={fold}
+						/>
+					</div>
 				</div>
 			)}
 		</>
