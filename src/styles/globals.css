@@ -452,11 +452,15 @@
 		);
 	}
 	.deck-lcd::after {
-		/* glass reflection: ambient top-left bloom + one diagonal streak */
+		/* glass reflection: ambient top-left bloom + one diagonal streak.
+		   Oversized and nudged by device tilt (--tilt-x/y from useDeviceTilt)
+		   so the glare drifts a few px across the glass — far subtler than
+		   the knob's glint. Static (translate 0) without a gyroscope. */
 		content: "";
 		position: absolute;
-		inset: 0;
+		inset: -16px;
 		pointer-events: none;
+		translate: calc(var(--tilt-x, 0) * 10px) calc(var(--tilt-y, 0) * 7px);
 		background:
 			radial-gradient(
 				130% 70% at 6% -12%,
