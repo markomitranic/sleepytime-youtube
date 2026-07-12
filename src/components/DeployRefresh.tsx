@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { usePlayer } from "~/components/playlist/PlayerContext";
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000;
@@ -9,51 +10,42 @@ const RELOAD_COOLDOWN_MS = 10 * 60 * 1000;
 /**
  * Hard-reloads the app when a new deployment goes live.
  *
- * Polls /api/version every few minutes (and whenever the app returns to the
- * foreground) and compares it against the build id baked into this bundle.
- * Never reloads mid-playback — if a video is playing, the reload waits for
- * the next pause so a nighttime deploy can't interrupt the lullaby. A
- * cooldown stopper prevents reload loops if the edge briefly keeps serving
- * the old bundle. No-op in dev, where the build id is always "dev".
+ * A React Query polls /api/version (the live deploy's build id) and compares
+ * it to the id baked into this bundle. The global QueryClient disables all
+ * auto-refetch, so this query opts back in: it polls every few minutes and
+ * refetches on window-focus + reconnect, so a reopened or reconnected client
+ * notices a new deploy promptly. Never reloads mid-playback — a running video
+ * defers the reload to the next pause so a nighttime deploy can't cut off the
+ * lullaby. A cooldown stopper prevents reload loops if the edge briefly keeps
+ * serving the old bundle. No-op in dev, where the build id is always "dev".
  * @example <DeployRefresh />
  */
 export function DeployRefresh() {
 	const player = usePlayer();
-	const staleRef = useRef(false);
-	const isPlayingRef = useRef(player.isPlaying);
-	isPlayingRef.current = player.isPlaying;
+	const current = process.env.NEXT_PUBLIC_BUILD_ID;
+	const enabled = !!current && current !== "dev";
 
-	// Playback just stopped with a reload pending — take the chance
+	const { data: liveVersion } = useQuery({
+		queryKey: ["deploy-version"],
+		queryFn: async () => {
+			const res = await fetch("/api/version", { cache: "no-store" });
+			const { version } = (await res.json()) as { version?: string };
+			return version ?? null;
+		},
+		enabled,
+		staleTime: 0,
+		refetchInterval: CHECK_INTERVAL_MS,
+		refetchOnWindowFocus: true,
+		refetchOnReconnect: true,
+		refetchOnMount: true,
+	});
+
+	const stale = enabled && !!liveVersion && liveVersion !== current;
+
+	// Reload once stale — immediately if idle, otherwise when playback stops.
 	useEffect(() => {
-		if (!player.isPlaying && staleRef.current) reload();
-	}, [player.isPlaying]);
-
-	useEffect(() => {
-		const current = process.env.NEXT_PUBLIC_BUILD_ID;
-		if (!current || current === "dev") return;
-
-		const check = async () => {
-			try {
-				const res = await fetch("/api/version", { cache: "no-store" });
-				const { version } = (await res.json()) as { version?: string };
-				if (version && version !== current) staleRef.current = true;
-			} catch {
-				// Offline or flaky network — try again next round
-			}
-			if (staleRef.current && !isPlayingRef.current) reload();
-		};
-
-		const onVisibilityChange = () => {
-			if (document.visibilityState === "visible") void check();
-		};
-
-		const interval = setInterval(check, CHECK_INTERVAL_MS);
-		document.addEventListener("visibilitychange", onVisibilityChange);
-		return () => {
-			clearInterval(interval);
-			document.removeEventListener("visibilitychange", onVisibilityChange);
-		};
-	}, []);
+		if (stale && !player.isPlaying) reload();
+	}, [stale, player.isPlaying]);
 
 	return null;
 }
