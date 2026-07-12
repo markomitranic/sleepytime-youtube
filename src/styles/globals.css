@@ -523,7 +523,7 @@
 	}
 
 	/* Recessed well: the painting behind a hard bezel, with a faint diagonal
-	   glass reflection drifting across it (nudged by device tilt like the LCD). */
+	   glass reflection across it (like the LCD). */
 	.hero-well {
 		position: relative;
 		overflow: hidden;
@@ -539,7 +539,6 @@
 		position: absolute;
 		inset: -16px;
 		pointer-events: none;
-		translate: calc(var(--tilt-x, 0) * 10px) calc(var(--tilt-y, 0) * 7px);
 		background:
 			radial-gradient(
 				130% 70% at 6% -12%,
@@ -622,15 +621,11 @@
 		);
 	}
 	.deck-lcd::after {
-		/* glass reflection: ambient top-left bloom + one diagonal streak.
-		   Oversized and nudged by device tilt (--tilt-x/y from useDeviceTilt)
-		   so the glare drifts a few px across the glass — far subtler than
-		   the knob's glint. Static (translate 0) without a gyroscope. */
+		/* glass reflection: ambient top-left bloom + one diagonal streak */
 		content: "";
 		position: absolute;
 		inset: -16px;
 		pointer-events: none;
-		translate: calc(var(--tilt-x, 0) * 10px) calc(var(--tilt-y, 0) * 7px);
 		background:
 			radial-gradient(
 				130% 70% at 6% -12%,

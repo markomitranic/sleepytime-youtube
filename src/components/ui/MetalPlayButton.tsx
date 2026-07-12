@@ -1,7 +1,6 @@
 "use client";
 
 import { Pause, Play } from "lucide-react";
-import { useDeviceTilt } from "~/lib/useDeviceTilt";
 import { cn } from "~/lib/utils";
 
 /**
@@ -13,10 +12,6 @@ import { cn } from "~/lib/utils";
  * playing it wakes to a mid glow and the cap is backlit from within (a radial
  * phosphor lamp under the metal), like the play key on an old backlit radio.
  * Colors follow the --phosphor tokens, so the day/night theme switches free.
- *
- * On devices with a gyroscope the metal catches the light: tilting shifts
- * the specular glint, the brushed-face angle and the drop shadow (driven by
- * the --tilt-x/--tilt-y vars from useDeviceTilt). Static everywhere else.
  * @example <MetalPlayButton isPlaying={isPlaying} onClick={toggle} size="sm" />
  * @example <MetalPlayButton isPlaying onClick={openQueue} icon={<ListVideo />} ariaLabel="Open queue" />
  */
@@ -36,7 +31,6 @@ export function MetalPlayButton({
 	ariaLabel?: string;
 }) {
 	const isLg = size === "lg";
-	useDeviceTilt();
 
 	return (
 		<button
@@ -52,8 +46,8 @@ export function MetalPlayButton({
 				background:
 					"repeating-conic-gradient(from 0deg, rgba(255,255,255,0.13) 0deg 3deg, rgba(0,0,0,0.10) 3deg 6deg)",
 				boxShadow: [
-					"calc(var(--tilt-x, 0) * -5px) calc(3px + var(--tilt-y, 0) * -5px) 10px rgba(0,0,0,0.5)",
-					"calc(var(--tilt-x, 0) * -2px) calc(1px + var(--tilt-y, 0) * -2px) 3px rgba(0,0,0,0.3)",
+					"0 3px 10px rgba(0,0,0,0.5)",
+					"0 1px 3px rgba(0,0,0,0.3)",
 					"inset 0 1px 1px rgba(255,255,255,0.08)",
 				].join(", "),
 			}}
@@ -80,13 +74,13 @@ export function MetalPlayButton({
 				style={{
 					background: [
 						`repeating-radial-gradient(circle at 50% 50%, rgba(0,0,0,0.12) 0px, transparent 1px, transparent ${isLg ? "3px" : "2.5px"}, rgba(0,0,0,0.12) ${isLg ? "3px" : "2.5px"})`,
-						"linear-gradient(calc(155deg + var(--tilt-x, 0) * 40deg), #cdc3b8 0%, #a89888 30%, #8a7a6e 50%, #a09080 70%, #c0b6aa 100%)",
+						"linear-gradient(155deg, #cdc3b8 0%, #a89888 30%, #8a7a6e 50%, #a09080 70%, #c0b6aa 100%)",
 					].join(", "),
 					boxShadow:
 						"inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.25)",
 				}}
 			/>
-			{/* Specular glint: a soft light spot that glides opposite the tilt */}
+			{/* Specular glint: a soft light spot near the top of the cap */}
 			<span
 				aria-hidden
 				className={cn(
@@ -95,7 +89,7 @@ export function MetalPlayButton({
 				)}
 				style={{
 					background:
-						"radial-gradient(circle at calc(50% + var(--tilt-x, 0) * 45%) calc(28% + var(--tilt-y, 0) * 45%), rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.1) 18%, transparent 42%)",
+						"radial-gradient(circle at 50% 28%, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.1) 18%, transparent 42%)",
 				}}
 			/>
 			{/* Backlight: the dial lamp shining through the cap while playing */}
