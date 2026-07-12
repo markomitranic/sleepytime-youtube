@@ -3,14 +3,12 @@ import { Geist, Lora } from "next/font/google";
 import localFont from "next/font/local";
 import "~/styles/globals.css";
 import { Toaster } from "sonner";
-import { BottomNav } from "~/components/BottomNav";
 import { CookieBanner } from "~/components/CookieBanner";
 import { DeployRefresh } from "~/components/DeployRefresh";
 import { GlobalLoadingProvider } from "~/components/GlobalLoadingContext";
 import { GlobalLoadingIndicator } from "~/components/GlobalLoadingIndicator";
 import { InstallPrompt } from "~/components/InstallPrompt";
 import { PlayerProvider } from "~/components/playlist/PlayerContext";
-import { StickyPlayerBar } from "~/components/playlist/StickyPlayerBar";
 import { ServiceWorkerKillSwitch } from "~/components/ServiceWorkerKillSwitch";
 import { SleepyFadeoutProvider } from "~/components/SleepyFadeoutContext";
 import { AuroraBackground } from "./AuroraBackground";
@@ -103,8 +101,6 @@ export default function RootLayout({
 								<GlobalLoadingIndicator />
 								<AuroraBackground />
 								{children}
-								<StickyPlayerBar />
-								<BottomNav />
 								<Toaster richColors position="bottom-center" closeButton />
 								<CookieBanner />
 								<InstallPrompt />
