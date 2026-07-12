@@ -195,8 +195,11 @@
 		content: "";
 		position: absolute;
 		pointer-events: none;
-		will-change: transform;
-		filter: blur(36px) saturate(100%);
+		/* No filter: blur() here on purpose. Blurring these giant blobs while
+		   their transform animates rotate/scale forces a full re-rasterization
+		   every frame (pins the GPU/raster processes even when idle). The soft
+		   look comes from the wide radial-gradient falloff below instead, so the
+		   transform animation stays compositor-only and effectively free. */
 	}
 
 	/* Blue blob */
@@ -208,7 +211,7 @@
 		background: radial-gradient(
 			ellipse 60% 45% at 50% 50%,
 			oklch(0.42 0.1 230 / 0.3),
-			transparent 60%
+			transparent 78%
 		);
 		transform: translate3d(0, 0, 0) rotate(0deg) scale(1.05);
 		animation: aurora-orbit-1 36s ease-in-out infinite alternate;
@@ -223,7 +226,7 @@
 		background: radial-gradient(
 			ellipse 70% 55% at 50% 50%,
 			oklch(0.3 0.06 55 / 0.2),
-			transparent 70%
+			transparent 82%
 		);
 		transform: translate3d(0, 0, 0) rotate(0deg) scale(1.05);
 		animation: aurora-orbit-2 42s ease-in-out infinite alternate;
@@ -287,19 +290,21 @@
 		text-shadow: 0 0 20px oklch(0.35 0.08 55 / 0.3);
 	}
 
-	/* Amber "now playing" lamp on the active playlist card */
+	/* Amber "now playing" lamp on the active playlist card.
+	   Breathe via opacity ONLY — animating box-shadow forces a paint +
+	   GPU re-upload every frame (measured ~50% CPU for this one dot).
+	   The shadow is static; opacity fades it together with the dot. */
 	@keyframes lamp-breathe {
 		0%,
 		100% {
 			opacity: 0.95;
-			box-shadow: 0 0 8px var(--lamp);
 		}
 		50% {
-			opacity: 0.5;
-			box-shadow: 0 0 3px var(--lamp);
+			opacity: 0.45;
 		}
 	}
 	.lamp-breathe {
+		box-shadow: 0 0 8px var(--lamp);
 		animation: lamp-breathe 2.6s ease-in-out infinite;
 	}
 	@media (prefers-reduced-motion: reduce) {
@@ -334,18 +339,15 @@
 
 /* Breathing green LED for built-in playlist badges */
 @layer utilities {
+	/* Breathe via opacity ONLY — animating box-shadow repaints every frame
+	   (same trap as lamp-breathe). Static glow, opacity does the pulsing. */
 	@keyframes led-breathe {
-		0% {
-			box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
+		0%,
+		100% {
 			opacity: 0.95;
 		}
 		50% {
-			box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
-			opacity: 0.8;
-		}
-		100% {
-			box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
-			opacity: 0.95;
+			opacity: 0.55;
 		}
 	}
 
@@ -355,6 +357,7 @@
 		height: 0.5rem; /* 8px */
 		border-radius: 9999px;
 		background-color: #22c55e; /* Tailwind green-500 */
+		box-shadow: 0 0 6px rgba(34, 197, 94, 0.45);
 		animation: led-breathe 2.2s ease-in-out infinite;
 	}
 
