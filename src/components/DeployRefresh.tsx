@@ -43,15 +43,24 @@ export function DeployRefresh() {
 			if (staleRef.current && !isPlayingRef.current) reload();
 		};
 
-		const onVisibilityChange = () => {
+		// Re-check whenever the app comes back to the foreground. Background
+		// tabs throttle the interval, so a reopen is the realistic trigger:
+		// visibilitychange (tab switch), focus (window regains focus), and
+		// pageshow (bfcache restore — the common mobile-PWA reopen, where the
+		// old bundle keeps running and no fresh load happens).
+		const onForeground = () => {
 			if (document.visibilityState === "visible") void check();
 		};
 
 		const interval = setInterval(check, CHECK_INTERVAL_MS);
-		document.addEventListener("visibilitychange", onVisibilityChange);
+		document.addEventListener("visibilitychange", onForeground);
+		window.addEventListener("focus", onForeground);
+		window.addEventListener("pageshow", onForeground);
 		return () => {
 			clearInterval(interval);
-			document.removeEventListener("visibilitychange", onVisibilityChange);
+			document.removeEventListener("visibilitychange", onForeground);
+			window.removeEventListener("focus", onForeground);
+			window.removeEventListener("pageshow", onForeground);
 		};
 	}, []);
 
