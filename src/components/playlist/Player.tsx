@@ -76,12 +76,13 @@ export function Player() {
 							},
 						},
 					);
+					player.clearSavedProgress(videoId);
 				}
 			}
 
 			if (nextVideoId) playlist.setCurrentVideoId(nextVideoId);
 		},
-		[canEdit, auth.accessToken, playlist, getNextVideoId],
+		[canEdit, auth.accessToken, playlist, getNextVideoId, player],
 	);
 
 	const onVideoEnded = useCallback((videoId: string) => {
@@ -149,6 +150,7 @@ export function Player() {
 
 			try {
 				await playlist.deleteMutation.mutateAsync({ playlistItemId: itemId });
+				if (item.videoId) player.clearSavedProgress(item.videoId);
 				if (wasCurrentVideo) {
 					const nextId = getNextVideoId(item.videoId);
 					if (nextId) playlist.setCurrentVideoId(nextId);
@@ -165,6 +167,7 @@ export function Player() {
 			currentVideoId,
 			playlist,
 			getNextVideoId,
+			player,
 		],
 	);
 

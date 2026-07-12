@@ -20,7 +20,7 @@ export default function PrivacyPage() {
 					Privacy Policy
 				</h1>
 				<p className="text-xs text-muted-foreground/40 mt-2">
-					Last updated: March 15, 2026
+					Last updated: July 12, 2026
 				</p>
 
 				<div className="mt-10 space-y-10">
@@ -108,7 +108,10 @@ export default function PrivacyPage() {
 										<td className="py-2 pr-4">Video playback progress</td>
 										<td className="py-2 pr-4">localStorage (browser)</td>
 										<td className="py-2 pr-4">Nobody</td>
-										<td className="py-2">Auto-deleted after 7 days</td>
+										<td className="py-2">
+											Deleted when finished or removed; otherwise auto-deleted
+											after 30 days
+										</td>
 									</tr>
 									<tr>
 										<td className="py-2 pr-4">Analytics / tracking</td>
