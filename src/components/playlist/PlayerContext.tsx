@@ -68,8 +68,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 			const saved = progress[videoId];
 			if (!saved?.currentTime || !saved?.duration) return null;
 			if (saved.duration - saved.currentTime < 10) return null;
-			const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-			if (saved.timestamp && saved.timestamp < sevenDaysAgo) return null;
+			const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+			if (saved.timestamp && saved.timestamp < thirtyDaysAgo) return null;
 			return saved.currentTime;
 		} catch {
 			return null;
