@@ -9,9 +9,11 @@ import { useEffect } from "react";
  *
  * The glint follows *changes* in tilt: a slow-adapting baseline recenters
  * after ~2s, so it works the same whether the iPad lies flat or sits propped
- * up. iOS needs a motion permission gesture — asked once on the first tap,
- * then remembered per site. No-op on desktops (no accelerometer) and under
- * prefers-reduced-motion. Multiple mounts share one sensor subscription.
+ * up. iOS needs a motion permission gesture — asked when a tap's finger
+ * lifts (iOS only grants activation there), retried until Safari gives a
+ * real answer, then remembered per site. No-op on desktops (no
+ * accelerometer) and under prefers-reduced-motion. Multiple mounts share
+ * one sensor subscription.
  * @example useDeviceTilt(); // then: box-shadow: calc(var(--tilt-x, 0) * -5px) ...
  */
 export function useDeviceTilt() {
@@ -98,17 +100,23 @@ function startTilt(): (() => void) | null {
 
 	let disarmTap: (() => void) | null = null;
 	if (typeof DOE.requestPermission === "function") {
-		// iOS: permission needs a user gesture; Safari remembers the grant,
-		// so the dialog appears once ever, then this resolves silently
-		const onFirstTap = () => {
+		// iOS: needs a user gesture, and touch only grants one when the finger
+		// LIFTS (pointerup) — pointerdown is too early and rejects silently.
+		// Keep asking on every tap until Safari gives a real answer; both
+		// granted and denied are remembered per site, so the dialog shows once.
+		const onTap = () => {
 			DOE.requestPermission?.()
 				.then((state) => {
+					stopAsking();
 					if (state === "granted") subscribe();
 				})
-				.catch(() => {});
+				.catch(() => {
+					// No activation yet (e.g. end of a scroll) — retry next tap
+				});
 		};
-		window.addEventListener("pointerdown", onFirstTap, { once: true });
-		disarmTap = () => window.removeEventListener("pointerdown", onFirstTap);
+		const stopAsking = () => window.removeEventListener("pointerup", onTap);
+		window.addEventListener("pointerup", onTap);
+		disarmTap = stopAsking;
 	} else {
 		subscribe();
 	}
