@@ -31,5 +31,6 @@ description: Build, launch and drive this app in a headless browser to verify UI
 
 - `/player` (no playlist): deck renders, LCD indicators, trays open/close.
 - `/` homepage → tapping a program slot folds into the player.
-- Lock: LCD LOCK indicator → clamshell closes, all input dead, slide (or
-  ArrowRight x4 on the knob) to unlock.
+- Lock: LCD LOCK indicator → clamshell closes over the deck only (video
+  stays visible), all input dead viewport-wide, slide (or ArrowRight x4 on
+  the knob) to unlock.

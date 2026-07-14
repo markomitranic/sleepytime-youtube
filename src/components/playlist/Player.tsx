@@ -317,10 +317,11 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 							}}
 						/>
 					</div>
+					{/* Child lock: clamshell sized to this deck bay, plus its
+					    viewport-wide input blanket (video stays visible) */}
+					<LockScreen open={locked} onUnlock={() => setLocked(false)} />
 				</div>
 			</div>
-
-			<LockScreen open={locked} onUnlock={() => setLocked(false)} />
 
 			<QueueDrawer
 				open={openPanel === "queue"}

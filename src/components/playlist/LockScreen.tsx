@@ -10,16 +10,19 @@ const TRACK_PAD = 5;
 const UNLOCK_AT = 0.92;
 
 /**
- * The lock: a clamshell case clamped shut over the whole machine.
+ * The child lock: a case clamped shut over the deck, deaf everywhere.
  *
- * Two molded black-plastic lips slide in from the screen edges and meet
- * mid-viewport — the box closing over the player. While locked the overlay
- * swallows everything: the root blankets all pointer input and a
- * capture-phase window listener eats keyboard events (spacebar play/pause
- * included) before any app handler sees them. The only live control is the
- * slide-to-unlock riding the seam, a straight lift of the first iPhone's:
- * recessed track, glossy metal knob, shimmering gray legend that fades as
- * you drag. Stays mounted while closed so the lips can animate back out.
+ * Two parts. An invisible full-viewport blanket swallows every click and
+ * drag — video included — and a capture-phase window listener eats keyboard
+ * events (deck spacebar included), so the app registers nothing while the
+ * video plays on. The visible part is a clamshell over the deck only: two
+ * molded black-plastic lips slide over the hardware and meet at its
+ * waistline — the box closing over the machine, not the screen. The one
+ * live control is the slide-to-unlock riding the seam, a straight lift of
+ * the first iPhone's: recessed track, glossy metal knob, shimmering gray
+ * legend that fades as you drag. Must be mounted inside the deck's
+ * relative container (it sizes itself to it), and stays mounted while
+ * closed so the lips can animate back out.
  * @example <LockScreen open={locked} onUnlock={() => setLocked(false)} />
  */
 export function LockScreen({
@@ -55,8 +58,8 @@ export function LockScreen({
 	}, [open]);
 
 	// Locked means deaf: eat keyboard events at the capture phase before any
-	// app handler (deck spacebar etc.) runs. Keys aimed at the overlay itself
-	// pass (the knob's arrow keys), as do browser-level combos like reload.
+	// app handler (deck spacebar etc.) runs. Keys aimed at the clamshell
+	// itself pass (the knob's arrow keys), as do browser combos like reload.
 	useEffect(() => {
 		if (!open) return;
 		const swallow = (e: KeyboardEvent) => {
@@ -114,77 +117,88 @@ export function LockScreen({
 		"lock-lip absolute inset-x-0 transition-transform duration-700 ease-[cubic-bezier(0.7,0,0.3,1)]";
 
 	return (
-		<div
-			ref={rootRef}
-			aria-hidden={!open}
-			className={cn(
-				"fixed inset-0 z-[100] select-none overflow-hidden",
-				!open && "pointer-events-none",
-			)}
-		>
-			{/* Bottom lip first in the DOM so the top lip clamps down over it */}
+		<>
+			{/* The blanket: invisible, viewport-wide, eats every click and drag
+			    aimed at the video or anything else while the box is shut */}
 			<div
+				aria-hidden
 				className={cn(
-					lipClass,
-					"lock-lip-bottom bottom-0 h-1/2",
-					!open && "translate-y-[115%]",
-				)}
-			/>
-			<div
-				className={cn(
-					lipClass,
-					"lock-lip-top top-0 h-[calc(50%+1px)]",
-					!open && "-translate-y-[115%]",
+					"fixed inset-0 z-[90] [touch-action:none]",
+					!open && "hidden",
 				)}
 			/>
 
-			{/* Slide to unlock, mounted on the seam; shows once the box has shut */}
+			{/* The clamshell: sized to the deck by its relative parent; above
+			    the blanket so the slider stays live */}
 			<div
-				className={cn(
-					"absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300",
-					open ? "opacity-100 delay-500" : "opacity-0",
-				)}
+				ref={rootRef}
+				aria-hidden={!open}
+				className="pointer-events-none absolute inset-0 z-[110] select-none overflow-hidden"
 			>
+				{/* Bottom lip first in the DOM so the top lip clamps down over it */}
 				<div
-					ref={trackRef}
-					className="lock-slide-track relative h-16 w-[min(78vw,320px)]"
+					className={cn(
+						lipClass,
+						"lock-lip-bottom bottom-0 h-1/2",
+						open ? "pointer-events-auto" : "translate-y-[115%]",
+					)}
+				/>
+				<div
+					className={cn(
+						lipClass,
+						"lock-lip-top top-0 h-[calc(50%+1px)]",
+						open ? "pointer-events-auto" : "-translate-y-[115%]",
+					)}
+				/>
+
+				{/* Slide to unlock, mounted on the seam; shows once the box has shut */}
+				<div
+					className={cn(
+						"absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300",
+						open ? "pointer-events-auto opacity-100 delay-500" : "opacity-0",
+					)}
 				>
-					<span
-						className="lock-slide-text pointer-events-none absolute inset-0 grid place-items-center pl-10 text-[21px]"
-						style={{ opacity: Math.max(0, 1 - progress * 1.8) }}
+					<div
+						ref={trackRef}
+						className="lock-slide-track relative h-14 w-[min(78vw,300px)]"
 					>
-						slide to unlock
-					</span>
-					<button
-						ref={knobRef}
-						type="button"
-						role="slider"
-						aria-label="Slide to unlock"
-						aria-valuemin={0}
-						aria-valuemax={100}
-						aria-valuenow={Math.round(progress * 100)}
-						onPointerDown={handlePointerDown}
-						onPointerMove={handlePointerMove}
-						onPointerUp={handlePointerEnd}
-						onPointerCancel={handlePointerEnd}
-						onKeyDown={handleKnobKeyDown}
-						onBlur={() => !dragging && setDragX(0)}
-						className="lock-slide-knob absolute inset-y-[5px] left-[5px] grid w-[72px] cursor-grab place-items-center [touch-action:none] active:cursor-grabbing"
-						style={{
-							transform: `translateX(${dragX}px)`,
-							transition: dragging
-								? "none"
-								: "transform 300ms cubic-bezier(0.2, 0.8, 0.3, 1)",
-						}}
-					>
-						<ChevronRight
-							className="h-7 w-7 text-[#8b8f96]"
-							strokeWidth={2.75}
-							aria-hidden
-						/>
-					</button>
+						<span
+							className="lock-slide-text pointer-events-none absolute inset-0 grid place-items-center pl-9 text-[19px]"
+							style={{ opacity: Math.max(0, 1 - progress * 1.8) }}
+						>
+							slide to unlock
+						</span>
+						<button
+							ref={knobRef}
+							type="button"
+							role="slider"
+							aria-label="Slide to unlock"
+							aria-valuemin={0}
+							aria-valuemax={100}
+							aria-valuenow={Math.round(progress * 100)}
+							onPointerDown={handlePointerDown}
+							onPointerMove={handlePointerMove}
+							onPointerUp={handlePointerEnd}
+							onPointerCancel={handlePointerEnd}
+							onKeyDown={handleKnobKeyDown}
+							onBlur={() => !dragging && setDragX(0)}
+							className="lock-slide-knob absolute inset-y-[5px] left-[5px] grid w-16 cursor-grab place-items-center [touch-action:none] active:cursor-grabbing"
+							style={{
+								transform: `translateX(${dragX}px)`,
+								transition: dragging
+									? "none"
+									: "transform 300ms cubic-bezier(0.2, 0.8, 0.3, 1)",
+							}}
+						>
+							<ChevronRight
+								className="h-6 w-6 text-[#8b8f96]"
+								strokeWidth={2.75}
+								aria-hidden
+							/>
+						</button>
+					</div>
 				</div>
 			</div>
-		</div>
+		</>
 	);
 }
