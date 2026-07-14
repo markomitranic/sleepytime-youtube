@@ -20,7 +20,7 @@ import type { YouTubePlaylistItem } from "~/lib/youtube";
  *
  * LCD window on the left carries all text in the phosphor color — title,
  * channel, seven-segment elapsed/remaining and a segment progress bar — plus
- * the SLEEP / HOME / ACCOUNT words printed on the glass. The right side is
+ * the SLEEP / LOCK / ACCOUNT words printed on the glass. The right side is
  * hardware: a 2x2 key grid (Playlists, Like, Sleep, Next) and the knurled
  * queue knob — the big control opens the queue; play/pause lives on the
  * video and the spacebar. The knob still backlights while playing (the
@@ -42,6 +42,7 @@ export function Deck({
 	onOpenAccount,
 	playlistsOpen = false,
 	onOpenSleep,
+	onLock,
 }: {
 	current: YouTubePlaylistItem | undefined;
 	currentVideoId: string | undefined;
@@ -55,6 +56,8 @@ export function Deck({
 	playlistsOpen?: boolean;
 	/** Opens the sleep timer tray */
 	onOpenSleep?: () => void;
+	/** Clamps the lock screen shut over the whole machine */
+	onLock?: () => void;
 }) {
 	const { isFadedOut } = useSleepyFadeout();
 	const player = usePlayer();
@@ -108,6 +111,7 @@ export function Deck({
 						<GlassIndicators
 							onOpenSleep={onOpenSleep}
 							onOpenAccount={onOpenAccount}
+							onLock={onLock}
 						/>
 					</div>
 					<div className="flex items-center gap-3.5">
@@ -165,18 +169,20 @@ export function Deck({
 }
 
 /**
- * SLEEP / HOME / ACCOUNT — words printed on the LCD glass, hi-fi indicator
+ * SLEEP / LOCK / ACCOUNT — words printed on the LCD glass, hi-fi indicator
  * style: ghost when off, lit amber when live. Small visuals, oversized tap
- * targets. SLEEP opens the timer tray (lit while armed), HOME leads back to
- * the homepage, ACCOUNT opens the account tray (lit when signed in) or
+ * targets. SLEEP opens the timer tray (lit while armed), LOCK clamps the
+ * lock screen shut, ACCOUNT opens the account tray (lit when signed in) or
  * starts the Google sign-in when signed out.
  */
 function GlassIndicators({
 	onOpenSleep,
 	onOpenAccount,
+	onLock,
 }: {
 	onOpenSleep?: () => void;
 	onOpenAccount?: () => void;
+	onLock?: () => void;
 }) {
 	const playlist = usePlaylist();
 	const auth = useAuth();
@@ -195,9 +201,14 @@ function GlassIndicators({
 			>
 				Sleep
 			</button>
-			<Link href="/" aria-label="Home" className={indClass}>
-				Home
-			</Link>
+			<button
+				type="button"
+				onClick={onLock}
+				aria-label="Lock the screen"
+				className={indClass}
+			>
+				Lock
+			</button>
 			{auth.isAuthenticated ? (
 				<button
 					type="button"

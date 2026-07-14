@@ -8,6 +8,7 @@ import { useAuth } from "~/components/auth/AuthContext";
 import { useGlobalLoading } from "~/components/GlobalLoadingContext";
 import { HomeScreenMenu } from "~/components/home/HomeScreenMenu";
 import { Deck } from "~/components/playlist/Deck";
+import { LockScreen } from "~/components/playlist/LockScreen";
 import { usePlayer } from "~/components/playlist/PlayerContext";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { PlaylistTray } from "~/components/playlist/PlaylistTray";
@@ -39,6 +40,8 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 	);
 	const currentVideoId = playlist.currentVideoId;
 	const [endedOpen, setEndedOpen] = useState(false);
+	// The clamshell: while true the lock screen swallows all input
+	const [locked, setLocked] = useState(false);
 	// One tray at a time: opening any panel closes the others
 	const [openPanel, setOpenPanel] = useState<
 		"queue" | "playlists" | "account" | "sleep" | null
@@ -308,10 +311,16 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 							onOpenSleep={() =>
 								setOpenPanel((p) => (p === "sleep" ? null : "sleep"))
 							}
+							onLock={() => {
+								setOpenPanel(null);
+								setLocked(true);
+							}}
 						/>
 					</div>
 				</div>
 			</div>
+
+			<LockScreen open={locked} onUnlock={() => setLocked(false)} />
 
 			<QueueDrawer
 				open={openPanel === "queue"}

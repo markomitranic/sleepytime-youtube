@@ -69,7 +69,7 @@ export function FoldStage() {
 		setStage(reduceMotion ? "player" : "folding");
 	}, []);
 
-	// Back button or the deck's HOME lamp lands on "/" — unfold to the sheet
+	// Back button lands on "/" — unfold to the sheet
 	useEffect(() => {
 		if (pathname === "/") setStage("home");
 	}, [pathname]);
