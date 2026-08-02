@@ -48,6 +48,20 @@ export const BUILTIN_PLAYLISTS: BuiltinPlaylist[] = [
 		title: "Cabin Life",
 		thumbnail: "/rosie.avif",
 	},
+	{
+		id: "PL079N-V25lxJpFu9kivvKGyyhcxrAKeBB",
+		shortLabel: "Cyberpunk",
+		title: "Cyberpunk 2077 PS5",
+		channel: "clivical",
+		thumbnail: "/cyberpunk.jpg",
+	},
+	{
+		id: "PLKtxx9TnH76SXumAiJX3N7Y36G2Gxi8zc",
+		shortLabel: "Semiconductors",
+		title: "Semiconductor Lore",
+		channel: "Asianometry",
+		thumbnail: "/semiconductor.jpg",
+	},
 ];
 
 export const BUILTIN_PLAYLIST_IDS = BUILTIN_PLAYLISTS.map(
