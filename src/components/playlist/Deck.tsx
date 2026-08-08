@@ -160,7 +160,12 @@ export function Deck({
 				</div>
 			</div>
 			{/* VCR feet: two wide dark-metal legs the chassis rests on */}
-			<div className="flex h-3 justify-between px-[9%]">
+			<div
+				className={cn(
+					"flex h-3 justify-between px-[9%] transition-opacity duration-1000",
+					isFadedOut && "opacity-30",
+				)}
+			>
 				<span className="deck-foot" aria-hidden />
 				<span className="deck-foot" aria-hidden />
 			</div>

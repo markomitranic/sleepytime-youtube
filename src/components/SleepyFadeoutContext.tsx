@@ -1,12 +1,20 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+	createContext,
+	useCallback,
+	useContext,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 
 const IDLE_TIMEOUT_MS = 5000;
 
-const SleepyFadeoutContext = createContext<{ isFadedOut: boolean } | null>(
-	null,
-);
+const SleepyFadeoutContext = createContext<{
+	isFadedOut: boolean;
+	setHold: (held: boolean) => void;
+} | null>(null);
 
 export function SleepyFadeoutProvider({
 	children,
@@ -14,6 +22,7 @@ export function SleepyFadeoutProvider({
 	children: React.ReactNode;
 }) {
 	const [isFadedOut, setIsFadedOut] = useState(false);
+	const [holdCount, setHoldCount] = useState(0);
 	const isFadedOutRef = useRef(false);
 	const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	// True between a wake-tap's pointerdown and its click: that click is eaten so
@@ -21,6 +30,12 @@ export function SleepyFadeoutProvider({
 	// whatever was under the finger.
 	const suppressRef = useRef(false);
 	const suppressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	const setHold = useCallback((held: boolean) => {
+		setHoldCount((count) => Math.max(0, count + (held ? 1 : -1)));
+	}, []);
+
+	const isHeld = holdCount > 0;
 
 	useEffect(() => {
 		const setFaded = (value: boolean) => {
@@ -31,6 +46,7 @@ export function SleepyFadeoutProvider({
 		const resetTimer = () => {
 			setFaded(false);
 			if (timerRef.current) clearTimeout(timerRef.current);
+			if (isHeld) return;
 			timerRef.current = setTimeout(() => setFaded(true), IDLE_TIMEOUT_MS);
 		};
 
@@ -68,13 +84,31 @@ export function SleepyFadeoutProvider({
 			if (timerRef.current) clearTimeout(timerRef.current);
 			if (suppressTimerRef.current) clearTimeout(suppressTimerRef.current);
 		};
-	}, []);
+	}, [isHeld]);
 
 	return (
-		<SleepyFadeoutContext.Provider value={{ isFadedOut }}>
+		<SleepyFadeoutContext.Provider value={{ isFadedOut, setHold }}>
 			{children}
 		</SleepyFadeoutContext.Provider>
 	);
+}
+
+/**
+ * Holds the UI awake for as long as `active` is true.
+ *
+ * Panels and trays are places to look at, not to watch the video through — the
+ * idle fade would dim exactly what the user just opened. Holds are counted, so
+ * overlapping callers each release their own.
+ * @example useKeepAwake(openPanel !== null); // no fade while any tray is out
+ */
+export function useKeepAwake(active: boolean) {
+	const { setHold } = useSleepyFadeout();
+
+	useEffect(() => {
+		if (!active) return;
+		setHold(true);
+		return () => setHold(false);
+	}, [active, setHold]);
 }
 
 export function useSleepyFadeout() {

@@ -17,6 +17,7 @@ import { SleepTimerExpiryOverlay } from "~/components/playlist/SleepTimerExpiryO
 import { SleepTray } from "~/components/playlist/SleepTray";
 import { useYouTubePlayer } from "~/components/playlist/useYouTubePlayer";
 import { VideoEndedDialog } from "~/components/playlist/VideoEndedDialog";
+import { useKeepAwake } from "~/components/SleepyFadeoutContext";
 import { useUserPlaylists } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
@@ -47,6 +48,8 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 		"queue" | "playlists" | "account" | "sleep" | null
 	>(null);
 	const endedVideoIdRef = useRef<string | undefined>(undefined);
+
+	useKeepAwake(openPanel !== null);
 
 	// Declarative loading from mutations
 	useGlobalLoading("delete-item", playlist.deleteMutation.isPending);
