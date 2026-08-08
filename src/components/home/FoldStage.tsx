@@ -9,6 +9,7 @@ import {
 	useState,
 } from "react";
 import { AuroraBackground } from "~/app/AuroraBackground";
+import { wasSignedIn } from "~/components/auth/signedInMemo";
 import { HomeContent } from "~/components/home/HomeContent";
 import { Player } from "~/components/playlist/Player";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
@@ -43,7 +44,8 @@ const SCREEN_RADIUS_PX = 4;
  *
  * The URL flips to /player via history.pushState at fold start — Next syncs
  * usePathname without remounting, and Back returns to `/`, which unfolds.
- * Reduced-motion users get an instant swap.
+ * Reduced-motion users get an instant swap. Signed-in visitors never see the
+ * sheet at all: they boot straight into "player".
  * @example <FoldStage /> // the whole homepage
  */
 export function FoldStage() {
@@ -69,8 +71,30 @@ export function FoldStage() {
 		setStage(reduceMotion ? "player" : "folding");
 	}, []);
 
-	// Back button lands on "/" — unfold to the sheet
+	// Signed-in users skip the landing page entirely. An installed PWA always
+	// cold-boots at the manifest's start_url — iOS gives home-screen apps no
+	// background process, so every relaunch is a fresh boot — which parked
+	// returning users on the homepage. Runs before paint so nothing flashes,
+	// and replaces the history entry so Back doesn't bounce straight back in.
+	// `?home` opts out, for anyone who wants the landing page while signed in.
+	const booted = useRef(false);
+	useLayoutEffect(() => {
+		if (booted.current) return;
+		booted.current = true;
+		if (pathname !== "/" || window.location.search.includes("home")) return;
+		if (!wasSignedIn()) return;
+		window.history.replaceState(null, "", "/player");
+		setStage("player");
+	}, [pathname]);
+
+	// Back button lands on "/" — unfold to the sheet. Skips the mount pass so
+	// it can't undo the boot above, which lands before pathname has synced.
+	const navigated = useRef(false);
 	useEffect(() => {
+		if (!navigated.current) {
+			navigated.current = true;
+			return;
+		}
 		if (pathname === "/") setStage("home");
 	}, [pathname]);
 

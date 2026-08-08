@@ -1,7 +1,8 @@
 "use client";
 
 import { signOut, useSession } from "next-auth/react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
+import { rememberSignedIn } from "~/components/auth/signedInMemo";
 
 type AuthState = {
 	isReady: boolean;
@@ -21,6 +22,25 @@ type AuthActions = {
 };
 
 export type AuthContextType = AuthState & AuthActions;
+
+/**
+ * Mirrors the session's signed-in state into localStorage, once per app.
+ *
+ * The real session is only known after a round-trip to /api/auth/session,
+ * which is far too late to decide what a cold launch should render. This
+ * leaves a breadcrumb that boot-time routing can read synchronously.
+ * @example <SessionMemory />
+ */
+export function SessionMemory() {
+	const { status } = useSession();
+
+	useEffect(() => {
+		if (status === "loading") return;
+		rememberSignedIn(status === "authenticated");
+	}, [status]);
+
+	return null;
+}
 
 export function useAuth(): AuthContextType {
 	const { data: session, status } = useSession();

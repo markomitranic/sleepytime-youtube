@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "next-auth/react";
+import { SessionMemory } from "~/components/auth/AuthContext";
 import { PlaylistProvider } from "~/components/playlist/PlaylistContext";
 
 const queryClient = new QueryClient({
@@ -23,6 +24,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 	return (
 		<QueryClientProvider client={queryClient}>
 			<SessionProvider>
+				<SessionMemory />
 				<PlaylistProvider>{children}</PlaylistProvider>
 			</SessionProvider>
 		</QueryClientProvider>

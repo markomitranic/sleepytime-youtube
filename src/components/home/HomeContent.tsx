@@ -219,8 +219,10 @@ export function HomeContent({
 			{/* Content */}
 			<div className="flex flex-col items-center px-6 pb-32">
 				<div className="w-full max-w-lg space-y-16 text-center md:space-y-20">
-					{/* Title + tagline — wordmark beside a breathing power lamp */}
-					<div className="mt-8 space-y-4">
+					{/* Title + tagline — wordmark beside a breathing power lamp.
+					    The way in sits right under them: on a phone this is the last
+					    thing above the fold, so it must never need a scroll to find */}
+					<div className="mt-6 space-y-4">
 						<div className="flex items-center justify-center gap-3">
 							<span className="deck-lamp lamp-breathe shrink-0" aria-hidden />
 							<h1 className="font-(family-name:--font-lora) text-4xl font-normal tracking-tight text-foreground/90 [text-shadow:0_0_34px_oklch(0.35_0.08_55/0.14)] md:text-5xl">
@@ -230,6 +232,15 @@ export function HomeContent({
 						<p className="font-(family-name:--font-lora) text-lg text-muted-foreground/90 italic leading-relaxed md:text-xl">
 							A better way to fall asleep to YouTube.
 						</p>
+						{onGoToPlayer && (
+							<div className="pt-7">
+								<DeckKeyButton
+									onClick={onGoToPlayer}
+									icon={<Play />}
+									label="Go to Player"
+								/>
+							</div>
+						)}
 					</div>
 
 					{/* Hook — engraved on a brushed-graphite plate, serif drop cap */}
@@ -240,17 +251,6 @@ export function HomeContent({
 						your homescreen for the full experience. No ads, no clutter, no
 						bright lights in a dark room.
 					</p>
-
-					{/* The way in: folds the page into the player instead of navigating */}
-					{onGoToPlayer && (
-						<div>
-							<DeckKeyButton
-								onClick={onGoToPlayer}
-								icon={<Play />}
-								label="Go to Player"
-							/>
-						</div>
-					)}
 
 					{/* Curated playlists — the program shelf */}
 					<div className="space-y-6">
