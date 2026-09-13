@@ -3,6 +3,7 @@
 import type { DragEndEvent } from "@dnd-kit/core";
 import { PlaylistSidebar } from "~/components/playlist/PlaylistSidebar";
 import { Drawer, DrawerContent, DrawerTitle } from "~/components/ui/drawer";
+import { useTouchScrollGuard } from "~/lib/useTouchScrollGuard";
 import type {
 	YouTubePlaylistItem,
 	YouTubePlaylistSnippet,
@@ -45,6 +46,8 @@ export function QueueDrawer({
 	onLoadMore: () => Promise<void>;
 	onRefresh?: () => Promise<void>;
 }) {
+	const touchScrollGuard = useTouchScrollGuard();
+
 	return (
 		<Drawer
 			direction="right"
@@ -55,7 +58,10 @@ export function QueueDrawer({
 			<DrawerContent className="gap-0 p-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] data-[vaul-drawer-direction=right]:w-[calc(100%-3rem)] data-[vaul-drawer-direction=right]:sm:max-w-md">
 				<DrawerTitle className="sr-only">Queue</DrawerTitle>
 
-				<div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
+				<div
+					{...touchScrollGuard}
+					className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain"
+				>
 					<PlaylistSidebar
 						items={items}
 						currentVideoId={currentVideoId}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTouchScrollGuard } from "~/lib/useTouchScrollGuard";
 import { cn } from "~/lib/utils";
 
 /**
@@ -26,7 +27,8 @@ export function DeckTray({
 	className?: string;
 	children: React.ReactNode;
 }) {
-	// Escape shuts the door
+	const touchScrollGuard = useTouchScrollGuard();
+
 	useEffect(() => {
 		if (!open) return;
 		const onKey = (e: KeyboardEvent) => {
@@ -38,7 +40,6 @@ export function DeckTray({
 
 	return (
 		<>
-			{/* Invisible scrim: tapping off the tray closes it */}
 			{open && (
 				<button
 					type="button"
@@ -51,7 +52,6 @@ export function DeckTray({
 				aria-label={label}
 				inert={!open}
 				className={cn(
-					// Phones get the whole screen above the deck; md+ keeps the door modest
 					"deck-tray absolute inset-x-0 bottom-[calc(100%-1.25rem)] z-20 mx-auto flex w-[90%] max-w-[600px] max-h-[calc(100dvh-16rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex-col pb-3 transition-all duration-500 ease-out md:max-h-[42dvh]",
 					!open && "pointer-events-none translate-y-6 opacity-0",
 					className,
@@ -61,7 +61,10 @@ export function DeckTray({
 					{label}
 				</p>
 
-				<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 pb-2">
+				<div
+					{...touchScrollGuard}
+					className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 pb-2"
+				>
 					{children}
 				</div>
 			</section>
