@@ -17,7 +17,7 @@ import { SleepTimerExpiryOverlay } from "~/components/playlist/SleepTimerExpiryO
 import { SleepTray } from "~/components/playlist/SleepTray";
 import { useYouTubePlayer } from "~/components/playlist/useYouTubePlayer";
 import { VideoEndedDialog } from "~/components/playlist/VideoEndedDialog";
-import { useKeepAwake } from "~/components/SleepyFadeoutContext";
+import { useKeepAwake, WakeShield } from "~/components/SleepyFadeoutContext";
 import { useUserPlaylists } from "~/lib/queries";
 import { cn } from "~/lib/utils";
 
@@ -123,6 +123,22 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 			player.setIsPlaying(true);
 		}
 	}, [player, playerInstanceRef]);
+
+	const handleSelectVideo = useCallback(
+		(videoId?: string) => {
+			const previousVideoId = currentVideoId;
+			playlist.setCurrentVideoId(videoId);
+			if (!previousVideoId || previousVideoId === videoId) return;
+
+			toast("Switched video", {
+				action: {
+					label: "Undo",
+					onClick: () => playlist.setCurrentVideoId(previousVideoId),
+				},
+			});
+		},
+		[currentVideoId, playlist],
+	);
 
 	const handleNext = useCallback(() => {
 		endedVideoIdRef.current = currentVideoId;
@@ -319,6 +335,7 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 								setLocked(true);
 							}}
 						/>
+						<WakeShield />
 					</div>
 					{/* Child lock: clamshell sized to this deck bay, plus its
 					    viewport-wide input blanket (video stays visible) */}
@@ -335,7 +352,7 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 				hasMore={playlist.hasMore}
 				snippet={playlist.snippet}
 				isRefreshing={playlist.isRefreshing}
-				onSelectVideo={playlist.setCurrentVideoId}
+				onSelectVideo={handleSelectVideo}
 				onDeleteItem={handleDeleteItem}
 				onDragEnd={handleDragEnd}
 				onLoadMore={playlist.loadMoreItems}

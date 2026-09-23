@@ -14,10 +14,11 @@ const IDLE_TIMEOUT_MS = 5000;
 const SleepyFadeoutContext = createContext<{
 	isFadedOut: boolean;
 	setHold: (held: boolean) => void;
+	wake: () => void;
 } | null>(null);
 
 /**
- * Owns idle fading and the first-interaction wake boundary for the app.
+ * Owns idle fading for the app: any activity wakes the UI, 5s of quiet dims it.
  * @example <SleepyFadeoutProvider>{children}</SleepyFadeoutProvider>
  */
 export function SleepyFadeoutProvider({
@@ -47,8 +48,11 @@ export function SleepyFadeoutProvider({
 	}, [isHeld]);
 
 	useEffect(() => {
-		const registerActivity = () => {
-			if (isFadedOutRef.current) return;
+		const registerActivity = (event: Event) => {
+			const fromShield =
+				event.target instanceof Element &&
+				event.target.closest("[data-wake-shield]");
+			if (fromShield) return;
 			wake();
 		};
 
@@ -78,25 +82,31 @@ export function SleepyFadeoutProvider({
 	}, [wake]);
 
 	return (
-		<SleepyFadeoutContext.Provider value={{ isFadedOut, setHold }}>
+		<SleepyFadeoutContext.Provider value={{ isFadedOut, setHold, wake }}>
 			{children}
-			{isFadedOut && <WakeCurtain onWake={wake} />}
 		</SleepyFadeoutContext.Provider>
 	);
 }
 
 /**
- * Swallows the first pointer activation while waking the faded interface.
- * @example <WakeCurtain onWake={wake} />
+ * Covers its `relative` parent while faded, so the first tap only lights the UI.
+ *
+ * Scope it to dimmed controls, never the video: a shield over the embed would
+ * make every play/pause tap land twice.
+ * @example <WakeShield /> // inside the deck's relative wrapper
  */
-function WakeCurtain({ onWake }: { onWake: () => void }) {
+export function WakeShield() {
+	const { isFadedOut, wake } = useSleepyFadeout();
+	if (!isFadedOut) return null;
+
 	return (
 		<button
 			type="button"
 			tabIndex={-1}
 			aria-label="Wake controls"
-			onClick={onWake}
-			className="fixed inset-0 z-[100] cursor-default border-0 bg-transparent p-0"
+			data-wake-shield
+			onClick={wake}
+			className="absolute inset-0 z-40 cursor-default border-0 bg-transparent p-0"
 		/>
 	);
 }

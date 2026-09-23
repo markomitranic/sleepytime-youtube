@@ -2,81 +2,63 @@
 
 import { useCallback, useRef } from "react";
 
-const MOVE_TOLERANCE_PX = 8;
-const SCROLL_SETTLE_MS = 250;
+const TAP_SLOP_PX = 10;
+const SCROLL_SETTLE_MS = 400;
 
-type TouchGesture = {
-	pointerId: number;
-	startX: number;
-	startY: number;
-	shouldBlock: boolean;
+type TouchStart = {
+	x: number;
+	y: number;
+	scrollTop: number;
+	wasScrolling: boolean;
 };
 
-/** Prevents a touch used for scrolling from activating content beneath it.
+/**
+ * Stops a touch that scrolled, or stopped a scroll, from activating a row.
  *
- * Apply the returned capture handlers to the element that owns overflow. Mouse
- * clicks and keyboard activation pass through unchanged.
+ * Judges the gesture by the container itself: its scroll events and scrollTop
+ * survive iOS taking over the pan, pointer moves do not. Mouse and keyboard
+ * activation pass through untouched.
  * @example <div {...useTouchScrollGuard()} className="overflow-y-auto" />
  */
 export function useTouchScrollGuard() {
-	const gestureRef = useRef<TouchGesture | null>(null);
-	const lastTouchScrollRef = useRef(0);
-	const blockUntilRef = useRef(0);
+	const touchStartRef = useRef<TouchStart | null>(null);
+	const lastScrollAtRef = useRef(0);
+
+	const onScroll = useCallback(() => {
+		lastScrollAtRef.current = Date.now();
+	}, []);
 
 	const onPointerDownCapture = useCallback(
 		(event: React.PointerEvent<HTMLElement>) => {
 			if (event.pointerType !== "touch") {
-				gestureRef.current = null;
+				touchStartRef.current = null;
 				return;
 			}
 
-			gestureRef.current = {
-				pointerId: event.pointerId,
-				startX: event.clientX,
-				startY: event.clientY,
-				shouldBlock: Date.now() < blockUntilRef.current,
+			touchStartRef.current = {
+				x: event.clientX,
+				y: event.clientY,
+				scrollTop: event.currentTarget.scrollTop,
+				wasScrolling: Date.now() - lastScrollAtRef.current < SCROLL_SETTLE_MS,
 			};
 		},
 		[],
 	);
 
-	const onPointerMoveCapture = useCallback(
-		(event: React.PointerEvent<HTMLElement>) => {
-			const gesture = gestureRef.current;
-			if (!gesture || gesture.pointerId !== event.pointerId) return;
-
-			const movedX = Math.abs(event.clientX - gesture.startX);
-			const movedY = Math.abs(event.clientY - gesture.startY);
-			if (Math.max(movedX, movedY) < MOVE_TOLERANCE_PX) return;
-
-			gesture.shouldBlock = true;
-			lastTouchScrollRef.current = Date.now();
-		},
-		[],
-	);
-
-	const onScroll = useCallback(() => {
-		const now = Date.now();
-		const gesture = gestureRef.current;
-		const followsTouch =
-			Boolean(gesture) || now - lastTouchScrollRef.current < SCROLL_SETTLE_MS;
-		if (!followsTouch) return;
-
-		if (gesture) gesture.shouldBlock = true;
-		lastTouchScrollRef.current = now;
-		blockUntilRef.current = now + SCROLL_SETTLE_MS;
-	}, []);
-
 	const onPointerCancelCapture = useCallback(() => {
-		gestureRef.current = null;
+		touchStartRef.current = null;
 	}, []);
 
 	const onClickCapture = useCallback((event: React.MouseEvent<HTMLElement>) => {
-		if (event.detail === 0) return;
+		const touch = touchStartRef.current;
+		touchStartRef.current = null;
+		if (!touch || event.detail === 0) return;
 
-		const gesture = gestureRef.current;
-		gestureRef.current = null;
-		if (!gesture?.shouldBlock) return;
+		const moved =
+			Math.hypot(event.clientX - touch.x, event.clientY - touch.y) >
+			TAP_SLOP_PX;
+		const scrolled = event.currentTarget.scrollTop !== touch.scrollTop;
+		if (!touch.wasScrolling && !moved && !scrolled) return;
 
 		event.preventDefault();
 		event.stopPropagation();
@@ -86,7 +68,6 @@ export function useTouchScrollGuard() {
 		onClickCapture,
 		onPointerCancelCapture,
 		onPointerDownCapture,
-		onPointerMoveCapture,
 		onScroll,
 	};
 }
