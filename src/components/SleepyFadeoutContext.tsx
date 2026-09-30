@@ -91,9 +91,9 @@ export function SleepyFadeoutProvider({
 /**
  * Covers its `relative` parent while faded, so the first tap only lights the UI.
  *
- * Scope it to dimmed controls, never the video: a shield over the embed would
- * make every play/pause tap land twice.
- * @example <WakeShield /> // inside the deck's relative wrapper
+ * Over the video it keeps a sleepy tap from toggling playback: the embed
+ * treats any tap as play/pause, even with its controls hidden.
+ * @example <WakeShield /> // inside the deck's or the screen's relative wrapper
  */
 export function WakeShield() {
 	const { isFadedOut, wake } = useSleepyFadeout();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { YTPlayer } from "~/components/playlist/PlayerContext";
 
 type YTPlayerEvent = {
@@ -52,6 +52,7 @@ export function useYouTubePlayer({
 	const autoAdvanceRef = useRef<(videoId: string) => void>(() => {});
 	const videoEndedRef = useRef<(videoId: string) => void>(() => {});
 	const playerFnsRef = useRef(player);
+	const cueNextRef = useRef(false);
 
 	sleepTimerIsActiveRef.current = sleepTimerIsActive;
 	autoAdvanceRef.current = onAutoAdvance;
@@ -75,15 +76,20 @@ export function useYouTubePlayer({
 
 		const p = playerFnsRef.current;
 		currentVideoIdRef.current = currentVideoId;
+		const autoplay = !cueNextRef.current;
+		cueNextRef.current = false;
 
 		// Reuse existing player for video changes (preserves autoplay privileges)
-		if (playerInstanceRef.current?.loadVideoById) {
+		const existing = playerInstanceRef.current;
+		if (existing?.loadVideoById) {
 			const savedStart = p.getSavedProgress(currentVideoId);
-			playerInstanceRef.current.loadVideoById({
+			const video = {
 				videoId: currentVideoId,
 				startSeconds: savedStart && savedStart > 0 ? Math.floor(savedStart) : 0,
-			});
-			p.setIsPlaying(true);
+			};
+			if (autoplay) existing.loadVideoById(video);
+			else existing.cueVideoById(video);
+			p.setIsPlaying(autoplay);
 			return;
 		}
 
@@ -101,7 +107,7 @@ export function useYouTubePlayer({
 			playerInstanceRef.current = new window.YT.Player(playerRef.current, {
 				videoId: currentVideoId,
 				playerVars: {
-					autoplay: 1,
+					autoplay: autoplay ? 1 : 0,
 					enablejsapi: 1,
 					playsinline: 1,
 					rel: 0,
@@ -128,6 +134,7 @@ export function useYouTubePlayer({
 								);
 						} catch {}
 
+						if (!autoplay) return;
 						try {
 							event.target.playVideo();
 							playerFnsRef.current.setIsPlaying(true);
@@ -199,5 +206,10 @@ export function useYouTubePlayer({
 		};
 	}, [currentVideoId, player.playerInstance, player.updateProgress]);
 
-	return { playerRef, playerInstanceRef };
+	/** Makes the next video change load paused instead of autoplaying. */
+	const cueNext = useCallback(() => {
+		cueNextRef.current = true;
+	}, []);
+
+	return { playerRef, playerInstanceRef, cueNext };
 }

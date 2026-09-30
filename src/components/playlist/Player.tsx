@@ -105,7 +105,7 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 		setEndedOpen(true);
 	}, []);
 
-	const { playerRef, playerInstanceRef } = useYouTubePlayer({
+	const { playerRef, playerInstanceRef, cueNext } = useYouTubePlayer({
 		currentVideoId: screenLive ? currentVideoId : undefined,
 		sleepTimerIsActive: playlist.sleepTimer.isActive,
 		onVideoEnded,
@@ -127,17 +127,23 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 	const handleSelectVideo = useCallback(
 		(videoId?: string) => {
 			const previousVideoId = currentVideoId;
+			if (previousVideoId === videoId) return;
+
+			cueNext();
 			playlist.setCurrentVideoId(videoId);
-			if (!previousVideoId || previousVideoId === videoId) return;
+			if (!previousVideoId) return;
 
 			toast("Switched video", {
 				action: {
 					label: "Undo",
-					onClick: () => playlist.setCurrentVideoId(previousVideoId),
+					onClick: () => {
+						cueNext();
+						playlist.setCurrentVideoId(previousVideoId);
+					},
 				},
 			});
 		},
-		[currentVideoId, playlist],
+		[currentVideoId, playlist, cueNext],
 	);
 
 	const handleNext = useCallback(() => {
