@@ -101,7 +101,12 @@ export default function RootLayout({
 								<GlobalLoadingIndicator />
 								<AuroraBackground />
 								{children}
-								<Toaster richColors position="bottom-center" closeButton />
+								<Toaster
+									theme="dark"
+									richColors
+									position="bottom-center"
+									closeButton
+								/>
 								<CookieBanner />
 								<InstallPrompt />
 								<ServiceWorkerKillSwitch />

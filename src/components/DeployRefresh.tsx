@@ -2,30 +2,24 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { usePlayer } from "~/components/playlist/PlayerContext";
+import { toast } from "sonner";
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000;
-const RELOAD_COOLDOWN_MS = 10 * 60 * 1000;
 
 /**
- * Hard-reloads the app when a new deployment goes live.
+ * Prompts a reload when a new deployment goes live.
  *
- * A React Query polls /api/version (the live deploy's build id) and compares
- * it to the id baked into this bundle. The global QueryClient disables all
- * auto-refetch, so this query opts back in: it polls every few minutes and
- * refetches on window-focus + reconnect, so a reopened or reconnected client
- * notices a new deploy promptly. Never reloads mid-playback — a running video
- * defers the reload to the next pause so a nighttime deploy can't cut off the
- * lullaby. A cooldown stopper prevents reload loops if the edge briefly keeps
- * serving the old bundle. No-op in dev, where the build id is always "dev".
+ * Polls /api/version every few minutes and whenever the app is reopened or
+ * reconnects, comparing it to the build id baked into this bundle. A stale
+ * bundle gets a persistent, dismissible toast that re-appears on each check.
+ * No-op in dev, where the build id is always "dev".
  * @example <DeployRefresh />
  */
 export function DeployRefresh() {
-	const player = usePlayer();
 	const current = process.env.NEXT_PUBLIC_BUILD_ID;
 	const enabled = !!current && current !== "dev";
 
-	const { data: liveVersion } = useQuery({
+	const { data: liveVersion, dataUpdatedAt } = useQuery({
 		queryKey: ["deploy-version"],
 		queryFn: async () => {
 			const res = await fetch("/api/version", { cache: "no-store" });
@@ -42,18 +36,14 @@ export function DeployRefresh() {
 
 	const stale = enabled && !!liveVersion && liveVersion !== current;
 
-	// Reload once stale — immediately if idle, otherwise when playback stops.
 	useEffect(() => {
-		if (stale && !player.isPlaying) reload();
-	}, [stale, player.isPlaying]);
+		if (!stale || !dataUpdatedAt) return;
+		toast("New version of the app is out", {
+			id: "deploy-refresh",
+			duration: Number.POSITIVE_INFINITY,
+			action: { label: "Reload", onClick: () => window.location.reload() },
+		});
+	}, [stale, dataUpdatedAt]);
 
 	return null;
-}
-
-/** Reload at most once per cooldown window, in case the edge still serves the old bundle. */
-function reload() {
-	const last = Number(sessionStorage.getItem("deploy-reload-at") ?? 0);
-	if (Date.now() - last < RELOAD_COOLDOWN_MS) return;
-	sessionStorage.setItem("deploy-reload-at", String(Date.now()));
-	window.location.reload();
 }
