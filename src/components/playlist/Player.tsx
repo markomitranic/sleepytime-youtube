@@ -299,6 +299,7 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 						{screenLive &&
 							!currentVideoId &&
 							(playlist.isLoading ? <ScreenLoading /> : <HomeScreenMenu />)}
+						<WakeShield />
 					</div>
 				</div>
 
