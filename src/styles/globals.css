@@ -2,6 +2,12 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* Phones: either viewport side under 600px, in any orientation. Tablets and desktops pass. */
+@custom-variant phone {
+	@media (max-width: 599px), (max-height: 599px) {
+		@slot;
+	}
+}
 
 @theme {
 	--font-sans:
