@@ -93,9 +93,10 @@ export function SleepyFadeoutProvider({
  *
  * Over the video it keeps a sleepy tap from toggling playback: the embed
  * treats any tap as play/pause, even with its controls hidden.
- * @example <WakeShield /> // inside the deck's or the screen's relative wrapper
+ * `onWake` lets the covered area show its own feedback for that first tap.
+ * @example <WakeShield onWake={showControls} /> // inside a relative wrapper
  */
-export function WakeShield() {
+export function WakeShield({ onWake }: { onWake?: () => void }) {
 	const { isFadedOut, wake } = useSleepyFadeout();
 	if (!isFadedOut) return null;
 
@@ -105,7 +106,10 @@ export function WakeShield() {
 			tabIndex={-1}
 			aria-label="Wake controls"
 			data-wake-shield
-			onClick={wake}
+			onClick={() => {
+				wake();
+				onWake?.();
+			}}
 			className="absolute inset-0 z-40 cursor-default border-0 bg-transparent p-0"
 		/>
 	);
