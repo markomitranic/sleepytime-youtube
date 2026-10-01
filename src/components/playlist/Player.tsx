@@ -13,7 +13,7 @@ import { usePlayer } from "~/components/playlist/PlayerContext";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { PlaylistTray } from "~/components/playlist/PlaylistTray";
 import { QueueDrawer } from "~/components/playlist/QueueDrawer";
-import { ScreenPlayHint } from "~/components/playlist/ScreenPlayHint";
+import { ScreenCurtain } from "~/components/playlist/ScreenCurtain";
 import { SleepTimerExpiryOverlay } from "~/components/playlist/SleepTimerExpiryOverlay";
 import { SleepTray } from "~/components/playlist/SleepTray";
 import { useYouTubePlayer } from "~/components/playlist/useYouTubePlayer";
@@ -300,8 +300,11 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 						{screenLive &&
 							!currentVideoId &&
 							(playlist.isLoading ? <ScreenLoading /> : <HomeScreenMenu />)}
-						{currentVideoId && <ScreenPlayHint isPlaying={player.isPlaying} />}
-						<WakeShield />
+						{currentVideoId ? (
+							<ScreenCurtain isPlaying={player.isPlaying} />
+						) : (
+							<WakeShield />
+						)}
 					</div>
 				</div>
 
