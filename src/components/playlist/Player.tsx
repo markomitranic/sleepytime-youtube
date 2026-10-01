@@ -13,7 +13,7 @@ import { usePlayer } from "~/components/playlist/PlayerContext";
 import { usePlaylist } from "~/components/playlist/PlaylistContext";
 import { PlaylistTray } from "~/components/playlist/PlaylistTray";
 import { QueueDrawer } from "~/components/playlist/QueueDrawer";
-import { ScreenPlayToggle } from "~/components/playlist/ScreenPlayToggle";
+import { ScreenPlayHint } from "~/components/playlist/ScreenPlayHint";
 import { SleepTimerExpiryOverlay } from "~/components/playlist/SleepTimerExpiryOverlay";
 import { SleepTray } from "~/components/playlist/SleepTray";
 import { useYouTubePlayer } from "~/components/playlist/useYouTubePlayer";
@@ -48,7 +48,8 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 	const [openPanel, setOpenPanel] = useState<
 		"queue" | "playlists" | "account" | "sleep" | null
 	>(null);
-	const [screenToggleOpen, setScreenToggleOpen] = useState(false);
+	const [screenHintFor, setScreenHintFor] = useState<boolean | null>(null);
+	const hideScreenHint = useCallback(() => setScreenHintFor(null), []);
 	const endedVideoIdRef = useRef<string | undefined>(undefined);
 
 	useKeepAwake(openPanel !== null);
@@ -302,14 +303,13 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 							!currentVideoId &&
 							(playlist.isLoading ? <ScreenLoading /> : <HomeScreenMenu />)}
 						{currentVideoId && (
-							<ScreenPlayToggle
-								open={screenToggleOpen}
-								onOpenChange={setScreenToggleOpen}
+							<ScreenPlayHint
+								shownFor={screenHintFor}
 								isPlaying={player.isPlaying}
-								onPlayPause={handlePlayPause}
+								onHide={hideScreenHint}
 							/>
 						)}
-						<WakeShield onWake={() => setScreenToggleOpen(true)} />
+						<WakeShield onWake={() => setScreenHintFor(player.isPlaying)} />
 					</div>
 				</div>
 

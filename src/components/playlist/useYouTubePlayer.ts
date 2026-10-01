@@ -137,7 +137,6 @@ export function useYouTubePlayer({
 						if (!autoplay) return;
 						try {
 							event.target.playVideo();
-							playerFnsRef.current.setIsPlaying(true);
 						} catch {}
 					},
 					onStateChange: (event: YTPlayerEvent) => {
