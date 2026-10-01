@@ -48,8 +48,6 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 	const [openPanel, setOpenPanel] = useState<
 		"queue" | "playlists" | "account" | "sleep" | null
 	>(null);
-	const [screenHintOpen, setScreenHintOpen] = useState(false);
-	const hideScreenHint = useCallback(() => setScreenHintOpen(false), []);
 	const endedVideoIdRef = useRef<string | undefined>(undefined);
 
 	useKeepAwake(openPanel !== null);
@@ -302,14 +300,8 @@ export function Player({ screenLive = true }: { screenLive?: boolean }) {
 						{screenLive &&
 							!currentVideoId &&
 							(playlist.isLoading ? <ScreenLoading /> : <HomeScreenMenu />)}
-						{currentVideoId && (
-							<ScreenPlayHint
-								open={screenHintOpen}
-								onHide={hideScreenHint}
-								isPlaying={player.isPlaying}
-							/>
-						)}
-						<WakeShield onWake={() => setScreenHintOpen(true)} />
+						{currentVideoId && <ScreenPlayHint isPlaying={player.isPlaying} />}
+						<WakeShield />
 					</div>
 				</div>
 

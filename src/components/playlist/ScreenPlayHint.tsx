@@ -1,45 +1,25 @@
 "use client";
 
 import { Pause, Play } from "lucide-react";
-import { useEffect } from "react";
-import { useEmbedTap } from "~/lib/useEmbedTap";
-import { cn } from "~/lib/utils";
-
-const VISIBLE_MS = 3000;
+import { useSleepyFadeout } from "~/components/SleepyFadeoutContext";
 
 /**
- * Click-through play/pause icon over the embed's own button, shown after a wake tap.
+ * Click-through play/pause icon covering the embed's own center button.
  *
- * Gives the wake tap visible feedback; the next tap falls through to the embed
- * and hides it, so it never contradicts the embed's own state.
- * @example <ScreenPlayHint open={shown} onHide={hide} isPlaying />
+ * Shown whenever the UI is awake. Taps pass straight through to the embed,
+ * since mobile browsers only start playback from a tap inside it.
+ * @example <ScreenPlayHint isPlaying />
  */
-export function ScreenPlayHint({
-	open,
-	onHide,
-	isPlaying,
-}: {
-	open: boolean;
-	onHide: () => void;
-	isPlaying: boolean;
-}) {
-	useEffect(() => {
-		if (!open) return;
-		const timer = setTimeout(onHide, VISIBLE_MS);
-		return () => clearTimeout(timer);
-	}, [open, onHide]);
-
-	useEmbedTap(onHide, open);
+export function ScreenPlayHint({ isPlaying }: { isPlaying: boolean }) {
+	const { isFadedOut } = useSleepyFadeout();
+	if (isFadedOut) return null;
 
 	const Icon = isPlaying ? Pause : Play;
 
 	return (
 		<div
 			aria-hidden
-			className={cn(
-				"pointer-events-none absolute top-1/2 left-1/2 z-30 grid size-24 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-black/70 text-white transition-opacity duration-200",
-				open ? "opacity-100" : "opacity-0",
-			)}
+			className="pointer-events-none absolute top-1/2 left-1/2 z-30 grid size-24 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-black text-white"
 		>
 			<Icon className="size-11" fill="currentColor" strokeWidth={0} />
 		</div>
