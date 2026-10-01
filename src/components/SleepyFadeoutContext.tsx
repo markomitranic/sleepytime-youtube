@@ -8,6 +8,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { useEmbedTap } from "~/lib/useEmbedTap";
 
 const IDLE_TIMEOUT_MS = 5000;
 
@@ -19,6 +20,8 @@ const SleepyFadeoutContext = createContext<{
 
 /**
  * Owns idle fading for the app: any activity wakes the UI, 5s of quiet dims it.
+ *
+ * Taps inside the video embed count as activity too.
  * @example <SleepyFadeoutProvider>{children}</SleepyFadeoutProvider>
  */
 export function SleepyFadeoutProvider({
@@ -80,6 +83,8 @@ export function SleepyFadeoutProvider({
 			if (timerRef.current) clearTimeout(timerRef.current);
 		};
 	}, [wake]);
+
+	useEmbedTap(wake);
 
 	return (
 		<SleepyFadeoutContext.Provider value={{ isFadedOut, setHold, wake }}>
